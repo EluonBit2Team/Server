@@ -19,4 +19,4 @@ size_t ring_buffer_read(ring_buffer_t* rb, char* data, size_t bytes);
 size_t ring_buffer_available_data(ring_buffer_t* rb);
 size_t ring_buffer_available_space(ring_buffer_t* rb);
 
-#endif // RING_BUFFER_H
+#endif
