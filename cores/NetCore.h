@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
+#include "../utilities/ring_buffer.h"
 
 #include "../utilities/ring_buffer.h"
 #include "../utilities/void_queue.h"
@@ -53,7 +54,7 @@ struct st_thread_pool {
 struct st_client_session {
     int fd;                     // 세션 fd
     // 💥TODO 일반적인 형태로.
-    char recv_buf[BUFF_SIZE];   // 유저별 소켓으로 받은 데이터를 저장할 버퍼(일감 가공 전 날것의 데이터)
+    ring_buffer_t recv_buf;   // 유저별 소켓으로 받은 데이터를 저장할 버퍼(일감 가공 전 날것의 데이터)
     char send_buf[BUFF_SIZE];
     int send_data_size;         // 유저로부터 
 } typedef client_session;

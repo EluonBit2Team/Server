@@ -139,8 +139,8 @@ int accept_client(epoll_net_core* server_ptr) {
 
     // 세션 초기화
     server_ptr->client_sessions[client_sock].fd = client_sock;
-    memset(server_ptr->client_sessions[client_sock].recv_buf, 0, BUFF_SIZE);
-    memset(server_ptr->client_sessions[client_sock].send_buf, 0, BUFF_SIZE);
+    ring_buffer_init(&server_ptr->client_sessions[client_sock].recv_buf);
+    //memset(server_ptr->client_sessions[client_sock].send_buf, 0, BUFF_SIZE);
 
     temp_event.data.fd = client_sock;
     // ✨ 엣지트리거방식의(EPOLLIN) 입력 이벤트 대기 설정(EPOLLET)
@@ -209,7 +209,8 @@ int run_server(epoll_net_core* server_ptr) {
             // 유저로부터 데이터가 와서, read할 수 있는 이벤트 발생시
             else if (server_ptr->epoll_events[i].events & EPOLLIN) {
                 int client_fd = server_ptr->epoll_events[i].data.fd;
-                int input_size = read(client_fd, server_ptr->client_sessions[client_fd].recv_buf, BUFF_SIZE);
+                char buffer[BUFF_SIZE];
+                int input_size = read(client_fd, buffer, BUFF_SIZE);
                 if (input_size == 0)
                 {
                     printf("input_size == 0\n");
@@ -222,10 +223,12 @@ int run_server(epoll_net_core* server_ptr) {
                 }
                 else
                 {
+                    ring_buffer_write(&server_ptr->client_sessions[client_fd].recv_buf, buffer, input_size); // 링 버퍼에 쓰기
+                    sleep(3);
                     // 워커 스레드에게 일감을 넣어줌
                     enqueue_task(
                         &server_ptr->thread_pool, client_fd, ECHO_SERVICE_FUNC, 
-                        server_ptr->client_sessions[client_fd].recv_buf, input_size);
+                        server_ptr->client_sessions[client_fd].recv_buf.buffer, input_size);
                 }
             }
             // 이벤트에 입력된 fd의 send버퍼가 비어서, send가능할시 발생하는 이벤트
