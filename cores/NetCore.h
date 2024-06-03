@@ -1,4 +1,5 @@
 #ifndef NET_CORE_H
+#define NET_CORE_H
 
 #include <fcntl.h>
 #include <arpa/inet.h>
@@ -10,6 +11,9 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
+
+#include "../utilities/ring_buffer.h"
+#include "../utilities/void_queue.h"
 
 #define TRUE 1
 #define FALSE 0
@@ -38,8 +42,9 @@ struct st_thread_pool {
     // ----- 스레드간 일감(테스크)을 동기화 처리할 큐(비슷한 무언가) -----
     pthread_mutex_t task_mutex; // 락
     pthread_cond_t task_cond;   // 대기중인 스레드를 깨워줄 컨디션벨류
-    int task_cnt;               // 큐 비스므리한 방식으로 쓰기 위한 카운터
-    task tasks[MAX_TASK_SIZE];  // 일감
+    //int task_cnt;               // 큐 비스므리한 방식으로 쓰기 위한 카운터
+    //task tasks[MAX_TASK_SIZE];  // 일감
+    void_queue_t task_queue;
     // -------------------------------------------------------
     
     pthread_t worker_threads[WOKER_THREAD_NUM]; // 워커스레드들

@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "*.erd": "json",
+        "*.vuerd": "json",
+        "ring_buffer.h": "c",
+        "void_queue.h": "c",
+        "string.h": "c",
+        "stdio.h": "c"
+    }
+}

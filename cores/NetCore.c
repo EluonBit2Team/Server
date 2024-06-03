@@ -3,6 +3,12 @@
 // (워커스레드들이)할 일의 정보를 담으면, 동기화 기법(뮤텍스)을 고려해서 담는 함수.
 void enqueue_task(thread_pool_t* thread_pool, int req_client_fd, int req_service_id, char* org_buf, int org_data_size)
 {
+    task new_task;
+    new_task.service_id = req_service_id;
+    new_task.req_client_fd = req_client_fd;
+    memcpy(new_task.buf, org_buf, org_data_size);
+    new_task.task_data_len = org_data_size;
+
     pthread_mutex_lock(&thread_pool->task_mutex);
     enqueue(&thread_pool->task_queue, (void*)&new_task);
     pthread_cond_signal(&thread_pool->task_cond);
@@ -13,20 +19,11 @@ void enqueue_task(thread_pool_t* thread_pool, int req_client_fd, int req_service
 int deqeueu_and_get_task(thread_pool_t* thread_pool, task* des)
 {
     pthread_mutex_lock(&thread_pool->task_mutex);
-    // 꺼낼게 없으면 반환
-    if (thread_pool->task_cnt == 0) // 💥TODO 개수 제한 풀기
+    if (dequeue(&thread_pool->task_queue, (void*)des) < 0)
     {
         pthread_mutex_unlock(&thread_pool->task_mutex);
         return FALSE;
     }
-
-    // 할 일 복사
-    task* dequeuing_task = &thread_pool->tasks[--thread_pool->task_cnt]; // 💥TODO 개수 제한 풀기
-    des->req_client_fd = dequeuing_task->req_client_fd;
-    des->service_id = dequeuing_task->service_id;
-    memcpy(des->buf, dequeuing_task->buf, dequeuing_task->task_data_len);
-    des->task_data_len = dequeuing_task->task_data_len;
-
     pthread_mutex_unlock(&thread_pool->task_mutex);
     return TRUE;
 }
@@ -39,7 +36,7 @@ void* work_routine(void *ptr)
     while (1) {
         // 큐에 할 일이 쌓일때까지 컨디션벨류를 이용해 대기
         pthread_mutex_lock(&thread_pool->task_mutex);
-        while (thread_pool->task_cnt == 0) {
+        while (is_empty(&thread_pool->task_queue) == true) {
             pthread_cond_wait(&thread_pool->task_cond, &thread_pool->task_mutex);
         }
         pthread_mutex_unlock(&thread_pool->task_mutex);
@@ -60,6 +57,7 @@ void init_worker_thread(epoll_net_core* server_ptr, thread_pool_t* thread_pool_t
 {
     pthread_mutex_init(&thread_pool_t_ptr->task_mutex, NULL);
     pthread_cond_init(&thread_pool_t_ptr->task_cond, NULL);
+    init_queue(&thread_pool_t_ptr->task_queue, sizeof(task));
     for (int i = 0; i < WOKER_THREAD_NUM; i++)
     {
         pthread_create(&thread_pool_t_ptr->worker_threads[i], NULL, work_routine, server_ptr);
@@ -148,7 +146,7 @@ int accept_client(epoll_net_core* server_ptr) {
     // ✨ 엣지트리거방식의(EPOLLIN) 입력 이벤트 대기 설정(EPOLLET)
     temp_event.events = EPOLLIN | EPOLLET;
     epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_ADD, client_sock, &temp_event);
-    printf("accept \n client", client_sock);
+    printf("accept %d client\n", client_sock);
 }
 
 void disconnect_client(epoll_net_core* server_ptr, int client_fd)
