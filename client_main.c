@@ -9,7 +9,7 @@
 
 #define SERVER_IP "127.0.0.1"
 #define SERVER_PORT 3334
-#define MAX_MESSAGE_SIZE 1024
+#define MAX_MESSAGE_SIZE 2048
 
 void *receive_thread(void *arg) {
     int sockfd = *((int *)arg);
