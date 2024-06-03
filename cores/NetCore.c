@@ -4,22 +4,7 @@
 void enqueue_task(thread_pool_t* thread_pool, int req_client_fd, int req_service_id, char* org_buf, int org_data_size)
 {
     pthread_mutex_lock(&thread_pool->task_mutex);
-    // 이미 쌓여 있는 할 일의 개수가 너무 많으면 무시함
-    if (thread_pool->task_cnt == MAX_TASK_SIZE) // 💥TODO 개수 제한 풀기
-    {
-        pthread_mutex_unlock(&thread_pool->task_mutex);
-        return ;
-    }
-
-    // 할 일 추가
-    task* queuing_task = &thread_pool->tasks[thread_pool->task_cnt++]; // 💥TODO 개수 제한 풀기
-    //printf("%d task enqueue\n", thread_pool->task_cnt);
-    queuing_task->service_id = req_service_id;
-    queuing_task->req_client_fd = req_client_fd;
-    memcpy(queuing_task->buf, org_buf, org_data_size);
-    queuing_task->task_data_len = org_data_size;
-
-    // 할 일이 생겼으니 대기중인 스레드는 일어나라는 신호(컨디션벨류)
+    enqueue(&thread_pool->task_queue, (void*)&new_task);
     pthread_cond_signal(&thread_pool->task_cond);
     pthread_mutex_unlock(&thread_pool->task_mutex);
 }
