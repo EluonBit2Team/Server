@@ -64,6 +64,32 @@ void init_worker_thread(epoll_net_core* server_ptr, thread_pool_t* thread_pool_t
     }
 }
 
+char* get_rear_send_buf_ptr(void_queue_t* vq)
+{
+    if (get_rear_data(vq) == NULL)
+    {
+        return NULL;
+    }
+    return ((send_buf_t*)get_rear_data(vq))->buf;
+}
+
+size_t get_rear_send_buf_size(void_queue_t* vq)
+{
+    return *((size_t*)get_rear_data(vq));
+}
+
+void reserve_send(void_queue_t* vq, char* send_org, size_t send_size)
+{
+    if (send_size > BUFF_SIZE)
+    {
+        return ;
+    }
+    send_buf_t temp_send_buf;
+    temp_send_buf.send_data_size = send_size;
+    memcpy(temp_send_buf.buf, send_org, send_size);
+    enqueue(vq, (void*)&temp_send_buf);
+}
+
 // ✨ 서비스 함수. 이런 형태의 함수들을 추가하여 서비스 추가. ✨
 void echo_service(epoll_net_core* server_ptr, task* task) {
     // 보낸사람 이외에 전부 출력.
@@ -74,8 +100,9 @@ void echo_service(epoll_net_core* server_ptr, task* task) {
         {
             continue ;
         }
+        reserve_send(&server_ptr->client_sessions[i].send_bufs, task->buf, task->task_data_len);
 
-        // 지금 바로 send할 수 있는지 알 수 없으니 send 이벤트 예약
+        // send 이벤트 예약
         struct epoll_event temp_event;
         temp_event.events = EPOLLOUT | EPOLLET;
         temp_event.data.fd = server_ptr->client_sessions[i].fd;
@@ -83,9 +110,6 @@ void echo_service(epoll_net_core* server_ptr, task* task) {
             perror("epoll_ctl: add");
             close(task->req_client_fd);
         }
-        // 지금 바로 send할 수 없으므로, 나중에 확인 가능한 세션 버퍼에 데이터를 저장
-        memcpy(server_ptr->client_sessions[i].send_buf, task->buf, task->task_data_len);
-        server_ptr->client_sessions[i].send_data_size = task->task_data_len;
     }
 }
 
@@ -100,7 +124,7 @@ int init_server(epoll_net_core* server_ptr) {
     for (int i = 0; i < MAX_CLIENT_NUM; i++)
     {
         server_ptr->client_sessions[i].fd = -1;
-        server_ptr->client_sessions[i].send_data_size = -1;
+        init_queue(&server_ptr->client_sessions[i].send_bufs, sizeof(send_buf_t));
     }
 
     // 서버 주소 설정
@@ -225,7 +249,6 @@ int run_server(epoll_net_core* server_ptr) {
                 {
                     ring_buffer_write(&server_ptr->client_sessions[client_fd].recv_buf, buffer, input_size); // 링 버퍼에 쓰기
                     // 워커 스레드에게 일감을 넣어줌
-                    // TODO:
                     enqueue_task(
                         &server_ptr->thread_pool, client_fd, ECHO_SERVICE_FUNC, 
                         server_ptr->client_sessions[client_fd].recv_buf.buffer, input_size);
@@ -233,17 +256,29 @@ int run_server(epoll_net_core* server_ptr) {
             }
             // 이벤트에 입력된 fd의 send버퍼가 비어서, send가능할시 발생하는 이벤트
             else if (server_ptr->epoll_events[i].events & EPOLLOUT) {
+                send_buf_t temp_send_buf;
                 int client_fd = server_ptr->epoll_events[i].data.fd;
                 // send버퍼가 비어있으므로, send가 무조건 성공한다는게 보장되므 send수행
                 //  -> send에 실패하여 EWOULDBLOCK가 에러가 뜨는 상황을 피하는 것.
-                ssize_t sent = send(
+                if (is_empty(&server_ptr->client_sessions[client_fd].send_bufs) == true)
+                {
+                    continue ;
+                }
+                char* send_buf_ptr = get_rear_send_buf_ptr(&server_ptr->client_sessions[client_fd].send_bufs);
+                if (send_buf_ptr == NULL)
+                {
+                    continue ;
+                }
+
+                size_t sent = send(
                     client_fd, 
-                    server_ptr->client_sessions[client_fd].send_buf, 
-                    server_ptr->client_sessions[client_fd].send_data_size, 0);
+                    get_rear_send_buf_ptr(&server_ptr->client_sessions[client_fd].send_bufs), 
+                    get_rear_send_buf_size(&server_ptr->client_sessions[client_fd].send_bufs), 0);
                 if (sent < 0) {
                     perror("send");
                     close(server_ptr->epoll_events[i].data.fd);
                 }
+                dequeue(&server_ptr->client_sessions[client_fd].send_bufs, NULL);
                 
                 // send할 때 이벤트를 변경(EPOLL_CTL_MOD)해서 보내는 이벤트로 바꿨으니
                 // 다시 통신을 받는 이벤트로 변경하여 유저의 입력을 대기.

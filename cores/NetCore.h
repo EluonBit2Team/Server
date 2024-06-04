@@ -42,19 +42,22 @@ struct st_thread_pool {
     // ----- 스레드간 일감(테스크)을 동기화 처리할 큐(비슷한 무언가) -----
     pthread_mutex_t task_mutex; // 락
     pthread_cond_t task_cond;   // 대기중인 스레드를 깨워줄 컨디션벨류
-    //int task_cnt;               // 큐 비스므리한 방식으로 쓰기 위한 카운터
-    //task tasks[MAX_TASK_SIZE];  // 일감
     void_queue_t task_queue;
-    // -------------------------------------------------------
     
     pthread_t worker_threads[WOKER_THREAD_NUM]; // 워커스레드들
 } typedef thread_pool_t;
 
+typedef struct send_buf {
+    size_t send_data_size;
+    char buf[BUFF_SIZE];
+} send_buf_t;
+
 struct st_client_session {
     int fd;                     // 세션 fd
     ring_buffer_t recv_buf;   // 유저별 소켓으로 받은 데이터를 저장할 버퍼(일감 가공 전 날것의 데이터)
-    char send_buf[BUFF_SIZE];
-    int send_data_size;         // 유저로부터 
+    //char send_buf[BUFF_SIZE];
+    void_queue_t send_bufs;
+    //int send_data_size;         // 유저로부터 
 } typedef client_session;
 
 struct st_epoll_net_core;   // 전방선언
@@ -88,12 +91,14 @@ void* work_routine(void *ptr);
 void enqueue_task(thread_pool_t* thread_pool, int req_client_fd, int req_service_id, char* org_buf, int org_data_size);
 // 워커스레드에서 할 일을 꺼낼때(des에 복사) 쓰는 함수.
 int deqeueu_and_get_task(thread_pool_t* thread_pool, task* des);
-
 // accept시 동작 처리 함수
 int accept_client(epoll_net_core* server_ptr); 
 void disconnect_client(epoll_net_core* server_ptr, int client_fd);
 void set_sock_nonblocking_mode(int sockFd) ;
 
+char* get_rear_send_buf_ptr(void_queue_t* vq);
+size_t get_rear_send_buf_size(void_queue_t* vq);
+void reserve_send(void_queue_t* vq, char* send_org, size_t send_size);
 // ✨ 서비스 함수. 이런 형태의 함수들을 추가하여 서비스 추가. ✨
 void echo_service(epoll_net_core* server_ptr, task* task) ;
 

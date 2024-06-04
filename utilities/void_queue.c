@@ -40,7 +40,10 @@ int dequeue(void_queue_t* queue, void* data_des)
         return -1;
     }
 
-    memcpy(data_des, r_node->data, queue->type_default_size);
+    if (data_des != NULL)
+    {
+       memcpy(data_des, r_node->data, queue->type_default_size);
+    }
     node_t* new_r_node = queue->rear_node->pre;
     queue->rear_node = new_r_node;
     if (new_r_node != NULL)
@@ -50,6 +53,11 @@ int dequeue(void_queue_t* queue, void* data_des)
 
     free(r_node->data);
     free(r_node);
+}
+
+void* get_rear_data(void_queue_t* queue)
+{
+    return queue->rear_node->data;
 }
 
 bool is_empty(void_queue_t* queue)

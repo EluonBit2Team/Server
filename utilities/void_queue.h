@@ -20,5 +20,5 @@ void init_queue(void_queue_t* queue, int type_default_size);
 int enqueue(void_queue_t* queue, const void* data_org);
 int dequeue(void_queue_t* queue, void* data_des);
 bool is_empty(void_queue_t* queue);
-
+void* get_rear_data(void_queue_t* queue);
 #endif
