@@ -1,5 +1,4 @@
 #ifndef NET_CORE_H
-#define NET_CORE_H
 
 #include <fcntl.h>
 #include <arpa/inet.h>
@@ -43,7 +42,6 @@ struct st_thread_pool {
     pthread_mutex_t task_mutex; // 락
     pthread_cond_t task_cond;   // 대기중인 스레드를 깨워줄 컨디션벨류
     void_queue_t task_queue;
-    
     pthread_t worker_threads[WOKER_THREAD_NUM]; // 워커스레드들
 } typedef thread_pool_t;
 
@@ -54,7 +52,7 @@ typedef struct send_buf {
 
 struct st_client_session {
     int fd;                     // 세션 fd
-    ring_buffer_t recv_buf;   // 유저별 소켓으로 받은 데이터를 저장할 버퍼(일감 가공 전 날것의 데이터)
+    ring_t recv_buf;   // 유저별 소켓으로 받은 데이터를 저장할 버퍼(일감 가공 전 날것의 데이터)
     //char send_buf[BUFF_SIZE];
     void_queue_t send_bufs;
     //int send_data_size;         // 유저로부터 
@@ -68,7 +66,6 @@ typedef struct st_epoll_net_core {
 
     func_ptr function_array[SERVICE_FUNC_NUM]; // 서비스 배열
     
-     // 💥TODO 개수 제한 풀기
     client_session client_sessions[MAX_CLIENT_NUM]; // 연결된 클라이언트들 관리할 세션 배열
     struct sockaddr_in listen_addr; // 리슨용 소켓 주소 담는 자료형
     

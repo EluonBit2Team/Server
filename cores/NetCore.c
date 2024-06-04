@@ -1,16 +1,25 @@
 #include "NetCore.h"
 
 // (워커스레드들이)할 일의 정보를 담으면, 동기화 기법(뮤텍스)을 고려해서 담는 함수.
-void enqueue_task(thread_pool_t* thread_pool, int req_client_fd, int req_service_id, char* org_buf, int org_data_size)
+void enqueue_task(thread_pool_t* thread_pool, int req_client_fd, int req_service_id, ring_t* org_buf, int org_data_size)
 {
-    task new_task;
-    new_task.service_id = req_service_id;
-    new_task.req_client_fd = req_client_fd;
-    memcpy(new_task.buf, org_buf, org_data_size);
-    new_task.task_data_len = org_data_size;
-
     pthread_mutex_lock(&thread_pool->task_mutex);
-    enqueue(&thread_pool->task_queue, (void*)&new_task);
+    // 이미 쌓여 있는 할 일의 개수가 너무 많으면 무시함
+    if (thread_pool->task_cnt == MAX_TASK_SIZE)
+    {
+        pthread_mutex_unlock(&thread_pool->task_mutex);
+        return ;
+    }
+
+    // 할 일 추가
+    task* queuing_task = &thread_pool->tasks[thread_pool->task_cnt++];
+    //printf("%d task enqueue\n", thread_pool->task_cnt);
+    queuing_task->service_id = req_service_id;
+    queuing_task->req_client_fd = req_client_fd;
+    
+    queuing_task->task_data_len = org_data_size;
+
+    // 할 일이 생겼으니 대기중인 스레드는 일어나라는 신호(컨디션벨류)
     pthread_cond_signal(&thread_pool->task_cond);
     pthread_mutex_unlock(&thread_pool->task_mutex);
 }
@@ -19,11 +28,20 @@ void enqueue_task(thread_pool_t* thread_pool, int req_client_fd, int req_service
 int deqeueu_and_get_task(thread_pool_t* thread_pool, task* des)
 {
     pthread_mutex_lock(&thread_pool->task_mutex);
-    if (dequeue(&thread_pool->task_queue, (void*)des) < 0)
+    // 꺼낼게 없으면 반환
+    if (thread_pool->task_cnt == 0)
     {
         pthread_mutex_unlock(&thread_pool->task_mutex);
         return FALSE;
     }
+
+    // 할 일 복사
+    task* dequeuing_task = &thread_pool->tasks[--thread_pool->task_cnt];
+    des->req_client_fd = dequeuing_task->req_client_fd;
+    des->service_id = dequeuing_task->service_id;
+    memcpy(des->buf, dequeuing_task->buf, dequeuing_task->task_data_len);
+    des->task_data_len = dequeuing_task->task_data_len;
+
     pthread_mutex_unlock(&thread_pool->task_mutex);
     return TRUE;
 }
@@ -36,7 +54,7 @@ void* work_routine(void *ptr)
     while (1) {
         // 큐에 할 일이 쌓일때까지 컨디션벨류를 이용해 대기
         pthread_mutex_lock(&thread_pool->task_mutex);
-        while (is_empty(&thread_pool->task_queue) == true) {
+        while (thread_pool->task_cnt == 0) {
             pthread_cond_wait(&thread_pool->task_cond, &thread_pool->task_mutex);
         }
         pthread_mutex_unlock(&thread_pool->task_mutex);
@@ -57,7 +75,6 @@ void init_worker_thread(epoll_net_core* server_ptr, thread_pool_t* thread_pool_t
 {
     pthread_mutex_init(&thread_pool_t_ptr->task_mutex, NULL);
     pthread_cond_init(&thread_pool_t_ptr->task_cond, NULL);
-    init_queue(&thread_pool_t_ptr->task_queue, sizeof(task));
     for (int i = 0; i < WOKER_THREAD_NUM; i++)
     {
         pthread_create(&thread_pool_t_ptr->worker_threads[i], NULL, work_routine, server_ptr);
@@ -163,13 +180,14 @@ int accept_client(epoll_net_core* server_ptr) {
 
     // 세션 초기화
     server_ptr->client_sessions[client_sock].fd = client_sock;
-    ring_buffer_init(&server_ptr->client_sessions[client_sock].recv_buf);
+    ring_init(server_ptr->client_sessions[client_sock].recv_buf);
+    memset(server_ptr->client_sessions[client_sock].send_buf, 0, BUFF_SIZE);
 
     temp_event.data.fd = client_sock;
     // ✨ 엣지트리거방식의(EPOLLIN) 입력 이벤트 대기 설정(EPOLLET)
     temp_event.events = EPOLLIN | EPOLLET;
     epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_ADD, client_sock, &temp_event);
-    printf("accept %d client\n", client_sock);
+    printf("accept \n client", client_sock);
 }
 
 void disconnect_client(epoll_net_core* server_ptr, int client_fd)
@@ -232,9 +250,7 @@ int run_server(epoll_net_core* server_ptr) {
             // 유저로부터 데이터가 와서, read할 수 있는 이벤트 발생시
             else if (server_ptr->epoll_events[i].events & EPOLLIN) {
                 int client_fd = server_ptr->epoll_events[i].data.fd;
-                // TODO : 
-                char buffer[BUFF_SIZE];
-                int input_size = read(client_fd, buffer, BUFF_SIZE);
+                int input_size = ring_get(server_ptr->client_sessions[client_fd].recv_buf, client_fd);
                 if (input_size == 0)
                 {
                     printf("input_size == 0\n");
@@ -242,16 +258,15 @@ int run_server(epoll_net_core* server_ptr) {
                 }
                 else if (input_size < 0)
                 {
-                    // errno EAGAIN?
+                    // errno EAGAIN? 
                     printf("input_size < 0\n");
                 }
                 else
                 {
-                    ring_buffer_write(&server_ptr->client_sessions[client_fd].recv_buf, buffer, input_size); // 링 버퍼에 쓰기
                     // 워커 스레드에게 일감을 넣어줌
                     enqueue_task(
                         &server_ptr->thread_pool, client_fd, ECHO_SERVICE_FUNC, 
-                        server_ptr->client_sessions[client_fd].recv_buf.buffer, input_size);
+                        ring_put(server_ptr->client_sessions[client_fd].recv_buf,client_fd), input_size);
                 }
             }
             // 이벤트에 입력된 fd의 send버퍼가 비어서, send가능할시 발생하는 이벤트
