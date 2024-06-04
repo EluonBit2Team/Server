@@ -1,5 +1,4 @@
 #ifndef NET_CORE_H
-#define NET_CORE_H
 
 #include <fcntl.h>
 #include <arpa/inet.h>
@@ -13,8 +12,6 @@
 #include <pthread.h>
 
 #include "../utilities/ring_buffer.h"
-#include "../utilities/void_queue.h"
-
 #define TRUE 1
 #define FALSE 0
 #define PORT 3334
@@ -42,9 +39,8 @@ struct st_thread_pool {
     // ----- 스레드간 일감(테스크)을 동기화 처리할 큐(비슷한 무언가) -----
     pthread_mutex_t task_mutex; // 락
     pthread_cond_t task_cond;   // 대기중인 스레드를 깨워줄 컨디션벨류
-    //int task_cnt;               // 큐 비스므리한 방식으로 쓰기 위한 카운터
-    //task tasks[MAX_TASK_SIZE];  // 일감
-    void_queue_t task_queue;
+    int task_cnt;               // 큐 비스므리한 방식으로 쓰기 위한 카운터
+    task tasks[MAX_TASK_SIZE];  // 일감
     // -------------------------------------------------------
     
     pthread_t worker_threads[WOKER_THREAD_NUM]; // 워커스레드들
@@ -52,7 +48,7 @@ struct st_thread_pool {
 
 struct st_client_session {
     int fd;                     // 세션 fd
-    ring_buffer_t recv_buf;   // 유저별 소켓으로 받은 데이터를 저장할 버퍼(일감 가공 전 날것의 데이터)
+    ring_t recv_buf;   // 유저별 소켓으로 받은 데이터를 저장할 버퍼(일감 가공 전 날것의 데이터)
     char send_buf[BUFF_SIZE];
     int send_data_size;         // 유저로부터 
 } typedef client_session;
@@ -65,7 +61,6 @@ typedef struct st_epoll_net_core {
 
     func_ptr function_array[SERVICE_FUNC_NUM]; // 서비스 배열
     
-     // 💥TODO 개수 제한 풀기
     client_session client_sessions[MAX_CLIENT_NUM]; // 연결된 클라이언트들 관리할 세션 배열
     struct sockaddr_in listen_addr; // 리슨용 소켓 주소 담는 자료형
     
