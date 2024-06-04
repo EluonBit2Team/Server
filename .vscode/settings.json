@@ -5,6 +5,8 @@
         "ring_buffer.h": "c",
         "void_queue.h": "c",
         "string.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "netcore.h": "c",
+        "fcntl.h": "c"
     }
 }
