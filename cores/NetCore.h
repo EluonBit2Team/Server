@@ -50,9 +50,15 @@ typedef struct send_buf {
     char buf[BUFF_SIZE];
 } send_buf_t;
 
+typedef struct recv_buf {
+    size_t recv_data_size;
+    char buf[BUFF_SIZE];
+} recv_buf_t;
+
 struct st_client_session {
     int fd;                     // 세션 fd
-    ring_t recv_buf;   // 유저별 소켓으로 받은 데이터를 저장할 버퍼(일감 가공 전 날것의 데이터)
+    //char recv_buf[BUFF_SIZE];   // 유저별 소켓으로 받은 데이터를 저장할 버퍼(일감 가공 전 날것의 데이터)
+    ring_buf recv_bufs;
     //char send_buf[BUFF_SIZE];
     void_queue_t send_bufs;
     //int send_data_size;         // 유저로부터 
@@ -85,7 +91,7 @@ void init_worker_thread(epoll_net_core* server_ptr, thread_pool_t* thread_pool_t
 // 워커스레드가 무한반 복할 루틴.
 void* work_routine(void *ptr);
 // (워커스레드들이)할 일의 정보를 담으면, 동기화 기법(뮤텍스)을 고려해서 담는 함수.
-void enqueue_task(thread_pool_t* thread_pool, int req_client_fd, int req_service_id, char* org_buf, int org_data_size);
+void enqueue_task(thread_pool_t* thread_pool, int req_client_fd, int req_service_id, ring_buf* org_buf, int org_data_size);
 // 워커스레드에서 할 일을 꺼낼때(des에 복사) 쓰는 함수.
 int deqeueu_and_get_task(thread_pool_t* thread_pool, task* des);
 // accept시 동작 처리 함수

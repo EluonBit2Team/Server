@@ -1,12 +1,12 @@
 #include "NetCore.h"
 
 // (워커스레드들이)할 일의 정보를 담으면, 동기화 기법(뮤텍스)을 고려해서 담는 함수.
-void enqueue_task(thread_pool_t* thread_pool, int req_client_fd, int req_service_id, ring_t* org_buf, int org_data_size)
+void enqueue_task(thread_pool_t* thread_pool, int req_client_fd, int req_service_id, ring_buf *org_buf, int org_data_size)
 {
     task new_task;
     new_task.service_id = req_service_id;
     new_task.req_client_fd = req_client_fd;
-    memcpy(new_task.buf, org_buf, org_data_size);
+    ring_array(org_buf,new_task.buf,org_data_size);
     new_task.task_data_len = org_data_size;
 
     pthread_mutex_lock(&thread_pool->task_mutex);
@@ -163,8 +163,7 @@ int accept_client(epoll_net_core* server_ptr) {
 
     // 세션 초기화
     server_ptr->client_sessions[client_sock].fd = client_sock;
-    ring_init(server_ptr->client_sessions[client_sock].recv_buf);
-
+    ring_clear(&server_ptr->client_sessions[client_sock].recv_bufs);
     temp_event.data.fd = client_sock;
     // ✨ 엣지트리거방식의(EPOLLIN) 입력 이벤트 대기 설정(EPOLLET)
     temp_event.events = EPOLLIN | EPOLLET;
@@ -232,24 +231,11 @@ int run_server(epoll_net_core* server_ptr) {
             // 유저로부터 데이터가 와서, read할 수 있는 이벤트 발생시
             else if (server_ptr->epoll_events[i].events & EPOLLIN) {
                 int client_fd = server_ptr->epoll_events[i].data.fd;
-                int input_size = ring_get(server_ptr->client_sessions[client_fd].recv_buf, client_fd);
-                if (input_size == 0)
-                {
-                    printf("input_size == 0\n");
-                    disconnect_client(server_ptr, client_fd);
-                }
-                else if (input_size < 0)
-                {
-                    // errno EAGAIN? 
-                    printf("input_size < 0\n");
-                }
-                else
-                {
-                    // 워커 스레드에게 일감을 넣어줌
-                    enqueue_task(
-                        &server_ptr->thread_pool, client_fd, ECHO_SERVICE_FUNC, 
-                        ring_put(server_ptr->client_sessions[client_fd].recv_buf,client_fd), input_size);
-                }
+                int input_size = ring_read(&server_ptr->client_sessions[client_fd].recv_bufs,client_fd);
+                
+                
+                enqueue_task(&server_ptr->thread_pool, client_fd, ECHO_SERVICE_FUNC, 
+                &server_ptr->client_sessions[client_fd].recv_bufs, input_size); 
             }
             // 이벤트에 입력된 fd의 send버퍼가 비어서, send가능할시 발생하는 이벤트
             else if (server_ptr->epoll_events[i].events & EPOLLOUT) {
