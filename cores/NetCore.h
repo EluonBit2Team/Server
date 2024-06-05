@@ -13,6 +13,7 @@
 
 #include "../utilities/ring_buffer.h"
 #include "../utilities/void_queue.h"
+#include "session.h"
 
 #define TRUE 1
 #define FALSE 0
@@ -50,19 +51,12 @@ typedef struct send_buf {
     char buf[BUFF_SIZE];
 } send_buf_t;
 
-typedef struct recv_buf {
-    size_t recv_data_size;
-    char buf[BUFF_SIZE];
-} recv_buf_t;
-
-struct st_client_session {
-    int fd;                     // 세션 fd
-    //char recv_buf[BUFF_SIZE];   // 유저별 소켓으로 받은 데이터를 저장할 버퍼(일감 가공 전 날것의 데이터)
-    ring_buf recv_bufs;
-    //char send_buf[BUFF_SIZE];
-    void_queue_t send_bufs;
-    //int send_data_size;         // 유저로부터 
-} typedef client_session;
+// struct st_client_session {
+//     int fd;                     // 세션 fd
+//     //char recv_buf[BUFF_SIZE];   // 유저별 소켓으로 받은 데이터를 저장할 버퍼(일감 가공 전 날것의 데이터)
+//     ring_buf recv_bufs;
+//     void_queue_t send_bufs;
+// } typedef client_session;
 
 struct st_epoll_net_core;   // 전방선언
 typedef void (*func_ptr)(struct st_epoll_net_core*, task*); // 서비스함수포인터 타입 지정.
@@ -72,7 +66,8 @@ typedef struct st_epoll_net_core {
 
     func_ptr function_array[SERVICE_FUNC_NUM]; // 서비스 배열
     
-    client_session client_sessions[MAX_CLIENT_NUM]; // 연결된 클라이언트들 관리할 세션 배열
+    //client_session client_sessions[MAX_CLIENT_NUM]; // 연결된 클라이언트들 관리할 세션 배열
+    session_pool_t session_pool;
     struct sockaddr_in listen_addr; // 리슨용 소켓 주소 담는 자료형
     
     int epoll_fd; 

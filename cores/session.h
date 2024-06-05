@@ -1,45 +1,33 @@
-// #ifndef VOID_POOL_H
-// #define VOID_POOL_H
-
-// #include <stdlib.h>
-
-// typedef void (*init_func_ptr_t)(void*);
-// typedef void (*clear_func_ptr_t)(void*);
-// typedef struct void_pool {
-//     int type_size;
-//     int pool_size;
-//     void* pool;
-    
-//     int idx_stack
-    
-//     init_func_ptr_t init_func_ptr;
-//     clear_func_ptr_t clear_func_ptr;
-// } void_pool_t;
-
-// void itit_pool(void_pool_t* pool, int type_size, int pool_size, init_func_ptr_t init_func_ptr, clear_func_ptr_t clear_func_ptr)
-// {
-//     pool->type_size = type_size;
-//     pool->pool_size = pool_size;
-//     pool->init_func_ptr = init_func_ptr;
-//     pool->clear_func_ptr = clear_func_ptr;
-
-//     pool->pool = malloc(type_size * pool_size);
-//     for (int i = 0; i < pool_size; i++)
-//     {
-//         void* elem = 
-//     }
-// }
-
-// void* get_elem_by_index(void_pool_t* pool, int idx)
-// {
-
-// }
-
-// #endif
-
 #ifndef SESSION_H
 #define SESSION_H
 
+#include "../utilities/ring_buffer.h"
+#include "../utilities/uthash.h"
+#include "../utilities/void_queue.h"
+#include "../defines.h"
 
+typedef struct client_session {
+    int fd;                     // 세션 fd
+    size_t session_idx;
+    ring_buf recv_bufs;
+    void_queue_t send_bufs;
+    UT_hash_handle hh;
+} client_session_t;
+
+typedef struct session_pool {
+    size_t session_size;
+    client_session_t* session_pool;
+
+    int* session_pool_idx_stack;
+    size_t stack_top_idx;
+
+    client_session_t* hash_map_by_fd;
+} session_pool_t;
+
+void reset_session(client_session_t* session_ptr);
+int init_session(session_pool_t* pool_ptr, size_t session_size);
+client_session_t* assign_session(session_pool_t* pool_ptr, int fd);
+client_session_t* find_session_by_fd(session_pool_t* pool_ptr, int fd);
+int release_session(session_pool_t* pool_ptr, client_session_t* session);
 
 #endif

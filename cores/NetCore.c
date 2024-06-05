@@ -162,8 +162,10 @@ int accept_client(epoll_net_core* server_ptr) {
     set_sock_nonblocking_mode(client_sock);
 
     // 세션 초기화
-    server_ptr->client_sessions[client_sock].fd = client_sock;
-    ring_clear(&server_ptr->client_sessions[client_sock].recv_bufs);
+    // server_ptr->client_sessions[client_sock].fd = client_sock;
+    // ring_clear(&server_ptr->client_sessions[client_sock].recv_bufs);
+    client_session_t* sesseion_ptr = assign_session(&server_ptr->session_pool, client_sock);
+    ring_clear(&sesseion_ptr->recv_bufs);
     temp_event.data.fd = client_sock;
     // ✨ 엣지트리거방식의(EPOLLIN) 입력 이벤트 대기 설정(EPOLLET)
     temp_event.events = EPOLLIN | EPOLLET;
@@ -231,11 +233,14 @@ int run_server(epoll_net_core* server_ptr) {
             // 유저로부터 데이터가 와서, read할 수 있는 이벤트 발생시
             else if (server_ptr->epoll_events[i].events & EPOLLIN) {
                 int client_fd = server_ptr->epoll_events[i].data.fd;
-                int input_size = ring_read(&server_ptr->client_sessions[client_fd].recv_bufs,client_fd);
+                // session 변경함.
+                client_session_t* s_ptr = find_session_by_fd(&server_ptr->session_pool, client_fd);
+                int input_size = ring_read(&s_ptr->recv_bufs, client_fd);
                 
                 
-                enqueue_task(&server_ptr->thread_pool, client_fd, ECHO_SERVICE_FUNC, 
-                &server_ptr->client_sessions[client_fd].recv_bufs, input_size); 
+                // enqueue_task(&server_ptr->thread_pool, client_fd, ECHO_SERVICE_FUNC, 
+                // &server_ptr->client_sessions[client_fd].recv_bufs, input_size); 
+                enqueue_task(&server_ptr->thread_pool, client_fd, ECHO_SERVICE_FUNC, &s_ptr->recv_bufs, input_size);
             }
             // 이벤트에 입력된 fd의 send버퍼가 비어서, send가능할시 발생하는 이벤트
             else if (server_ptr->epoll_events[i].events & EPOLLOUT) {
@@ -243,25 +248,34 @@ int run_server(epoll_net_core* server_ptr) {
                 int client_fd = server_ptr->epoll_events[i].data.fd;
                 // send버퍼가 비어있으므로, send가 무조건 성공한다는게 보장되므 send수행
                 //  -> send에 실패하여 EWOULDBLOCK가 에러가 뜨는 상황을 피하는 것.
-                if (is_empty(&server_ptr->client_sessions[client_fd].send_bufs) == true)
+                client_session_t* s_ptr = find_session_by_fd(&server_ptr->session_pool, client_fd);
+                if (s_ptr == NULL)
+                {
+                    // TODO log invlidant client fd
+                }
+                //if (is_empty(&server_ptr->client_sessions[client_fd].send_bufs) == true)
+                if (is_empty(&s_ptr->send_bufs) == true)
                 {
                     continue ;
                 }
-                char* send_buf_ptr = get_rear_send_buf_ptr(&server_ptr->client_sessions[client_fd].send_bufs);
+                //char* send_buf_ptr = get_rear_send_buf_ptr(&server_ptr->client_sessions[client_fd].send_bufs);
+                char* send_buf_ptr = get_rear_send_buf_ptr(&s_ptr->send_bufs);
                 if (send_buf_ptr == NULL)
                 {
                     continue ;
                 }
 
-                size_t sent = send(
-                    client_fd, 
-                    get_rear_send_buf_ptr(&server_ptr->client_sessions[client_fd].send_bufs), 
-                    get_rear_send_buf_size(&server_ptr->client_sessions[client_fd].send_bufs), 0);
+                // size_t sent = send(
+                //     client_fd, 
+                //     get_rear_send_buf_ptr(&server_ptr->client_sessions[client_fd].send_bufs), 
+                //     get_rear_send_buf_size(&server_ptr->client_sessions[client_fd].send_bufs), 0);
+                size_t sent = send(client_fd, get_rear_send_buf_ptr(&s_ptr->send_bufs), get_rear_send_buf_size(&s_ptr->send_bufs), 0);
                 if (sent < 0) {
                     perror("send");
                     close(server_ptr->epoll_events[i].data.fd);
                 }
-                dequeue(&server_ptr->client_sessions[client_fd].send_bufs, NULL);
+                //dequeue(&server_ptr->client_sessions[client_fd].send_bufs, NULL);
+                dequeue(&s_ptr->send_bufs, NULL);
                 
                 // send할 때 이벤트를 변경(EPOLL_CTL_MOD)해서 보내는 이벤트로 바꿨으니
                 // 다시 통신을 받는 이벤트로 변경하여 유저의 입력을 대기.
