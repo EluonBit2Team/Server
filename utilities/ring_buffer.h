@@ -3,21 +3,27 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <stdbool.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <unistd.h>
 
-#define MAX_RING_SIZE 200              
-#define MAX_RING_DATA_SIZE 2048         
+#define QUEUE_SIZE  1024
+#define NEXT(index)   ((index+1)%QUEUE_SIZE)
 
-typedef struct{                                
-  int sz_data;                            
-  char data[MAX_RING_DATA_SIZE];        
-} rign_item_t;    
+typedef struct ring_buf
+{
+    char buf[QUEUE_SIZE];
+    int front; 
+    int rear;
+}ring_buf;
 
-typedef struct{
-  int tag_head;                         
-  int tag_tail;                        
-  rign_item_t item[MAX_RING_SIZE];       
-} ring_t; 
-
+void ring_clear(ring_buf *ring);
+bool ring_full(ring_buf *ring);
+bool ring_empty(ring_buf *ring);
+void ring_enque(ring_buf *ring, char data);
+char ring_deque(ring_buf *ring);
+bool ring_array(ring_buf *queue, char *data_ptr, int length);
+int ring_read(ring_buf *ring, int fd);
 
 #endif
