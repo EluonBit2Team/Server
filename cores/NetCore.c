@@ -95,18 +95,18 @@ void echo_service(epoll_net_core* server_ptr, task* task) {
     // 보낸사람 이외에 전부 출력.
     for (int i = 0; i < MAX_CLIENT_NUM; i++)
     {
-        if (server_ptr->client_sessions[i].fd == -1
-            || task->req_client_fd == server_ptr->client_sessions[i].fd)
+        client_session_t* now_session = &server_ptr->session_pool.session_pool[i];
+        if (now_session->fd == -1 || task->req_client_fd == now_session->fd)
         {
             continue ;
         }
-        reserve_send(&server_ptr->client_sessions[i].send_bufs, task->buf, task->task_data_len);
+        reserve_send(&now_session->send_bufs, task->buf, task->task_data_len);
 
         // send 이벤트 예약
         struct epoll_event temp_event;
         temp_event.events = EPOLLOUT | EPOLLET;
-        temp_event.data.fd = server_ptr->client_sessions[i].fd;
-        if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, server_ptr->client_sessions[i].fd, &temp_event) == -1) {
+        temp_event.data.fd = now_session->fd;
+        if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_event) == -1) {
             perror("epoll_ctl: add");
             close(task->req_client_fd);
         }
@@ -121,11 +121,7 @@ void set_sock_nonblocking_mode(int sockFd) {
 // 서버 초기화
 int init_server(epoll_net_core* server_ptr) {
     // 세션 초기화
-    for (int i = 0; i < MAX_CLIENT_NUM; i++)
-    {
-        server_ptr->client_sessions[i].fd = -1;
-        init_queue(&server_ptr->client_sessions[i].send_bufs, sizeof(send_buf_t));
-    }
+    init_session(&server_ptr->session_pool, MAX_CLIENT_NUM);
 
     // 서버 주소 설정
     server_ptr->is_run = FALSE;
@@ -144,7 +140,7 @@ int init_server(epoll_net_core* server_ptr) {
     server_ptr->listen_fd = socket(PF_INET, SOCK_STREAM, 0);
     if (server_ptr->listen_fd < 0)
     {
-        printf("listen sock assignment error: \n", errno);
+        printf("listen sock assignment error: %d\n", errno);
     }
     set_sock_nonblocking_mode(server_ptr->listen_fd);
 }
@@ -156,27 +152,36 @@ int accept_client(epoll_net_core* server_ptr) {
     socklen_t client_addr_size = client_addr_size = sizeof(client_addr);
     int client_sock = accept(server_ptr->listen_fd, (struct sockaddr*)&(client_addr), &client_addr_size);
     if (client_sock < 0) {
-        printf("accept error: \n", errno);
+        printf("accept error: %d\n", errno);
     }
-
     set_sock_nonblocking_mode(client_sock);
 
     // 세션 초기화
-    // server_ptr->client_sessions[client_sock].fd = client_sock;
-    // ring_clear(&server_ptr->client_sessions[client_sock].recv_bufs);
     client_session_t* sesseion_ptr = assign_session(&server_ptr->session_pool, client_sock);
-    ring_clear(&sesseion_ptr->recv_bufs);
+    if (sesseion_ptr == NULL)
+    {
+        printf("assign fail\n");
+        return -1;
+    }
     temp_event.data.fd = client_sock;
     // ✨ 엣지트리거방식의(EPOLLIN) 입력 이벤트 대기 설정(EPOLLET)
     temp_event.events = EPOLLIN | EPOLLET;
     epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_ADD, client_sock, &temp_event);
-    printf("accept \n client", client_sock);
+    printf("accept %d client, session id : %ld \n", client_sock, sesseion_ptr->session_idx);
 }
 
 void disconnect_client(epoll_net_core* server_ptr, int client_fd)
 {
     epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_DEL, client_fd, NULL);
-    // TODO: 세션 데이터 추가 필요
+    client_session_t* session_ptr = find_session_by_fd(&server_ptr->session_pool, client_fd);
+    if (session_ptr == NULL)
+    {
+        printf("fd and session mismatch in disconnect_client\n");
+    }
+    else
+    {
+        close_session(&server_ptr->session_pool, session_ptr);
+    }
     close(client_fd);
     printf("disconnect:%d\n", client_fd);
 }
@@ -235,46 +240,47 @@ int run_server(epoll_net_core* server_ptr) {
                 int client_fd = server_ptr->epoll_events[i].data.fd;
                 // session 변경함.
                 client_session_t* s_ptr = find_session_by_fd(&server_ptr->session_pool, client_fd);
+                if (s_ptr == NULL)
+                {
+                    printf("%d session is invalid\n", client_fd);
+                    continue;
+                }
+                
                 int input_size = ring_read(&s_ptr->recv_bufs, client_fd);
+                if (input_size == 0) {
+                    disconnect_client(server_ptr, client_fd);
+                    continue;
+                }
                 
-                
-                // enqueue_task(&server_ptr->thread_pool, client_fd, ECHO_SERVICE_FUNC, 
-                // &server_ptr->client_sessions[client_fd].recv_bufs, input_size); 
                 enqueue_task(&server_ptr->thread_pool, client_fd, ECHO_SERVICE_FUNC, &s_ptr->recv_bufs, input_size);
             }
             // 이벤트에 입력된 fd의 send버퍼가 비어서, send가능할시 발생하는 이벤트
             else if (server_ptr->epoll_events[i].events & EPOLLOUT) {
                 send_buf_t temp_send_buf;
                 int client_fd = server_ptr->epoll_events[i].data.fd;
-                // send버퍼가 비어있으므로, send가 무조건 성공한다는게 보장되므 send수행
-                //  -> send에 실패하여 EWOULDBLOCK가 에러가 뜨는 상황을 피하는 것.
+                // send버퍼가 비어있으므로, send 성공이 보장되므로 send수행
                 client_session_t* s_ptr = find_session_by_fd(&server_ptr->session_pool, client_fd);
                 if (s_ptr == NULL)
                 {
-                    // TODO log invlidant client fd
+                    printf("%d session is invalid in send\n", client_fd);
+                    continue;
                 }
-                //if (is_empty(&server_ptr->client_sessions[client_fd].send_bufs) == true)
                 if (is_empty(&s_ptr->send_bufs) == true)
                 {
                     continue ;
                 }
-                //char* send_buf_ptr = get_rear_send_buf_ptr(&server_ptr->client_sessions[client_fd].send_bufs);
+
                 char* send_buf_ptr = get_rear_send_buf_ptr(&s_ptr->send_bufs);
                 if (send_buf_ptr == NULL)
                 {
                     continue ;
                 }
 
-                // size_t sent = send(
-                //     client_fd, 
-                //     get_rear_send_buf_ptr(&server_ptr->client_sessions[client_fd].send_bufs), 
-                //     get_rear_send_buf_size(&server_ptr->client_sessions[client_fd].send_bufs), 0);
                 size_t sent = send(client_fd, get_rear_send_buf_ptr(&s_ptr->send_bufs), get_rear_send_buf_size(&s_ptr->send_bufs), 0);
                 if (sent < 0) {
                     perror("send");
                     close(server_ptr->epoll_events[i].data.fd);
                 }
-                //dequeue(&server_ptr->client_sessions[client_fd].send_bufs, NULL);
                 dequeue(&s_ptr->send_bufs, NULL);
                 
                 // send할 때 이벤트를 변경(EPOLL_CTL_MOD)해서 보내는 이벤트로 바꿨으니
@@ -294,10 +300,14 @@ int run_server(epoll_net_core* server_ptr) {
     }
 }
 
-void down_server(epoll_net_core* server_ptr)
-{
+void down_server(epoll_net_core* server_ptr) {
+    printf("down server\n");
     server_ptr->is_run = FALSE;
+    close_all_sessions(&server_ptr->session_pool);
     close(server_ptr->listen_fd);
     close(server_ptr->epoll_fd);
     free(server_ptr->epoll_events);
+    for (int i = 0; i < WOKER_THREAD_NUM; i++) {
+       pthread_join(server_ptr->thread_pool.worker_threads[i], NULL);
+    }
 }

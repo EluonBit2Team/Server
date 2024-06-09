@@ -54,8 +54,13 @@ client_session_t* find_session_by_fd(session_pool_t* pool_ptr, int fd)
     return temp_session;
 }
 
-int release_session(session_pool_t* pool_ptr, client_session_t* session)
+int close_session(session_pool_t* pool_ptr, client_session_t* session)
 {
+    if (session == NULL)
+    {
+        printf("session is NULL\n");
+        return 0;
+    }
     if (pool_ptr->stack_top_idx >= pool_ptr->session_size)
     {
         return -1;
@@ -71,5 +76,17 @@ int release_session(session_pool_t* pool_ptr, client_session_t* session)
     {
         HASH_DEL(pool_ptr->hash_map_by_fd, session);
     }
+    close(session->fd);
     reset_session(session);
+}
+
+void close_all_sessions(session_pool_t* pool_ptr)
+{
+    for (int i = 0; i < MAX_CLIENT_NUM; i++)
+    {
+        if (pool_ptr->session_pool[i].fd != -1)
+        {
+            close(pool_ptr->session_pool[i].fd);
+        }
+    }
 }
