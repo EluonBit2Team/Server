@@ -251,9 +251,10 @@ int run_server(epoll_net_core* server_ptr) {
                     disconnect_client(server_ptr, client_fd);
                     continue;
                 }
-                ring_resize(&s_ptr->recv_bufs, get_buffer_size(&s_ptr->recv_bufs.buf[s_ptr->recv_bufs.front]));
-                
+                ring_resize(&s_ptr->recv_bufs, 100);
+                //printf("버퍼사이즈는 %d입니다\n",get_buffer_size(&s_ptr->recv_bufs.buf[s_ptr->recv_bufs.front]));      
                 enqueue_task(&server_ptr->thread_pool, client_fd, ECHO_SERVICE_FUNC, &s_ptr->recv_bufs, input_size);
+                printf("enque_data: %d\n",input_size); 
             }
             // 이벤트에 입력된 fd의 send버퍼가 비어서, send가능할시 발생하는 이벤트
             else if (server_ptr->epoll_events[i].events & EPOLLOUT) {

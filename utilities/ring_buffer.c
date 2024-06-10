@@ -1,18 +1,26 @@
 #include "ring_buffer.h"
 
 // 링 버퍼의 사이즈를 설정 하는 함수
+void ring_init(ring_buf *ring) {
+    ring->size = MIN_BUFF_SIZE;
+    ring->buf = (char *)malloc(ring->size * sizeof(char));
+    ring_clear(ring);
+}
+
 void ring_resize(ring_buf *ring, int data_size) {
-    // 새로운 사이즈에 따라 버퍼의 크기 설정
     if (data_size <= MIN_BUFF_SIZE) {
         ring->size = MIN_BUFF_SIZE;
-    } else {
+    } 
+    else {
         ring->size = MAX_BUFF_SIZE;
     }
     printf("버퍼사이즈 %d로 설정\n",ring->size);
 
-    // 새로운 크기의 메모리를 할당하고 초기화
+    if (ring->buf != NULL) {
+        free(ring->buf);
+    }
+
     ring->buf = (char *)malloc(ring->size * sizeof(char));
-    //printf("버퍼사이즈 %d로 설정\n",sizeof(ring->size));
     ring_clear(ring);
 }
 // 초기화하는 함수
@@ -73,17 +81,8 @@ bool ring_array(ring_buf *queue, char *data_ptr, int length) {
     return true;
 }
 
-// 링 버퍼의 메모리를 해제하는 함수
-void ring_free(ring_buf *ring) {
-    if (ring->buf != NULL) {
-        free(ring->buf);
-    }
-    printf("버퍼할당해제!\n");
-}
-
 // 파일 디스크립터로부터 데이터를 읽어와 큐에 저장하는 함수
 int ring_read(ring_buf *ring, int fd) {
-    // 파일 디스크립터의 플래그를 가져옴
     int flags = fcntl(fd, F_GETFL, 0);
     if (flags == -1) {
         perror("fcntl");
@@ -96,18 +95,41 @@ int ring_read(ring_buf *ring, int fd) {
         return -1;
     }
 
-    char temp_buf[ring->size];
-    int bytes_read = read(fd, temp_buf, ring->size);
-    if (bytes_read > 0) {
-        for (int i = 0; i < bytes_read; i++) {
-            ring_enque(ring, temp_buf[i]);
-        }
-    } else if (bytes_read == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+    int bytes_read = 0;
+    int tail_space = ring->size - ring->rear;
+
+    int first_read = read(fd, ring->buf + ring->rear, tail_space);
+    printf("%d\n",tail_space);
+    printf("%d\n",ring->rear);
+    printf("%d\n",first_read);
+    if (first_read > 0) {
+        bytes_read += first_read;
+        ring->rear = (ring->rear + first_read) % ring->size;
+    } else if (first_read == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
         printf("넌블로킹 소켓에서 읽을 데이터가 없습니다\n");
         return 0;
-    } else if (bytes_read == -1) {
+    } else if (first_read == -1) {
         perror("read error");
         return -1;
+    }
+
+    if (first_read == tail_space) {
+        int second_read = read(fd, ring->buf, ring->front);
+        if (second_read > 0) {
+            bytes_read += second_read;
+            ring->rear = second_read % ring->size;
+        } else if (second_read == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            printf("넌블로킹 소켓에서 읽을 데이터가 없습니다\n");
+            return bytes_read;
+        } else if (second_read == -1) {
+            perror("read error");
+            return -1;
+        }
+    }
+
+    // 링 버퍼가 가득 찬 경우 front를 이동하여 덮어쓰기 처리
+    if (ring_full(ring)) {
+        ring->front = (ring->rear + 1) % ring->size;
     }
 
     return bytes_read;

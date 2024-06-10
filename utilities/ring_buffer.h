@@ -15,11 +15,12 @@
 typedef struct ring_buf
 {
     char *buf;
-    int front; 
+    int front;
     int rear;
     int size;
 }ring_buf;
 
+void ring_init(ring_buf *ring);
 void ring_resize(ring_buf *ring, int data_size);
 void ring_clear(ring_buf *ring);
 bool ring_full(ring_buf *ring);
