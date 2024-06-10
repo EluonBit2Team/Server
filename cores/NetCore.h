@@ -50,11 +50,6 @@ typedef struct send_buf {
     char buf[BUFF_SIZE];
 } send_buf_t;
 
-typedef struct recv_buf {
-    size_t recv_data_size;
-    char buf[BUFF_SIZE];
-} recv_buf_t;
-
 struct st_client_session {
     int fd;                     // 세션 fd
     //char recv_buf[BUFF_SIZE];   // 유저별 소켓으로 받은 데이터를 저장할 버퍼(일감 가공 전 날것의 데이터)

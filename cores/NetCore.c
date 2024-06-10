@@ -231,9 +231,8 @@ int run_server(epoll_net_core* server_ptr) {
             // 유저로부터 데이터가 와서, read할 수 있는 이벤트 발생시
             else if (server_ptr->epoll_events[i].events & EPOLLIN) {
                 int client_fd = server_ptr->epoll_events[i].data.fd;
+                ring_resize(&server_ptr->client_sessions[client_fd].recv_bufs,500);
                 int input_size = ring_read(&server_ptr->client_sessions[client_fd].recv_bufs,client_fd);
-                
-                
                 enqueue_task(&server_ptr->thread_pool, client_fd, ECHO_SERVICE_FUNC, 
                 &server_ptr->client_sessions[client_fd].recv_bufs, input_size); 
             }
