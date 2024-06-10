@@ -8,6 +8,20 @@ void init_queue(void_queue_t* queue, int type_default_size)
     queue->rear_node = NULL;
 }
 
+void reset_queue(void_queue_t* queue)
+{
+    node_t* cur = queue->rear_node;
+    while (cur != NULL)
+    {
+        node_t* temp_pre = cur->pre;
+        free(cur->data);
+        free(cur);
+        cur = temp_pre;
+    }
+    queue->rear_node = NULL;
+    queue->type_default_size = 0;
+}
+
 int enqueue(void_queue_t* queue, const void* data_org)
 {
     node_t* new_node = (node_t*)malloc(sizeof(void_queue_t));
@@ -18,13 +32,13 @@ int enqueue(void_queue_t* queue, const void* data_org)
         return -1;
     }
     memcpy(new_node->data, data_org, queue->type_default_size);
-    new_node->next = NULL;
+    // new_node->next = NULL;
     
     // queue의 rear과 새 노드를 연결
-    if (queue->rear_node != NULL)
-    {
-        queue->rear_node->next = new_node;
-    }
+    // if (queue->rear_node != NULL)
+    // {
+    //     queue->rear_node->next = new_node;
+    // }
     new_node->pre = queue->rear_node;
     
     // rear노드 갱신
@@ -46,10 +60,10 @@ int dequeue(void_queue_t* queue, void* data_des)
     }
     node_t* new_r_node = queue->rear_node->pre;
     queue->rear_node = new_r_node;
-    if (new_r_node != NULL)
-    {
-        new_r_node->next = NULL;
-    }
+    // if (new_r_node != NULL)
+    // {
+    //     new_r_node->next = NULL;
+    // }
 
     free(r_node->data);
     free(r_node);
