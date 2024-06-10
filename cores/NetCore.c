@@ -233,7 +233,6 @@ int run_server(epoll_net_core* server_ptr) {
             // accept 이벤트시
             if (server_ptr->epoll_events[i].data.fd == server_ptr->listen_fd) {
                 accept_client(server_ptr);
-                printf("accept\n");
             }
             // 유저로부터 데이터가 와서, read할 수 있는 이벤트 발생시
             else if (server_ptr->epoll_events[i].events & EPOLLIN) {
