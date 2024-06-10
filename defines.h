@@ -2,3 +2,4 @@
 #define MAX_CLIENT_NUM 100
 #define EPOLL_SIZE MAX_CLIENT_NUM
 #define BUFF_SIZE 1024
+#define BUFF_SIZE_LENGTH sizeof(int)

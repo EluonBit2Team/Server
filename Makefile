@@ -15,10 +15,16 @@ CORE_OBJECT = $(CORE_SRC:.c=.o)
 MAIN = main.c
 MAIN_OBJECT = $(MAIN:.c=.o)
 
+JSON_SUBDIR = cJSON
+JSON_AR = $(JSON_SUBDIR)/cJSON.a
+
 all : $(TARGET)
 
-$(TARGET) : $(CORE_OBJECT) $(UTILS_OBJECT) $(MAIN_OBJECT)
+$(TARGET) : $(CORE_OBJECT) $(UTILS_OBJECT) $(MAIN_OBJECT) $(JSON_AR)
 	$(GCC) -o $@ -lpthread $?
+
+$(JSON_AR) : 
+	make -C $(JSON_SUBDIR)
 
 %.o : %.c
 	$(GCC) -o $@ -c $(FLAGS) $<
