@@ -57,17 +57,22 @@ int main() {
     }
 
     char message[MAX_MESSAGE_SIZE];
+    memset(message, '\0', MAX_MESSAGE_SIZE);
     while (1) {
         printf("Enter message to send (or type 'exit' to quit): ");
-        fgets(message, MAX_MESSAGE_SIZE, stdin);
-        message[strcspn(message, "\n")] = '\0'; // Remove newline character
+        fgets(message + sizeof(int), MAX_MESSAGE_SIZE - sizeof(int), stdin);
+        message[strcspn(message + sizeof(int), "\n") + sizeof(int)] = '\0'; // Remove newline character
+        int input_len = strlen(message + sizeof(int)) + sizeof(int);
 
-        if (strcmp(message, "exit") == 0) {
+        printf("meesage size: %d\n", input_len);
+        memcpy(message, &input_len, sizeof(input_len));
+        
+        if (strcmp(message + sizeof(int), "exit") == 0) {
             printf("Exiting...\n");
             break;
         }
 
-        int bytes_sent = send(sockfd, message, strlen(message), 0);
+        int bytes_sent = send(sockfd, message, input_len, 0);
         if (bytes_sent == -1) {
             perror("send");
             break;
