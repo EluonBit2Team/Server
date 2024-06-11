@@ -119,7 +119,12 @@ void set_sock_nonblocking_mode(int sockFd) {
 }
 
 // 서버 초기화
-int init_server(epoll_net_core* server_ptr) {
+bool init_server(epoll_net_core* server_ptr) {
+    if (init_mariadb(&server_ptr->db) == false)
+    {
+        printf("DB conn Failse\n");
+        return false;
+    }
     // 세션 초기화
     init_session_pool(&server_ptr->session_pool, MAX_CLIENT_NUM);
 
@@ -303,6 +308,7 @@ int run_server(epoll_net_core* server_ptr) {
 void down_server(epoll_net_core* server_ptr) {
     printf("down server\n");
     server_ptr->is_run = FALSE;
+    close_mariadb(&server_ptr->db);
     close_all_sessions(&server_ptr->session_pool);
     close(server_ptr->listen_fd);
     close(server_ptr->epoll_fd);

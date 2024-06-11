@@ -4,7 +4,7 @@ GCC = gcc
 TARGET = cJSON.a
 
 HEADER = cJSON.h
-SRC = $(UTILS:.h=.c)
+SRC = $(HEADER:.h=.c)
 OBJ = $(HEADER:.h=.o)
 
 all : $(TARGET)
