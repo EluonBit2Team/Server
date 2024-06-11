@@ -1,4 +1,4 @@
-GCC = gcc
+GCC = gcc -g
 C_FLAGS = -std=c99
 LINK_THREAD_FLAG = -lpthread
 LINK_MARIA_FLAG = -I/usr/include/mysql -L/usr/lib64/mysql -lmysqlclient

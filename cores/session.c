@@ -25,9 +25,10 @@ int init_session_pool(session_pool_t* pool_ptr, size_t session_size)
         pool_ptr->session_pool[i].session_idx = i;
         pool_ptr->session_pool[i].fd = -1;
         init_queue(&pool_ptr->session_pool[i].send_bufs, BUFF_SIZE);
-
+        ring_init(&pool_ptr->session_pool[i].recv_bufs);
         pool_ptr->session_pool_idx_stack[i] = i;
     }
+    
     pool_ptr->stack_top_idx = session_size - 1;
     pool_ptr->hash_map_by_fd = NULL;
 }
