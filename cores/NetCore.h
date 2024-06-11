@@ -1,10 +1,10 @@
 #ifndef NET_CORE_H
 #define NET_CORE_H
 
-#include <fcntl.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -15,6 +15,8 @@
 #include "../utilities/ring_buffer.h"
 #include "../utilities/void_queue.h"
 #include "../utilities/packet_converter.h"
+#include "../mariadb/mariadb.h"
+
 #include "session.h"
 
 #define TRUE 1
@@ -40,7 +42,6 @@ struct st_task {
 
 // 스레드풀.
 struct st_thread_pool {
-
     // ----- 스레드간 일감(테스크)을 동기화 처리할 큐(비슷한 무언가) -----
     pthread_mutex_t task_mutex; // 락
     pthread_cond_t task_cond;   // 대기중인 스레드를 깨워줄 컨디션벨류
@@ -67,10 +68,12 @@ typedef struct st_epoll_net_core {
     struct epoll_event* epoll_events;
 
     thread_pool_t thread_pool; // 서버에서 사용할 워커스레드
+
+    chatdb_t db; 
 } epoll_net_core;
 
 // 서버 세팅 함수들 -> main에서 호출하여 조작.
-int init_server(epoll_net_core* server_ptr) ;
+bool init_server(epoll_net_core* server_ptr) ;
 int run_server(epoll_net_core* server_ptr) ;
 void down_server(epoll_net_core* server_ptr);
 

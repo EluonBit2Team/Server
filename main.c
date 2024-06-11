@@ -1,9 +1,11 @@
 #include "cores/NetCore.h"
 
-int main()
-{
+int main() {
     epoll_net_core net;
-    init_server(&net);
+    if (init_server(&net) == false)
+    {
+        return -1;
+    }
     run_server(&net);
     down_server(&net);
 }

@@ -119,7 +119,12 @@ void set_sock_nonblocking_mode(int sockFd) {
 }
 
 // 서버 초기화
-int init_server(epoll_net_core* server_ptr) {
+bool init_server(epoll_net_core* server_ptr) {
+    if (init_mariadb(&server_ptr->db) == false)
+    {
+        printf("DB conn Failse\n");
+        return false;
+    }
     // 세션 초기화
     init_session_pool(&server_ptr->session_pool, MAX_CLIENT_NUM);
 
@@ -236,7 +241,6 @@ int run_server(epoll_net_core* server_ptr) {
             // accept 이벤트시
             if (server_ptr->epoll_events[i].data.fd == server_ptr->listen_fd) {
                 accept_client(server_ptr);
-                printf("accept\n");
             }
             // 유저로부터 데이터가 와서, read할 수 있는 이벤트 발생시
             else if (server_ptr->epoll_events[i].events & EPOLLIN) {
@@ -305,11 +309,12 @@ int run_server(epoll_net_core* server_ptr) {
 void down_server(epoll_net_core* server_ptr) {
     printf("down server\n");
     server_ptr->is_run = FALSE;
-    close_all_sessions(&server_ptr->session_pool);
     close(server_ptr->listen_fd);
     close(server_ptr->epoll_fd);
     free(server_ptr->epoll_events);
     for (int i = 0; i < WOKER_THREAD_NUM; i++) {
        pthread_join(server_ptr->thread_pool.worker_threads[i], NULL);
     }
+    close_all_sessions(&server_ptr->session_pool);
+    close_mariadb(&server_ptr->db);
 }

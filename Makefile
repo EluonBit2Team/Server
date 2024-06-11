@@ -1,5 +1,7 @@
 GCC = gcc -g
-FLAGS = -std=c99
+C_FLAGS = -std=c99
+LINK_THREAD_FLAG = -lpthread
+LINK_MARIA_FLAG = -I/usr/include/mysql -L/usr/lib64/mysql -lmysqlclient
 TARGET = epoll_server.out
 
 UTILS_DIR = utilities
@@ -18,19 +20,24 @@ MAIN_OBJECT = $(MAIN:.c=.o)
 JSON_SUBDIR = cJSON
 JSON_AR = $(JSON_SUBDIR)/cJSON.a
 
+MARIADB_DIR = mariadb
+MARIADB_HEADER = mariadb_pool.h mariadb.h
+MARIADB_SRC = $(patsubst %.h,$(MARIADB_DIR)/%.c,$(MARIADB_HEADER))
+MARIADB_OBJECT = $(MARIADB_SRC:.c=.o)
+
 all : $(TARGET)
 
-$(TARGET) : $(CORE_OBJECT) $(UTILS_OBJECT) $(MAIN_OBJECT) $(JSON_AR)
-	$(GCC) -o $@ -lpthread $?
+$(TARGET) : $(CORE_OBJECT) $(UTILS_OBJECT) $(MAIN_OBJECT) $(MARIADB_OBJECT) $(JSON_AR)
+	$(GCC) -o $@ $(LINK_THREAD_FLAG) $(LINK_MARIA_FLAG) $?
 
 $(JSON_AR) : 
 	make -C $(JSON_SUBDIR)
 
 %.o : %.c
-	$(GCC) -o $@ -c $(FLAGS) $<
+	$(GCC) -o $@ -c $(C_FLAGS) $<
 
 clean :
-	rm -rf $(CORE_OBJECT) $(UTILS_OBJECT) $(MAIN_OBJECT)
+	rm -rf $(CORE_OBJECT) $(UTILS_OBJECT) $(MARIADB_OBJECT) $(MAIN_OBJECT)
 fclean : clean
 	rm -rf $(TARGET)
 re : clean fclean all
