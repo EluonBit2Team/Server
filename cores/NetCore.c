@@ -308,12 +308,12 @@ int run_server(epoll_net_core* server_ptr) {
 void down_server(epoll_net_core* server_ptr) {
     printf("down server\n");
     server_ptr->is_run = FALSE;
-    close_mariadb(&server_ptr->db);
-    close_all_sessions(&server_ptr->session_pool);
     close(server_ptr->listen_fd);
     close(server_ptr->epoll_fd);
     free(server_ptr->epoll_events);
     for (int i = 0; i < WOKER_THREAD_NUM; i++) {
        pthread_join(server_ptr->thread_pool.worker_threads[i], NULL);
     }
+    close_all_sessions(&server_ptr->session_pool);
+    close_mariadb(&server_ptr->db);
 }

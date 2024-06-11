@@ -1,5 +1,7 @@
 GCC = gcc
-FLAGS = -std=c99
+C_FLAGS = -std=c99
+LINK_THREAD_FLAG = -lpthread
+LINK_MARIA_FLAG = -I/usr/include/mysql -L/usr/lib64/mysql -lmysqlclient
 TARGET = epoll_server.out
 
 UTILS_DIR = utilities
@@ -26,13 +28,13 @@ MARIADB_OBJECT = $(MARIADB_SRC:.c=.o)
 all : $(TARGET)
 
 $(TARGET) : $(CORE_OBJECT) $(UTILS_OBJECT) $(MAIN_OBJECT) $(MARIADB_OBJECT) $(JSON_AR)
-	$(GCC) -o $@ -lpthread -I/usr/include/mysql -L/usr/lib64/mysql -lmysqlclient $?
+	$(GCC) -o $@ $(LINK_THREAD_FLAG) $(LINK_MARIA_FLAG) $?
 
 $(JSON_AR) : 
 	make -C $(JSON_SUBDIR)
 
 %.o : %.c
-	$(GCC) -o $@ -c $(FLAGS) $<
+	$(GCC) -o $@ -c $(C_FLAGS) $<
 
 clean :
 	rm -rf $(CORE_OBJECT) $(UTILS_OBJECT) $(MARIADB_OBJECT) $(MAIN_OBJECT)
