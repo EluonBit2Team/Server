@@ -1,4 +1,4 @@
-GCC = gcc
+GCC = gcc -g
 FLAGS = -std=c99
 TARGET = epoll_server.out
 
