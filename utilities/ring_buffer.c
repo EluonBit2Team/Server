@@ -29,33 +29,33 @@ char ring_deque(ring_buf *ring)
     return data;
 }
 
-void ring_msg_size(ring_buf *ring)
+void set_ring_header(ring_buf *ring)
 {
     int tail_space = MAX_BUFF_SIZE - ring->front;
 
     if (HEADER_SIZE > tail_space) {
-        printf("2044이후\n");
-        int ms;
         memcpy(&ring->msg_size, &ring->buf[ring->front], tail_space);
         memcpy(((char*)&ring->msg_size) + tail_space, &ring->buf[0], HEADER_SIZE - tail_space);
     }
     else {
-        printf("2044이전\n");
         memcpy(&ring->msg_size,&ring->buf[ring->front],HEADER_SIZE);       
     }
 }
 
 // 링 버퍼에서 데이터를 꺼내는 함수
-bool ring_array(ring_buf *ring, char *data_ptr, int length) {
-
-    if (length <= 0 || ring_empty(ring)) {
-        printf("empty\n");
+bool ring_array(ring_buf *ring, char *data_ptr) {
+    if (ring_empty(ring) || ring->msg_size < 0) {
         return false; 
     }
- 
-    ring_msg_size(ring);
+
+    set_ring_header(ring);
+    if (ring->msg_size > get_ring_size(ring))
+    {
+        return false;
+    }
+
     printf("data: ");
-    for (int i = 0; i < length; i++) {
+    for (int i = 0; i < ring->msg_size; i++) {
         if (ring_empty(ring)) {
             return false; 
         }
@@ -66,6 +66,19 @@ bool ring_array(ring_buf *ring, char *data_ptr, int length) {
     return true;
 }
 
+int get_ring_size(ring_buf *ring) {
+    int data_size;
+    if (ring->rear > ring->front)
+    {
+        data_size = ring->rear - ring->front;
+    }
+    else{
+        data_size = MAX_BUFF_SIZE - ring->front;
+        data_size += ring->rear;
+    }
+
+    return data_size;
+}
 // 파일 디스크립터로부터 데이터를 읽어와 버퍼에 저장하는 함수
 int ring_read(ring_buf *ring, int fd) {
     int flags = fcntl(fd, F_GETFL, 0);
@@ -74,42 +87,69 @@ int ring_read(ring_buf *ring, int fd) {
         return -1;
     }
 
-    // 넌블로킹 모드인지 확인
     if (!(flags & O_NONBLOCK)) {
         printf("파일 디스크립터가 넌블로킹 모드가 아닙니다\n");
         return -1;
     }
 
     int bytes_read = 0;
+    int ctrl = 0;
+    int write_pos = 0;
+    int read_len = 0;
     int tail_space = MAX_BUFF_SIZE - ring->rear;
-    printf("1. %d\n",ring->rear);
-    int first_read = read(fd, ring->buf + ring->rear, tail_space);
-    printf("2. %d\n",ring->rear);
-    if (first_read > 0) {
-        bytes_read += first_read;
-        ring->rear = (ring->rear + first_read) % MAX_BUFF_SIZE;
-        printf("3. %d\n",ring->rear);
-    } else if (first_read == -1) {
-        perror("read error");
-        return -1;
+    int avaliable_space = MAX_BUFF_SIZE - get_ring_size(ring);
+    if (tail_space > avaliable_space)
+    {
+        tail_space = avaliable_space;
     }
-
-    if (first_read == tail_space) {
-        printf("4. %d\n",ring->rear);
-        int second_read = read(fd, ring->buf, ring->front);
-        printf("5. %d\n",ring->rear);
-        if (second_read > 0) {
-            bytes_read += second_read;
-            ring->rear = second_read % MAX_BUFF_SIZE;
-            printf("6. %d\n",ring->rear);
-            if (ring_full(ring)) {
-                ring->front = (ring->rear + 1) % MAX_BUFF_SIZE;
-            }
-        }else if (second_read == -1) {
+    // 1번도는거
+    if (ring->front > ring-> rear) {
+        printf("1.\n");
+        ctrl = 1;
+        write_pos = (void*)ring->buf + ring->rear;
+        read_len = get_ring_size(ring);
+    }
+    //2번도는거 
+    else if (ring->rear > ring-> front) {
+        printf("2.\n");
+        ctrl = 2;
+        write_pos = (void*)ring->buf + ring->rear;
+        read_len = MAX_BUFF_SIZE - ring->rear;
+    }
+    else if (ring->front == ring->rear) {
+        printf("3.\n");
+        ring->front = 0;
+        ring->rear = 0;
+        ctrl = 1;
+        write_pos = (void*)ring->buf;
+        read_len = MAX_BUFF_SIZE;
+    }
+    for (int i=0;i<ctrl;i++)
+    {
+        // TODO: int강제형변환 수정
+        printf("4.\n");
+        int data_read = (int)recv(fd, write_pos, read_len, 0);
+        printf("w_pos: %d, r_len: %d\n",write_pos, read_len);
+        printf("1.\n");
+        if (data_read > 0) {
+            printf("5.\n");
+            bytes_read += data_read;
+            printf("6.\n");
+            ring->rear = (ring->rear + data_read) % MAX_BUFF_SIZE;
+            printf("7.\n");
+        } else if (data_read == -1) {
             perror("read error");
             return -1;
         }
+        if(ctrl == 2) {
+            write_pos = (void*)ring->buf;
+            read_len = ring->front;
+        }
+        printf("\n");
     }
+    
+    printf("8.\n");
     printf("bytes_read : %d\n",bytes_read);
+    set_ring_header(ring);
     return bytes_read;
 }

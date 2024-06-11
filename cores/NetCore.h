@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <sys/epoll.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -79,7 +80,7 @@ void init_worker_thread(epoll_net_core* server_ptr, thread_pool_t* thread_pool_t
 // 워커스레드가 무한반 복할 루틴.
 void* work_routine(void *ptr);
 // (워커스레드들이)할 일의 정보를 담으면, 동기화 기법(뮤텍스)을 고려해서 담는 함수.
-void enqueue_task(thread_pool_t* thread_pool, int req_client_fd, int req_service_id, ring_buf* org_buf, int org_data_size);
+bool enqueue_task(thread_pool_t* thread_pool, int req_client_fd, int req_service_id, ring_buf* org_buf, int org_data_size);
 // 워커스레드에서 할 일을 꺼낼때(des에 복사) 쓰는 함수.
 int deqeueu_and_get_task(thread_pool_t* thread_pool, task* des);
 // accept시 동작 처리 함수
