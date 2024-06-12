@@ -10,7 +10,9 @@ bool enqueue_task(thread_pool_t* thread_pool, int req_client_fd, ring_buf *org_b
     }
     new_task.req_client_fd = req_client_fd;
     new_task.task_data_len = org_buf->msg_size;
+    write(STDOUT_FILENO, new_task.buf, 10); write(STDOUT_FILENO, "\n", 1);
 
+    printf("dequeue\n");
     pthread_mutex_lock(&thread_pool->task_mutex);
     enqueue(&thread_pool->task_queue, (void*)&new_task);
     pthread_cond_signal(&thread_pool->task_cond);
@@ -47,6 +49,7 @@ void* work_routine(void *ptr)
         task temp_task;
         // 할 일을 temp_task에 복사하고
         // 미리 설정해둔 서비스 배열로, 적합한 함수 포인터를 호출하여 처리
+        printf("work_routine dequeue\n");
         if (deqeueu_and_get_task(thread_pool, &temp_task) == TRUE)
         {
             int type = type_finder(temp_task.buf + HEADER_SIZE);
@@ -283,7 +286,6 @@ int run_server(epoll_net_core* server_ptr) {
                     disconnect_client(server_ptr, client_fd);
                     continue;
                 }
-                sleep(5);
                 while(1) {
                     if (enqueue_task(&server_ptr->thread_pool, client_fd, &s_ptr->recv_bufs, input_size) == false)
                     {

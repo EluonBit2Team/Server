@@ -48,6 +48,7 @@ bool ring_array(ring_buf *ring, char *data_ptr) {
         return false; 
     }
 
+    printf("ring_array-header: %d\n", ring->msg_size);
     set_ring_header(ring);
     if (ring->msg_size > get_ring_size(ring))
     {
