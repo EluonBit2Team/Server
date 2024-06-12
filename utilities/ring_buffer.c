@@ -91,7 +91,7 @@ int ring_read(ring_buf *ring, int fd) {
 
     int bytes_read = 0;
     int ctrl = 0;
-    int write_pos = 0;
+    char* write_pos = 0;
     int read_len = 0;
     int tail_space = MAX_BUFF_SIZE - ring->rear;
     int avaliable_space = MAX_BUFF_SIZE - get_ring_size(ring);
@@ -102,20 +102,20 @@ int ring_read(ring_buf *ring, int fd) {
     // 1번도는거
     if (ring->front > ring-> rear) {
         ctrl = 1;
-        write_pos = (void*)ring->buf + ring->rear;
+        write_pos = ring->buf + ring->rear;
         read_len = get_ring_size(ring);
     }
     //2번도는거 
     else if (ring->rear > ring-> front) {
         ctrl = 2;
-        write_pos = (void*)ring->buf + ring->rear;
+        write_pos = ring->buf + ring->rear;
         read_len = MAX_BUFF_SIZE - ring->rear;
     }
     else if (ring->front == ring->rear) {
         ring->front = 0;
         ring->rear = 0;
         ctrl = 1;
-        write_pos = (void*)ring->buf;
+        write_pos = ring->buf;
         read_len = MAX_BUFF_SIZE;
     }
     for (int i=0;i<ctrl;i++)
@@ -130,7 +130,7 @@ int ring_read(ring_buf *ring, int fd) {
             return -1;
         }
         if(ctrl == 2) {
-            write_pos = (void*)ring->buf;
+            write_pos = ring->buf;
             read_len = ring->front;
         }
     }
