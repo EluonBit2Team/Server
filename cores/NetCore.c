@@ -1,14 +1,13 @@
 #include "NetCore.h"
 
 // (워커스레드들이)할 일의 정보를 담으면, 동기화 기법(뮤텍스)을 고려해서 담는 함수.
-bool enqueue_task(thread_pool_t* thread_pool, int req_client_fd, int req_service_id, ring_buf *org_buf, int org_data_size)
+bool enqueue_task(thread_pool_t* thread_pool, int req_client_fd, ring_buf *org_buf, int org_data_size)
 {
     task new_task;
     if (ring_array(org_buf, new_task.buf) == false)
     {
         return false;
     }
-    new_task.service_id = req_service_id;
     new_task.req_client_fd = req_client_fd;
     new_task.task_data_len = org_buf->msg_size;
 
@@ -50,7 +49,12 @@ void* work_routine(void *ptr)
         // 미리 설정해둔 서비스 배열로, 적합한 함수 포인터를 호출하여 처리
         if (deqeueu_and_get_task(thread_pool, &temp_task) == TRUE)
         {
-            server_ptr->function_array[temp_task.service_id](server_ptr, &temp_task);
+            int type = type_finder(temp_task.buf + HEADER_SIZE);
+            if (type < 0)
+            {
+                printf("invalid type\n");
+            }
+            server_ptr->function_array[type](server_ptr, &temp_task);
         }
     }
     return NULL;
@@ -117,6 +121,21 @@ void echo_service(epoll_net_core* server_ptr, task* task) {
     }
 }
 
+void login_service(epoll_net_core* server_ptr, task* task) {
+    cJSON* json_ptr = get_parsed_json(task->buf);
+    cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "name");
+    if (cJSON_IsString(name_ptr) == true)
+    {
+        printf("name: %s\n", name_ptr->valuestring);
+    }
+    cJSON* pw_ptr = cJSON_GetObjectItem(json_ptr, "pw");
+    if (cJSON_IsString(name_ptr) == true)
+    {
+        printf("pw: %s\n", name_ptr->valuestring);
+    }
+    cJSON_Delete(json_ptr);
+}
+
 void set_sock_nonblocking_mode(int sockFd) {
     int flag = fcntl(sockFd, F_GETFL, 0);
     fcntl(sockFd, F_SETFL, flag | O_NONBLOCK);
@@ -144,6 +163,7 @@ bool init_server(epoll_net_core* server_ptr) {
         server_ptr->function_array[i] = NULL;
     }
     server_ptr->function_array[ECHO_SERVICE_FUNC] = echo_service;
+    server_ptr->function_array[LOGIN_SERV_FUNC] = login_service;
 
     // 리슨소켓 생성
     server_ptr->listen_fd = socket(PF_INET, SOCK_STREAM, 0);
@@ -264,7 +284,7 @@ int run_server(epoll_net_core* server_ptr) {
                 }
                 sleep(5);
                 while(1) {
-                    if (enqueue_task(&server_ptr->thread_pool, client_fd, ECHO_SERVICE_FUNC, &s_ptr->recv_bufs, input_size) == false)
+                    if (enqueue_task(&server_ptr->thread_pool, client_fd, &s_ptr->recv_bufs, input_size) == false)
                     {
                         break;
                     }

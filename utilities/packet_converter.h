@@ -6,4 +6,5 @@
 
 int get_buffer_size(char* buf);
 cJSON* get_parsed_json(char* buf);
+int type_finder(char *buf);
 #endif

@@ -17,6 +17,7 @@
 #include "../utilities/void_queue.h"
 #include "../utilities/packet_converter.h"
 #include "../mariadb/mariadb.h"
+#include "../defines.h"
 
 #include "session.h"
 
@@ -25,17 +26,18 @@
 #define PORT 3334
 #define MAX_CLIENT_NUM 100
 #define EPOLL_SIZE MAX_CLIENT_NUM
-#define BUFF_SIZE 1024
 
 #define SERVICE_FUNC_NUM 10
 #define ECHO_SERVICE_FUNC 0
+#define SIGNUP_SERV_FUNC 1
+#define LOGIN_SERV_FUNC 2
 
 #define WOKER_THREAD_NUM 4
 #define MAX_TASK_SIZE 100
 
 // 워커스레드가 처리할 일감을 포장한 구조체
 struct st_task {
-    int service_id;     // 일감의 종류(에코인지 뭔지...)
+    //int service_id;     // 일감의 종류(에코인지 뭔지...)
     int req_client_fd;  // 일감 요청한 클라이언트 fd
     char buf[BUFF_SIZE];// 처리할 일감
     int task_data_len;  // 처리할 일감이 어느정도 크기인지
@@ -83,7 +85,7 @@ void init_worker_thread(epoll_net_core* server_ptr, thread_pool_t* thread_pool_t
 // 워커스레드가 무한반 복할 루틴.
 void* work_routine(void *ptr);
 // (워커스레드들이)할 일의 정보를 담으면, 동기화 기법(뮤텍스)을 고려해서 담는 함수.
-bool enqueue_task(thread_pool_t* thread_pool, int req_client_fd, int req_service_id, ring_buf* org_buf, int org_data_size);
+bool enqueue_task(thread_pool_t* thread_pool, int req_client_fd, ring_buf* org_buf, int org_data_size);
 // 워커스레드에서 할 일을 꺼낼때(des에 복사) 쓰는 함수.
 int deqeueu_and_get_task(thread_pool_t* thread_pool, task* des);
 // accept시 동작 처리 함수

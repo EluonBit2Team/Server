@@ -9,6 +9,8 @@
         "netcore.h": "c",
         "fcntl.h": "c",
         "mariadb.h": "c",
-        "mariadb_pool.h": "c"
+        "mariadb_pool.h": "c",
+        "packet_converter.h": "c",
+        "defines.h": "c"
     }
 }
