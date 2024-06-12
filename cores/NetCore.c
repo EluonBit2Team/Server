@@ -102,23 +102,33 @@ void reserve_send(void_queue_t* vq, char* send_org, size_t send_size)
 // ✨ 서비스 함수. 이런 형태의 함수들을 추가하여 서비스 추가. ✨
 void echo_service(epoll_net_core* server_ptr, task* task) {
     // 보낸사람 이외에 전부 출력.
-    for (int i = 0; i < MAX_CLIENT_NUM; i++)
-    {
-        client_session_t* now_session = &server_ptr->session_pool.session_pool[i];
-        if (now_session->fd == -1 || task->req_client_fd == now_session->fd)
-        {
-            continue ;
-        }
-        reserve_send(&now_session->send_bufs, task->buf, task->task_data_len);
+    // for (int i = 0; i < MAX_CLIENT_NUM; i++)
+    // {
+    //     client_session_t* now_session = &server_ptr->session_pool.session_pool[i];
+    //     if (now_session->fd == -1 || task->req_client_fd == now_session->fd)
+    //     {
+    //         continue ;
+    //     }
+    //     reserve_send(&now_session->send_bufs, task->buf, task->task_data_len);
 
-        // send 이벤트 예약
-        struct epoll_event temp_event;
-        temp_event.events = EPOLLOUT | EPOLLET;
-        temp_event.data.fd = now_session->fd;
-        if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_event) == -1) {
-            perror("epoll_ctl: add");
-            close(task->req_client_fd);
-        }
+    //     // send 이벤트 예약
+    //     struct epoll_event temp_event;
+    //     temp_event.events = EPOLLOUT | EPOLLET;
+    //     temp_event.data.fd = now_session->fd;
+    //     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_event) == -1) {
+    //         perror("epoll_ctl: add");
+    //         close(task->req_client_fd);
+    //     }
+    // }
+    client_session_t* now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    reserve_send(&now_session->send_bufs, task->buf, task->task_data_len);
+    
+    struct epoll_event temp_event;
+    temp_event.events = EPOLLOUT | EPOLLET;
+    temp_event.data.fd = now_session->fd;
+    if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_event) == -1) {
+        perror("epoll_ctl: add");
+        close(task->req_client_fd);
     }
 }
 
