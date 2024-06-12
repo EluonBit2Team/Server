@@ -126,9 +126,12 @@ int ring_read(ring_buf *ring, int fd) {
         if (data_read > 0) {
             bytes_read += data_read;
             ring->rear = (ring->rear + data_read) % MAX_BUFF_SIZE;
-        } else if (data_read == -1) {
+        } else if (data_read < 0) {
             perror("read error");
             return -1;
+        }
+        else {
+            return 0;
         }
         if(ctrl == 2) {
             write_pos = ring->buf;
