@@ -220,10 +220,12 @@ bool init_server(epoll_net_core* server_ptr) {
     if (server_ptr->listen_fd < 0)
     {
         printf("listen sock assignment error: %d\n", errno);
+        return false;
     }
     int opt = 1;
     setsockopt(server_ptr->listen_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     set_sock_nonblocking_mode(server_ptr->listen_fd);
+    return true;
 }
 
 // accept시 동작 처리 함수
