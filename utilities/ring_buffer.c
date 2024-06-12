@@ -54,12 +54,15 @@ bool ring_array(ring_buf *ring, char *data_ptr) {
         return false;
     }
 
+    printf("data: ");
     for (int i = 0; i < ring->msg_size; i++) {
         if (ring_empty(ring)) {
             return false; 
         }
         data_ptr[i] = ring_deque(ring);
+        printf("%c",data_ptr[i]);
     }
+    printf("\nmsg_size %d\n",ring->msg_size);
     return true;
 }
 
@@ -121,7 +124,7 @@ int ring_read(ring_buf *ring, int fd) {
     for (int i=0;i<ctrl;i++)
     {
         // TODO: int강제형변환 수정
-        int data_read = (int)recv(fd, write_pos, read_len, 0);
+        ssize_t data_read = (int)recv(fd, write_pos, read_len, 0);
         if (data_read > 0) {
             bytes_read += data_read;
             ring->rear = (ring->rear + data_read) % MAX_BUFF_SIZE;
@@ -133,8 +136,10 @@ int ring_read(ring_buf *ring, int fd) {
             write_pos = (void*)ring->buf;
             read_len = ring->front;
         }
+        printf("\n");
     }
     
+    printf("bytes_read : %d\n",bytes_read);
     set_ring_header(ring);
     return bytes_read;
 }

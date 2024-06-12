@@ -3,8 +3,9 @@
         {
             "name": "Linux",
             "includePath": [
-                "/usr/include/**",
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "/usr/include",
+                "/usr/include/mysql" // MySQL 헤더 파일 경로 추가
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
