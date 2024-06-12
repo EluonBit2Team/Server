@@ -54,15 +54,12 @@ bool ring_array(ring_buf *ring, char *data_ptr) {
         return false;
     }
 
-    printf("data: ");
     for (int i = 0; i < ring->msg_size; i++) {
         if (ring_empty(ring)) {
             return false; 
         }
         data_ptr[i] = ring_deque(ring);
-        printf("%c",data_ptr[i]);
     }
-    printf("\nmsg_size %d\n",ring->msg_size);
     return true;
 }
 
@@ -104,20 +101,17 @@ int ring_read(ring_buf *ring, int fd) {
     }
     // 1번도는거
     if (ring->front > ring-> rear) {
-        printf("1.\n");
         ctrl = 1;
         write_pos = (void*)ring->buf + ring->rear;
         read_len = get_ring_size(ring);
     }
     //2번도는거 
     else if (ring->rear > ring-> front) {
-        printf("2.\n");
         ctrl = 2;
         write_pos = (void*)ring->buf + ring->rear;
         read_len = MAX_BUFF_SIZE - ring->rear;
     }
     else if (ring->front == ring->rear) {
-        printf("3.\n");
         ring->front = 0;
         ring->rear = 0;
         ctrl = 1;
@@ -127,16 +121,10 @@ int ring_read(ring_buf *ring, int fd) {
     for (int i=0;i<ctrl;i++)
     {
         // TODO: int강제형변환 수정
-        printf("4.\n");
         int data_read = (int)recv(fd, write_pos, read_len, 0);
-        printf("w_pos: %d, r_len: %d\n",write_pos, read_len);
-        printf("1.\n");
         if (data_read > 0) {
-            printf("5.\n");
             bytes_read += data_read;
-            printf("6.\n");
             ring->rear = (ring->rear + data_read) % MAX_BUFF_SIZE;
-            printf("7.\n");
         } else if (data_read == -1) {
             perror("read error");
             return -1;
@@ -145,11 +133,8 @@ int ring_read(ring_buf *ring, int fd) {
             write_pos = (void*)ring->buf;
             read_len = ring->front;
         }
-        printf("\n");
     }
     
-    printf("8.\n");
-    printf("bytes_read : %d\n",bytes_read);
     set_ring_header(ring);
     return bytes_read;
 }
