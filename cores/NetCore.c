@@ -1,18 +1,22 @@
 #include "NetCore.h"
 
 // (워커스레드들이)할 일의 정보를 담으면, 동기화 기법(뮤텍스)을 고려해서 담는 함수.
-void enqueue_task(thread_pool_t* thread_pool, int req_client_fd, int req_service_id, ring_buf *org_buf, int org_data_size)
+bool enqueue_task(thread_pool_t* thread_pool, int req_client_fd, int req_service_id, ring_buf *org_buf, int org_data_size)
 {
     task new_task;
+    if (ring_array(org_buf, new_task.buf) == false)
+    {
+        return false;
+    }
     new_task.service_id = req_service_id;
     new_task.req_client_fd = req_client_fd;
-    ring_array(org_buf,new_task.buf,org_data_size);
-    new_task.task_data_len = org_data_size;
+    new_task.task_data_len = org_buf->msg_size;
 
     pthread_mutex_lock(&thread_pool->task_mutex);
     enqueue(&thread_pool->task_queue, (void*)&new_task);
     pthread_cond_signal(&thread_pool->task_cond);
     pthread_mutex_unlock(&thread_pool->task_mutex);
+    return true;
 }
 
 // 워커스레드에서 할 일을 꺼낼때(des에 복사) 쓰는 함수.
@@ -257,8 +261,14 @@ int run_server(epoll_net_core* server_ptr) {
                 if (input_size == 0) {
                     disconnect_client(server_ptr, client_fd);
                     continue;
-                }     
-                enqueue_task(&server_ptr->thread_pool, client_fd, ECHO_SERVICE_FUNC, &s_ptr->recv_bufs, input_size);
+                }
+                sleep(5);
+                while(1) {
+                    if (enqueue_task(&server_ptr->thread_pool, client_fd, ECHO_SERVICE_FUNC, &s_ptr->recv_bufs, input_size) == false)
+                    {
+                        break;
+                    }
+                }
             }
             // 이벤트에 입력된 fd의 send버퍼가 비어서, send가능할시 발생하는 이벤트
             else if (server_ptr->epoll_events[i].events & EPOLLOUT) {
