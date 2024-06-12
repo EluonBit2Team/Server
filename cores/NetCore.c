@@ -10,7 +10,6 @@ bool enqueue_task(thread_pool_t* thread_pool, int req_client_fd, ring_buf *org_b
     }
     new_task.req_client_fd = req_client_fd;
     new_task.task_data_len = org_buf->msg_size;
-    write(STDOUT_FILENO, new_task.buf, 10); write(STDOUT_FILENO, "\n", 1);
 
     pthread_mutex_lock(&thread_pool->task_mutex);
     enqueue(&thread_pool->task_queue, (void*)&new_task);
@@ -123,19 +122,69 @@ void echo_service(epoll_net_core* server_ptr, task* task) {
 }
 
 void login_service(epoll_net_core* server_ptr, task* task) {
-    printf("login_service\n");
     cJSON* json_ptr = get_parsed_json(task->buf);
-    cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "id");
+    cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "name");
     if (cJSON_IsString(name_ptr) == true)
     {
         printf("name: %s\n", name_ptr->valuestring);
+    }
+    cJSON* pw_ptr = cJSON_GetObjectItem(json_ptr, "pw");
+    if (cJSON_IsString(name_ptr) == true)
+    {
+        printf("pw: %s\n", name_ptr->valuestring);
+    }
+    cJSON_Delete(json_ptr);
+}
+
+void signup_service(epoll_net_core* server_ptr, task* task) {
+    conn_t* conn = get_conn(server_ptr->db.pools[USER_SETTING_D_IDX].pool);
+    cJSON* json_ptr = get_parsed_json(task->buf);
+    cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "name");
+    if (cJSON_IsString(name_ptr) == true)
+    {
+        printf("name: %s\n", name_ptr->valuestring);
+    }
+    cJSON* id_ptr = cJSON_GetObjectItem(json_ptr, "id");
+    if (cJSON_IsString(id_ptr) == true)
+    {
+        printf("id: %s\n", id_ptr->valuestring);
     }
     cJSON* pw_ptr = cJSON_GetObjectItem(json_ptr, "pw");
     if (cJSON_IsString(pw_ptr) == true)
     {
         printf("pw: %s\n", pw_ptr->valuestring);
     }
+    cJSON* phone_ptr = cJSON_GetObjectItem(json_ptr, "phone");
+    if (cJSON_IsString(phone_ptr) == true)
+    {
+        printf("phone: %s\n", phone_ptr->valuestring);
+    }
+    cJSON* email_ptr = cJSON_GetObjectItem(json_ptr, "email");
+    if (cJSON_IsString(email_ptr) == true)
+    {
+        printf("email: %s\n", email_ptr->valuestring);
+    }
+    cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
+    if (cJSON_IsString(dept_ptr) == true)
+    {
+        printf("dept: %s\n", dept_ptr->valuestring);
+    }
+    cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
+    if (cJSON_IsString(pos_ptr) == true)
+    {
+        printf("pos: %s\n", pos_ptr->valuestring);
+    }
     cJSON_Delete(json_ptr);
+    
+    if (mysql_query(conn,("INSERT INTO sign_req (login_id, password, name, phone, email, deptno, position) VALUES "
+                            "('%s','%s','%s','%s','%s','%s','%s')",
+                            id_ptr, pw_ptr, name_ptr, phone_ptr, email_ptr, dept_ptr, pos_ptr))) {
+        fprintf(stderr, "INSERT failed\n");
+        mysql_close(conn);
+        return 1;
+    }
+
+    release_conn(server_ptr->db.pools[USER_SETTING_D_IDX].pool, conn);
 }
 
 void set_sock_nonblocking_mode(int sockFd) {
@@ -166,18 +215,17 @@ bool init_server(epoll_net_core* server_ptr) {
     }
     server_ptr->function_array[ECHO_SERVICE_FUNC] = echo_service;
     server_ptr->function_array[LOGIN_SERV_FUNC] = login_service;
+    server_ptr->function_array[SIGNUP_SERV_FUNC] = signup_service;
 
     // 리슨소켓 생성
     server_ptr->listen_fd = socket(PF_INET, SOCK_STREAM, 0);
     if (server_ptr->listen_fd < 0)
     {
         printf("listen sock assignment error: %d\n", errno);
-
     }
     int opt = 1;
     setsockopt(server_ptr->listen_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     set_sock_nonblocking_mode(server_ptr->listen_fd);
-    return true;
 }
 
 // accept시 동작 처리 함수
@@ -285,6 +333,7 @@ int run_server(epoll_net_core* server_ptr) {
                     disconnect_client(server_ptr, client_fd);
                     continue;
                 }
+                sleep(5);
                 while(1) {
                     if (enqueue_task(&server_ptr->thread_pool, client_fd, &s_ptr->recv_bufs, input_size) == false)
                     {
