@@ -55,6 +55,7 @@ void* work_routine(void *ptr)
             {
                 printf("invalid type\n");
             }
+            printf("type num:%d\n", type);
             server_ptr->function_array[type](server_ptr, &temp_task);
         }
     }
@@ -120,7 +121,13 @@ void echo_service(epoll_net_core* server_ptr, task* task) {
     //         close(task->req_client_fd);
     //     }
     // }
+    printf("echo_service\n");
     client_session_t* now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL)
+    {
+        printf("invalid fd:%d", task->req_client_fd);
+        return ;
+    }
     reserve_send(&now_session->send_bufs, task->buf, task->task_data_len);
     
     struct epoll_event temp_event;
