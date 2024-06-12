@@ -20,16 +20,16 @@ bool enqueue_task(thread_pool_t* thread_pool, int req_client_fd, ring_buf *org_b
 }
 
 // 워커스레드에서 할 일을 꺼낼때(des에 복사) 쓰는 함수.
-int deqeueu_and_get_task(thread_pool_t* thread_pool, task* des)
+bool deqeueu_and_get_task(thread_pool_t* thread_pool, task* des)
 {
     pthread_mutex_lock(&thread_pool->task_mutex);
     if (dequeue(&thread_pool->task_queue, (void*)des) < 0)
     {
         pthread_mutex_unlock(&thread_pool->task_mutex);
-        return FALSE;
+        return false;
     }
     pthread_mutex_unlock(&thread_pool->task_mutex);
-    return TRUE;
+    return true;
 }
 
 // 워커스레드가 무한반 복할 루틴.
@@ -48,7 +48,7 @@ void* work_routine(void *ptr)
         task temp_task;
         // 할 일을 temp_task에 복사하고
         // 미리 설정해둔 서비스 배열로, 적합한 함수 포인터를 호출하여 처리
-        if (deqeueu_and_get_task(thread_pool, &temp_task) == TRUE)
+        if (deqeueu_and_get_task(thread_pool, &temp_task) == true)
         {
             int type = type_finder(temp_task.buf + HEADER_SIZE);
             if (type < 0)
@@ -102,25 +102,6 @@ void reserve_send(void_queue_t* vq, char* send_org, size_t send_size)
 
 // ✨ 서비스 함수. 이런 형태의 함수들을 추가하여 서비스 추가. ✨
 void echo_service(epoll_net_core* server_ptr, task* task) {
-    // 보낸사람 이외에 전부 출력.
-    // for (int i = 0; i < MAX_CLIENT_NUM; i++)
-    // {
-    //     client_session_t* now_session = &server_ptr->session_pool.session_pool[i];
-    //     if (now_session->fd == -1 || task->req_client_fd == now_session->fd)
-    //     {
-    //         continue ;
-    //     }
-    //     reserve_send(&now_session->send_bufs, task->buf, task->task_data_len);
-
-    //     // send 이벤트 예약
-    //     struct epoll_event temp_event;
-    //     temp_event.events = EPOLLOUT | EPOLLET;
-    //     temp_event.data.fd = now_session->fd;
-    //     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_event) == -1) {
-    //         perror("epoll_ctl: add");
-    //         close(task->req_client_fd);
-    //     }
-    // }
     printf("echo_service\n");
     client_session_t* now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
     if (now_session == NULL)
@@ -171,7 +152,7 @@ bool init_server(epoll_net_core* server_ptr) {
     init_session_pool(&server_ptr->session_pool, MAX_CLIENT_NUM);
 
     // 서버 주소 설정
-    server_ptr->is_run = FALSE;
+    server_ptr->is_run = false;
     server_ptr->listen_addr.sin_family = AF_INET;
     server_ptr->listen_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     server_ptr->listen_addr.sin_port = htons(PORT);
@@ -239,7 +220,7 @@ void disconnect_client(epoll_net_core* server_ptr, int client_fd)
 }
 
 int run_server(epoll_net_core* server_ptr) {
-    server_ptr->is_run = TRUE;
+    server_ptr->is_run = true;
 
     struct epoll_event temp_epoll_event;
     server_ptr->epoll_fd = epoll_create1(0);
@@ -273,7 +254,7 @@ int run_server(epoll_net_core* server_ptr) {
     }
 
     // 메인 스레드(main함수에서 run_server()까지 호출한 메인 흐름)가 epoll_wait로 io완료 대기
-    while (server_ptr->is_run == TRUE) {
+    while (server_ptr->is_run == true) {
         int occured_event_cnt = epoll_wait(
             server_ptr->epoll_fd, server_ptr->epoll_events, 
             EPOLL_SIZE, -1);
@@ -357,7 +338,7 @@ int run_server(epoll_net_core* server_ptr) {
 
 void down_server(epoll_net_core* server_ptr) {
     printf("down server\n");
-    server_ptr->is_run = FALSE;
+    server_ptr->is_run = false;
     close(server_ptr->listen_fd);
     close(server_ptr->epoll_fd);
     free(server_ptr->epoll_events);

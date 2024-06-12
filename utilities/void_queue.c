@@ -47,6 +47,7 @@ int dequeue(void_queue_t* queue, void* data_des) {
 
     free(r_node->data);
     free(r_node);
+    return 0;
 }
 
 void* get_rear_data(void_queue_t* queue) {
