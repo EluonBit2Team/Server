@@ -122,15 +122,15 @@ void echo_service(epoll_net_core* server_ptr, task* task) {
 void login_service(epoll_net_core* server_ptr, task* task) {
     printf("login_service\n");
     cJSON* json_ptr = get_parsed_json(task->buf);
-    cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "name");
+    cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "id");
     if (cJSON_IsString(name_ptr) == true)
     {
         printf("name: %s\n", name_ptr->valuestring);
     }
     cJSON* pw_ptr = cJSON_GetObjectItem(json_ptr, "pw");
-    if (cJSON_IsString(name_ptr) == true)
+    if (cJSON_IsString(pw_ptr) == true)
     {
-        printf("pw: %s\n", name_ptr->valuestring);
+        printf("pw: %s\n", pw_ptr->valuestring);
     }
     cJSON_Delete(json_ptr);
 }
@@ -319,7 +319,10 @@ int run_server(epoll_net_core* server_ptr) {
                     disconnect_client(server_ptr, client_fd);
                     continue;
                 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> gyeon
                 while(1) {
                     if (enqueue_task(&server_ptr->thread_pool, client_fd, &s_ptr->recv_bufs, input_size) == false)
                     {
@@ -350,6 +353,7 @@ int run_server(epoll_net_core* server_ptr) {
                 }
 
                 size_t sent = send(client_fd, get_rear_send_buf_ptr(&s_ptr->send_bufs), get_rear_send_buf_size(&s_ptr->send_bufs), 0);
+                write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, &s_ptr->send_bufs, 10); write(STDOUT_FILENO, "\n", 1);
                 if (sent < 0) {
                     perror("send");
                     close(server_ptr->epoll_events[i].data.fd);
