@@ -34,16 +34,15 @@ int main() {
         finish_with_error(con);
     }
 
-    // if (mysql_query(con, "SELECT * FROM your_table")) {
+    // if (mysql_query(con, "SELECT * FROM signin_req")) {
     //     finish_with_error(con);
     // }
 
-    char query[1024];
-    snprintf(query, sizeof(query), "INSERT INTO sign_req (login_id, password, name, phone, email, deptno, position) VALUES ('1','2','3','4','5','6','7')");
-
+    // char query[1024];
+    // snprintf(query, sizeof(query), "INSERT INTO sign_req(login_id, password, name, phone, email, deptno, position) VALUES('1','2','3','4','5','6','7')");
     
-    if (mysql_query(con,query)) {
-        fprintf(stderr, "INSERT failed\n");
+    if (mysql_query(con,"INSERT INTO signin_req(login_id, password, name, phone, email, deptno, position) VALUES('1','2','3','4','5','6','7')")) {
+        fprintf(stderr, "INSERT failed: %s\n", mysql_error(con));
         mysql_close(con);
     }
 
@@ -57,7 +56,7 @@ int main() {
 
     MYSQL_ROW row;
 
-    // C99 표준 사용하여 for 루프 내 변수 선언
+    // //C99 표준 사용하여 for 루프 내 변수 선언
     // while ((row = mysql_fetch_row(result))) {
     //     for (int i = 0; i < num_fields; i++) {
     //         printf("%s ", row[i] ? row[i] : "NULL");
