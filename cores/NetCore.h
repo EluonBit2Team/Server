@@ -21,8 +21,6 @@
 
 #include "session.h"
 
-#define TRUE 1
-#define FALSE 0
 #define PORT 3334
 #define MAX_CLIENT_NUM 100
 #define EPOLL_SIZE MAX_CLIENT_NUM
@@ -31,9 +29,9 @@
 #define ECHO_SERVICE_FUNC 0
 #define SIGNUP_SERV_FUNC 1
 #define LOGIN_SERV_FUNC 2
+#define MSG_SERV_FUNC 3
 
 #define WOKER_THREAD_NUM 4
-#define MAX_TASK_SIZE 100
 
 // 워커스레드가 처리할 일감을 포장한 구조체
 struct st_task {
@@ -60,7 +58,7 @@ typedef struct send_buf {
 struct st_epoll_net_core;   // 전방선언
 typedef void (*func_ptr)(struct st_epoll_net_core*, task*); // 서비스함수포인터 타입 지정.
 typedef struct st_epoll_net_core {
-    int is_run;     // 서버 내릴때 flase(지금은)
+    bool is_run;     // 서버 내릴때 flase(지금은)
     int listen_fd;  // 서버 리슨용 소켓 fd
 
     func_ptr function_array[SERVICE_FUNC_NUM]; // 서비스 배열
@@ -87,7 +85,7 @@ void* work_routine(void *ptr);
 // (워커스레드들이)할 일의 정보를 담으면, 동기화 기법(뮤텍스)을 고려해서 담는 함수.
 bool enqueue_task(thread_pool_t* thread_pool, int req_client_fd, ring_buf* org_buf, int org_data_size);
 // 워커스레드에서 할 일을 꺼낼때(des에 복사) 쓰는 함수.
-int deqeueu_and_get_task(thread_pool_t* thread_pool, task* des);
+bool deqeueu_and_get_task(thread_pool_t* thread_pool, task* des);
 // accept시 동작 처리 함수
 int accept_client(epoll_net_core* server_ptr); 
 void disconnect_client(epoll_net_core* server_ptr, int client_fd);
