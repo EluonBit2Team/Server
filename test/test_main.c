@@ -41,11 +41,15 @@ int main() {
     // char query[1024];
     // snprintf(query, sizeof(query), "INSERT INTO sign_req(login_id, password, name, phone, email, deptno, position) VALUES('1','2','3','4','5','6','7')");
     
-    if (mysql_query(con,"INSERT INTO signin_req(login_id, password, name, phone, email, deptno, position) VALUES('1','2','3','4','5','6','7')")) {
-        fprintf(stderr, "INSERT failed: %s\n", mysql_error(con));
-        mysql_close(con);
-    }
+    // char query[1024];
+    // snprintf(query, sizeof(query), "INSERT INTO signin_req (login_id, password, name, phone, email, deptno, position) VALUES ('%s','%s','%s','%s','%s','%s','%s')",
+    //                     'asdf','qwer','asdf','qwer','asdf','qwer','asdf');
 
+    
+    // if (mysql_query(con,query)) {
+    //     fprintf(stderr, "INSERT failed\n");
+    //     mysql_close(con);
+    // }
     MYSQL_RES *result = mysql_store_result(con);
 
     if (result == NULL) {
