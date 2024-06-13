@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <mysql/mysql.h>
+#include "../mariadb/mariadb.h"
 
 #define DB_IP "192.168.0.253"
 #define DB_PORT 3307
@@ -23,16 +24,16 @@ void finish_with_error(MYSQL *con) {
 }
 
 int main() {
-    MYSQL *con = mysql_init(NULL);
+    // MYSQL *con = mysql_init(NULL);
 
-    if (con == NULL) {
-        fprintf(stderr, "mysql_init() failed\n");
-        exit(1);
-    }
+    // if (con == NULL) {
+    //     fprintf(stderr, "mysql_init() failed\n");
+    //     exit(1);
+    // }
 
-    if (mysql_real_connect(con, DB_IP, DB_USER_NAME, DB_USER_PASS, USER_REQUEST_DB, DB_PORT, NULL, 0) == NULL) {
-        finish_with_error(con);
-    }
+    // if (mysql_real_connect(con, DB_IP, DB_USER_NAME, DB_USER_PASS, USER_REQUEST_DB, DB_PORT, NULL, 0) == NULL) {
+    //     finish_with_error(con);
+    // }
 
     // if (mysql_query(con, "SELECT * FROM signin_req")) {
     //     finish_with_error(con);
@@ -50,26 +51,41 @@ int main() {
     //     fprintf(stderr, "INSERT failed\n");
     //     mysql_close(con);
     // }
-    MYSQL_RES *result = mysql_store_result(con);
+    // MYSQL_RES *result = mysql_store_result(con);
 
-    if (result == NULL) {
-        finish_with_error(con);
-    }
-
-    int num_fields = mysql_num_fields(result);
-
-    MYSQL_ROW row;
-
-    // //C99 표준 사용하여 for 루프 내 변수 선언
-    // while ((row = mysql_fetch_row(result))) {
-    //     for (int i = 0; i < num_fields; i++) {
-    //         printf("%s ", row[i] ? row[i] : "NULL");
-    //     }
-    //     printf("\n");
+    // if (result == NULL) {
+    //     finish_with_error(con);
     // }
 
-    mysql_free_result(result);
-    mysql_close(con);
+    // int num_fields = mysql_num_fields(result);
 
+    // MYSQL_ROW row;
+
+    // // //C99 표준 사용하여 for 루프 내 변수 선언
+    // // while ((row = mysql_fetch_row(result))) {
+    // //     for (int i = 0; i < num_fields; i++) {
+    // //         printf("%s ", row[i] ? row[i] : "NULL");
+    // //     }
+    // //     printf("\n");
+    // // }
+
+    // mysql_free_result(result);
+    // mysql_close(con);
+    chatdb_t db;
+    init_mariadb(&db);
+    printf("init\n");
+    conn_t* conn = get_conn(&db.pools[USER_REQUEST_DB_IDX]);
+    printf("get conn\n");
+    char query[1024];
+    snprintf(query, sizeof(query), "INSERT INTO signin_req(login_id, password, name, phone, email, deptno, position) VALUES('1','2','3','4','5','6','7')");
+    printf("snprintf\n");
+    if (mysql_query(conn->conn, query)) {
+        fprintf(stderr, "INSERT failed\n");
+        mysql_close(conn->conn);
+    }
+    printf("mysql_query\n");
+    release_conn(&db.pools[USER_REQUEST_DB_IDX], conn);
+    printf("mysql_query\n");
+    close_mariadb(&db);
     return 0;
 }
