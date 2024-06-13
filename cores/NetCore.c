@@ -319,10 +319,6 @@ int run_server(epoll_net_core* server_ptr) {
                     disconnect_client(server_ptr, client_fd);
                     continue;
                 }
-<<<<<<< HEAD
-
-=======
->>>>>>> gyeon
                 while(1) {
                     if (enqueue_task(&server_ptr->thread_pool, client_fd, &s_ptr->recv_bufs, input_size) == false)
                     {
