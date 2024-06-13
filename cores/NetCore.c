@@ -154,23 +154,27 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     printf("email: %s\n", email_ptr->valuestring);
     printf("pos: %s\n", pos_ptr->valuestring);
     
+    if (cJSON_IsString(name_ptr) == true && cJSON_IsString(id_ptr) == true && cJSON_IsString(pw_ptr) == true && cJSON_IsString(phone_ptr) == true && 
+        cJSON_IsString(email_ptr) == true && cJSON_IsString(dept_ptr) == true && cJSON_IsString(pos_ptr) == true ) {
+            fprintf(stderr, "Invalid input data\n");
+            cJSON_Delete(json_ptr);
+            release_conn(&server_ptr->db.pools[USER_SETTING_D_IDX], conn);
+            return;
+    }
+
     char query[1024];
+    printf("1\n");
     snprintf(query, sizeof(query), "INSERT INTO sign_req (login_id, password, name, phone, email, deptno, position) VALUES "
                         "('%s','%s','%s','%s','%s','%s','%s')",
                         id_ptr->valuestring, pw_ptr->valuestring, name_ptr->valuestring, phone_ptr->valuestring, 
                         email_ptr->valuestring, dept_ptr->valuestring, pos_ptr->valuestring);
-
-    if (cJSON_IsString(name_ptr) == true && cJSON_IsString(id_ptr) == true && cJSON_IsString(pw_ptr) == true && cJSON_IsString(phone_ptr) == true && 
-        cJSON_IsString(email_ptr) == true && cJSON_IsString(dept_ptr) == true && cJSON_IsString(name_ptr) == true ) {
-        if (mysql_query(conn,query)) {
-            fprintf(stderr, "INSERT failed\n");
-            mysql_close(conn);
-        }
-    }
-    else {
-        printf("Input Data Error!!\n");
+    printf("2\n");
+    if (mysql_query(conn,query)) {
+        fprintf(stderr, "INSERT failed\n");
+        mysql_close(conn);
     }
     
+    printf("3\n");
     release_conn(&server_ptr->db.pools[USER_SETTING_D_IDX], conn);
     cJSON_Delete(json_ptr);
 }
