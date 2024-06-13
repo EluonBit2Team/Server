@@ -158,10 +158,11 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     
     char query[1024];
     snprintf(query, sizeof(query), "INSERT INTO sign_req (login_id, password, name, phone, email, deptno, position) VALUES "
-                        "('%s','%s','%s','%s','%s','%s','%s')",
-                        cJSON_Print(id_ptr), cJSON_Print(pw_ptr), cJSON_Print(name_ptr), cJSON_Print(phone_ptr), 
-                        cJSON_Print(email_ptr), cJSON_Print(dept_ptr), cJSON_Print(pos_ptr));
-
+                        "('1','2','3','4','5','6','7')"
+                        );
+// cJSON_Print(id_ptr), cJSON_Print(pw_ptr), cJSON_Print(name_ptr), cJSON_Print(phone_ptr), 
+//                         cJSON_Print(email_ptr), cJSON_Print(dept_ptr), cJSON_Print(pos_ptr)
+    
     if (mysql_query(conn,query)) {
         fprintf(stderr, "INSERT failed\n");
         mysql_close(conn);
