@@ -163,7 +163,7 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
                         cJSON_Print(email_ptr), cJSON_Print(dept_ptr), cJSON_Print(pos_ptr));
     printf("2\n");
     if (mysql_query(conn->conn,query)) {
-        fprintf(stderr, "INSERT failed\n");
+        fprintf(stderr, "INSERT failed: %s\n", mysql_error(conn->conn));
         mysql_close(conn->conn);
     }
     printf("3\n");
