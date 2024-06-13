@@ -140,48 +140,42 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     conn_t* conn = get_conn(&server_ptr->db.pools[USER_SETTING_D_IDX]);
     printf("connection success\n");
     cJSON* json_ptr = get_parsed_json(task->buf);
-    printf("1\n");
     cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "name");
-    printf("2\n");
     cJSON* id_ptr = cJSON_GetObjectItem(json_ptr, "id");
-    printf("3\n");   
     cJSON* pw_ptr = cJSON_GetObjectItem(json_ptr, "pw");
-    printf("4\n");  
     cJSON* phone_ptr = cJSON_GetObjectItem(json_ptr, "phone");
-    printf("5\n"); 
     cJSON* email_ptr = cJSON_GetObjectItem(json_ptr, "email");
-    printf("6\n");
     cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
-    printf("7\n");
     cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
-    printf("8\n");
+
     
-    if (cJSON_IsString(name_ptr) == true && cJSON_IsString(id_ptr) == true && cJSON_IsString(pw_ptr) == true && cJSON_IsString(phone_ptr) == true && 
+    /*if (cJSON_IsString(name_ptr) == true && cJSON_IsString(id_ptr) == true && cJSON_IsString(pw_ptr) == true && cJSON_IsString(phone_ptr) == true && 
         cJSON_IsString(email_ptr) == true && cJSON_IsString(dept_ptr) == true && cJSON_IsString(pos_ptr) == true ) {
             fprintf(stderr, "Invalid input data\n");
             cJSON_Delete(json_ptr);
             release_conn(&server_ptr->db.pools[USER_SETTING_D_IDX], conn);
             return;
-    }
-
-    printf("name: %s\n", name_ptr->valuestring);
-    printf("id: %s\n", id_ptr->valuestring);
-    printf("pw: %s\n", pw_ptr->valuestring);
-    printf("email: %s\n", email_ptr->valuestring);
-    printf("pos: %s\n", pos_ptr->valuestring);
+    }*/
+    printf("name: %s\n", cJSON_Print(name_ptr));
+    printf("id: %s\n", cJSON_Print(id_ptr));
+    printf("pw: %s\n", cJSON_Print(pw_ptr));
+    printf("phone: %s\n", cJSON_Print(pw_ptr));
+    printf("email: %s\n", cJSON_Print(email_ptr));
+    printf("dept: %s\n", cJSON_Print(pw_ptr));
+    printf("pos: %s\n", cJSON_Print(pos_ptr));
     
     
-    char query[1024];
-    printf("1\n");
-    snprintf(query, sizeof(query), "INSERT INTO sign_req (login_id, password, name, phone, email, deptno, position) VALUES "
-                        "('%s','%s','%s','%s','%s','%s','%s')",
-                        id_ptr->valuestring, pw_ptr->valuestring, name_ptr->valuestring, phone_ptr->valuestring, 
-                        email_ptr->valuestring, dept_ptr->valuestring, pos_ptr->valuestring);
-    printf("2\n");
-    if (mysql_query(conn,query)) {
-        fprintf(stderr, "INSERT failed\n");
-        mysql_close(conn);
-    }
+    // char query[1024];
+    // printf("1\n");
+    // snprintf(query, sizeof(query), "INSERT INTO sign_req (login_id, password, name, phone, email, deptno, position) VALUES "
+    //                     "('%s','%s','%s','%s','%s','%s','%s')",
+    //                     id_ptr->valuestring, pw_ptr->valuestring, name_ptr->valuestring, phone_ptr->valuestring, 
+    //                     email_ptr->valuestring, dept_ptr->valuestring, pos_ptr->valuestring);
+    // printf("2\n");
+    // if (mysql_query(conn,query)) {
+    //     fprintf(stderr, "INSERT failed\n");
+    //     mysql_close(conn);
+    // }
     
     printf("3\n");
     release_conn(&server_ptr->db.pools[USER_SETTING_D_IDX], conn);
