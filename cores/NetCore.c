@@ -156,12 +156,6 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
     printf("8\n");
     
-    printf("name: %s\n", name_ptr->valuestring);
-    printf("id: %s\n", id_ptr->valuestring);
-    printf("pw: %s\n", pw_ptr->valuestring);
-    printf("email: %s\n", email_ptr->valuestring);
-    printf("pos: %s\n", pos_ptr->valuestring);
-    
     if (cJSON_IsString(name_ptr) == true && cJSON_IsString(id_ptr) == true && cJSON_IsString(pw_ptr) == true && cJSON_IsString(phone_ptr) == true && 
         cJSON_IsString(email_ptr) == true && cJSON_IsString(dept_ptr) == true && cJSON_IsString(pos_ptr) == true ) {
             fprintf(stderr, "Invalid input data\n");
@@ -170,6 +164,13 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
             return;
     }
 
+    printf("name: %s\n", name_ptr->valuestring);
+    printf("id: %s\n", id_ptr->valuestring);
+    printf("pw: %s\n", pw_ptr->valuestring);
+    printf("email: %s\n", email_ptr->valuestring);
+    printf("pos: %s\n", pos_ptr->valuestring);
+    
+    
     char query[1024];
     printf("1\n");
     snprintf(query, sizeof(query), "INSERT INTO sign_req (login_id, password, name, phone, email, deptno, position) VALUES "
