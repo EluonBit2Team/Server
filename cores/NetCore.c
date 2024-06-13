@@ -148,36 +148,25 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
     cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
 
-    
-    /*if (cJSON_IsString(name_ptr) == true && cJSON_IsString(id_ptr) == true && cJSON_IsString(pw_ptr) == true && cJSON_IsString(phone_ptr) == true && 
-        cJSON_IsString(email_ptr) == true && cJSON_IsString(dept_ptr) == true && cJSON_IsString(pos_ptr) == true ) {
-            fprintf(stderr, "Invalid input data\n");
-            cJSON_Delete(json_ptr);
-            release_conn(&server_ptr->db.pools[USER_SETTING_D_IDX], conn);
-            return;
-    }*/
     printf("name: %s\n", cJSON_Print(name_ptr));
     printf("id: %s\n", cJSON_Print(id_ptr));
     printf("pw: %s\n", cJSON_Print(pw_ptr));
-    printf("phone: %s\n", cJSON_Print(pw_ptr));
+    printf("phone: %s\n", cJSON_Print(phone_ptr));
     printf("email: %s\n", cJSON_Print(email_ptr));
-    printf("dept: %s\n", cJSON_Print(pw_ptr));
+    printf("dept: %s\n", cJSON_Print(dept_ptr));
     printf("pos: %s\n", cJSON_Print(pos_ptr));
     
+    char query[1024];
+    snprintf(query, sizeof(query), "INSERT INTO sign_req (login_id, password, name, phone, email, deptno, position) VALUES "
+                        "('%s','%s','%s','%s','%s','%s','%s')",
+                        cJSON_Print(id_ptr), cJSON_Print(pw_ptr), cJSON_Print(name_ptr), cJSON_Print(phone_ptr), 
+                        cJSON_Print(email_ptr), cJSON_Print(dept_ptr), cJSON_Print(pos_ptr));
+
+    if (mysql_query(conn,query)) {
+        fprintf(stderr, "INSERT failed\n");
+        mysql_close(conn);
+    }
     
-    // char query[1024];
-    // printf("1\n");
-    // snprintf(query, sizeof(query), "INSERT INTO sign_req (login_id, password, name, phone, email, deptno, position) VALUES "
-    //                     "('%s','%s','%s','%s','%s','%s','%s')",
-    //                     id_ptr->valuestring, pw_ptr->valuestring, name_ptr->valuestring, phone_ptr->valuestring, 
-    //                     email_ptr->valuestring, dept_ptr->valuestring, pos_ptr->valuestring);
-    // printf("2\n");
-    // if (mysql_query(conn,query)) {
-    //     fprintf(stderr, "INSERT failed\n");
-    //     mysql_close(conn);
-    // }
-    
-    printf("3\n");
     release_conn(&server_ptr->db.pools[USER_SETTING_D_IDX], conn);
     cJSON_Delete(json_ptr);
 }
