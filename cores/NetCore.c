@@ -19,16 +19,16 @@ bool enqueue_task(thread_pool_t* thread_pool, int req_client_fd, ring_buf *org_b
 }
 
 // 워커스레드에서 할 일을 꺼낼때(des에 복사) 쓰는 함수.
-int deqeueu_and_get_task(thread_pool_t* thread_pool, task* des)
+bool deqeueu_and_get_task(thread_pool_t* thread_pool, task* des)
 {
     pthread_mutex_lock(&thread_pool->task_mutex);
     if (dequeue(&thread_pool->task_queue, (void*)des) < 0)
     {
         pthread_mutex_unlock(&thread_pool->task_mutex);
-        return FALSE;
+        return false;
     }
     pthread_mutex_unlock(&thread_pool->task_mutex);
-    return TRUE;
+    return true;
 }
 
 // 워커스레드가 무한반 복할 루틴.
@@ -47,13 +47,14 @@ void* work_routine(void *ptr)
         task temp_task;
         // 할 일을 temp_task에 복사하고
         // 미리 설정해둔 서비스 배열로, 적합한 함수 포인터를 호출하여 처리
-        if (deqeueu_and_get_task(thread_pool, &temp_task) == TRUE)
+        if (deqeueu_and_get_task(thread_pool, &temp_task) == true)
         {
             int type = type_finder(temp_task.buf + HEADER_SIZE);
             if (type < 0)
             {
                 printf("invalid type\n");
             }
+            printf("type num:%d\n", type);
             server_ptr->function_array[type](server_ptr, &temp_task);
         }
     }
@@ -100,28 +101,26 @@ void reserve_send(void_queue_t* vq, char* send_org, size_t send_size)
 
 // ✨ 서비스 함수. 이런 형태의 함수들을 추가하여 서비스 추가. ✨
 void echo_service(epoll_net_core* server_ptr, task* task) {
-    // 보낸사람 이외에 전부 출력.
-    for (int i = 0; i < MAX_CLIENT_NUM; i++)
+    printf("echo_service\n");
+    client_session_t* now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL)
     {
-        client_session_t* now_session = &server_ptr->session_pool.session_pool[i];
-        if (now_session->fd == -1 || task->req_client_fd == now_session->fd)
-        {
-            continue ;
-        }
-        reserve_send(&now_session->send_bufs, task->buf, task->task_data_len);
-
-        // send 이벤트 예약
-        struct epoll_event temp_event;
-        temp_event.events = EPOLLOUT | EPOLLET;
-        temp_event.data.fd = now_session->fd;
-        if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_event) == -1) {
-            perror("epoll_ctl: add");
-            close(task->req_client_fd);
-        }
+        printf("invalid fd:%d", task->req_client_fd);
+        return ;
+    }
+    reserve_send(&now_session->send_bufs, task->buf, task->task_data_len);
+    
+    struct epoll_event temp_event;
+    temp_event.events = EPOLLOUT | EPOLLET;
+    temp_event.data.fd = now_session->fd;
+    if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_event) == -1) {
+        perror("epoll_ctl: add");
+        close(task->req_client_fd);
     }
 }
 
 void login_service(epoll_net_core* server_ptr, task* task) {
+    printf("login_service\n");
     cJSON* json_ptr = get_parsed_json(task->buf);
     cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "name");
     if (cJSON_IsString(name_ptr) == true)
@@ -137,42 +136,36 @@ void login_service(epoll_net_core* server_ptr, task* task) {
 }
 
 void signup_service(epoll_net_core* server_ptr, task* task) {
+    printf("signup_service\n");
+    conn_t* conn = get_conn(server_ptr->db.pools[USER_SETTING_D_IDX].pool);
+
     cJSON* json_ptr = get_parsed_json(task->buf);
     cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "name");
-    if (cJSON_IsString(name_ptr) == true)
-    {
-        printf("name: %s\n", name_ptr->valuestring);
-    }
-    cJSON* id_ptr = cJSON_GetObjectItem(json_ptr, "id");
-    if (cJSON_IsString(id_ptr) == true)
-    {
-        printf("id: %s\n", id_ptr->valuestring);
-    }
-    cJSON* pw_ptr = cJSON_GetObjectItem(json_ptr, "pw");
-    if (cJSON_IsString(pw_ptr) == true)
-    {
-        printf("pw: %s\n", pw_ptr->valuestring);
-    }
-    cJSON* phone_ptr = cJSON_GetObjectItem(json_ptr, "phone");
-    if (cJSON_IsString(phone_ptr) == true)
-    {
-        printf("phone: %s\n", phone_ptr->valuestring);
-    }
+    cJSON* id_ptr = cJSON_GetObjectItem(json_ptr, "id");   
+    cJSON* pw_ptr = cJSON_GetObjectItem(json_ptr, "pw");  
+    cJSON* phone_ptr = cJSON_GetObjectItem(json_ptr, "phone"); 
     cJSON* email_ptr = cJSON_GetObjectItem(json_ptr, "email");
-    if (cJSON_IsString(email_ptr) == true)
-    {
-        printf("email: %s\n", email_ptr->valuestring);
-    }
     cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
-    if (cJSON_IsString(dept_ptr) == true)
-    {
-        printf("dept: %s\n", dept_ptr->valuestring);
-    }
     cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
-    if (cJSON_IsString(pos_ptr) == true)
-    {
-        printf("pos: %s\n", pos_ptr->valuestring);
+    
+    char query[1024];
+    snprintf(query, sizeof(query), "INSERT INTO sign_req (login_id, password, name, phone, email, deptno, position) VALUES "
+                        "('%s','%s','%s','%s','%s','%s','%s')",
+                        id_ptr->valuestring, pw_ptr->valuestring, name_ptr->valuestring, phone_ptr->valuestring, 
+                        email_ptr->valuestring, dept_ptr->valuestring, pos_ptr->valuestring);
+
+    if (cJSON_IsString(name_ptr) == true && cJSON_IsString(id_ptr) == true && cJSON_IsString(pw_ptr) == true && cJSON_IsString(phone_ptr) == true && 
+        cJSON_IsString(email_ptr) == true && cJSON_IsString(dept_ptr) == true && cJSON_IsString(name_ptr) == true ) {
+        if (mysql_query(conn,query)) {
+            fprintf(stderr, "INSERT failed\n");
+            mysql_close(conn);
+        }
     }
+    else {
+        printf("Input Data Error!!\n");
+    }
+    
+    release_conn(server_ptr->db.pools[USER_SETTING_D_IDX].pool, conn);
     cJSON_Delete(json_ptr);
 }
 
@@ -192,7 +185,7 @@ bool init_server(epoll_net_core* server_ptr) {
     init_session_pool(&server_ptr->session_pool, MAX_CLIENT_NUM);
 
     // 서버 주소 설정
-    server_ptr->is_run = FALSE;
+    server_ptr->is_run = false;
     server_ptr->listen_addr.sin_family = AF_INET;
     server_ptr->listen_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     server_ptr->listen_addr.sin_port = htons(PORT);
@@ -211,11 +204,12 @@ bool init_server(epoll_net_core* server_ptr) {
     if (server_ptr->listen_fd < 0)
     {
         printf("listen sock assignment error: %d\n", errno);
-
+        return false;
     }
     int opt = 1;
     setsockopt(server_ptr->listen_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     set_sock_nonblocking_mode(server_ptr->listen_fd);
+    return true;
 }
 
 // accept시 동작 처리 함수
@@ -260,7 +254,7 @@ void disconnect_client(epoll_net_core* server_ptr, int client_fd)
 }
 
 int run_server(epoll_net_core* server_ptr) {
-    server_ptr->is_run = TRUE;
+    server_ptr->is_run = true;
 
     struct epoll_event temp_epoll_event;
     server_ptr->epoll_fd = epoll_create1(0);
@@ -294,7 +288,7 @@ int run_server(epoll_net_core* server_ptr) {
     }
 
     // 메인 스레드(main함수에서 run_server()까지 호출한 메인 흐름)가 epoll_wait로 io완료 대기
-    while (server_ptr->is_run == TRUE) {
+    while (server_ptr->is_run == true) {
         int occured_event_cnt = epoll_wait(
             server_ptr->epoll_fd, server_ptr->epoll_events, 
             EPOLL_SIZE, -1);
@@ -379,7 +373,7 @@ int run_server(epoll_net_core* server_ptr) {
 
 void down_server(epoll_net_core* server_ptr) {
     printf("down server\n");
-    server_ptr->is_run = FALSE;
+    server_ptr->is_run = false;
     close(server_ptr->listen_fd);
     close(server_ptr->epoll_fd);
     free(server_ptr->epoll_events);
