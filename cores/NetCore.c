@@ -148,6 +148,12 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
     cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
     
+    printf("name: %s\n", name_ptr->valuestring);
+    printf("id: %s\n", id_ptr->valuestring);
+    printf("pw: %s\n", pw_ptr->valuestring);
+    printf("email: %s\n", email_ptr->valuestring);
+    printf("pos: %s\n", pos_ptr->valuestring);
+    
     char query[1024];
     snprintf(query, sizeof(query), "INSERT INTO sign_req (login_id, password, name, phone, email, deptno, position) VALUES "
                         "('%s','%s','%s','%s','%s','%s','%s')",
@@ -317,7 +323,7 @@ int run_server(epoll_net_core* server_ptr) {
                     disconnect_client(server_ptr, client_fd);
                     continue;
                 }
-                sleep(5);
+
                 while(1) {
                     if (enqueue_task(&server_ptr->thread_pool, client_fd, &s_ptr->recv_bufs, input_size) == false)
                     {
