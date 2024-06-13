@@ -138,15 +138,23 @@ void login_service(epoll_net_core* server_ptr, task* task) {
 void signup_service(epoll_net_core* server_ptr, task* task) {
     printf("signup_service\n");
     conn_t* conn = get_conn(&server_ptr->db.pools[USER_SETTING_D_IDX]);
-
+    printf("connection success\n");
     cJSON* json_ptr = get_parsed_json(task->buf);
+    printf("1\n");
     cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "name");
-    cJSON* id_ptr = cJSON_GetObjectItem(json_ptr, "id");   
-    cJSON* pw_ptr = cJSON_GetObjectItem(json_ptr, "pw");  
-    cJSON* phone_ptr = cJSON_GetObjectItem(json_ptr, "phone"); 
+    printf("2\n");
+    cJSON* id_ptr = cJSON_GetObjectItem(json_ptr, "id");
+    printf("3\n");   
+    cJSON* pw_ptr = cJSON_GetObjectItem(json_ptr, "pw");
+    printf("4\n");  
+    cJSON* phone_ptr = cJSON_GetObjectItem(json_ptr, "phone");
+    printf("5\n"); 
     cJSON* email_ptr = cJSON_GetObjectItem(json_ptr, "email");
+    printf("6\n");
     cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
+    printf("7\n");
     cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
+    printf("8\n");
     
     printf("name: %s\n", name_ptr->valuestring);
     printf("id: %s\n", id_ptr->valuestring);
