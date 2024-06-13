@@ -137,7 +137,7 @@ void login_service(epoll_net_core* server_ptr, task* task) {
 
 void signup_service(epoll_net_core* server_ptr, task* task) {
     printf("signup_service\n");
-    conn_t* conn = get_conn(server_ptr->db.pools[USER_SETTING_D_IDX].pool);
+    conn_t* conn = get_conn(&server_ptr->db.pools[USER_SETTING_D_IDX]);
 
     cJSON* json_ptr = get_parsed_json(task->buf);
     cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "name");
@@ -165,7 +165,7 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
         printf("Input Data Error!!\n");
     }
     
-    release_conn(server_ptr->db.pools[USER_SETTING_D_IDX].pool, conn);
+    release_conn(&server_ptr->db.pools[USER_SETTING_D_IDX], conn);
     cJSON_Delete(json_ptr);
 }
 
