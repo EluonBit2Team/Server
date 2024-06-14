@@ -195,7 +195,7 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     mysql_free_result(res);
     
     snprintf(query, sizeof(query), 
-             "INSERT INTO signin_req (login_id, password, name, phone, email) VALUES ('%s', '%s', '%s', '%s', '%s')",
+             "INSERT INTO signup_req (login_id, password, name, phone, email) VALUES ('%s', '%s', '%s', '%s', '%s')",
              cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), cJSON_GetStringValue(name_ptr), cJSON_GetStringValue(phone_ptr), cJSON_GetStringValue(email_ptr));
 
     if (mysql_query(conn->conn, query)) {
