@@ -145,7 +145,6 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event);
         return ;
     }
-    printf("cJSON* json_ptr = get_parsed_json(task->buf);\n");
 
     cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "id");
     if (name_ptr == NULL)
@@ -158,7 +157,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         // epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event);
         return ;
     }
-    printf("cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, \"id\");\n");
+
     cJSON* pw_ptr = cJSON_GetObjectItem(json_ptr, "pw");
     if (pw_ptr == NULL)
     {
@@ -170,12 +169,12 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         // epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event);
         return ;
     }
-    printf("cJSON* pw_ptr = cJSON_GetObjectItem(json_ptr, \"pw\");\n");
+
     // TODO: signup_req_id에서 관리자 기능 구현 후 유저 정보 DB테이블로 이관. 
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT sign_req_id FROM signup_req AS sr WHERE '%s' = sr.login_id AND UNHEX(SHA2('%s', %d)) = sr.password",
         cJSON_GetStringValue(name_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH);
-    printf("%s\n", SQL_buf);
+
     conn_t* conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
     if (mysql_query(conn->conn, SQL_buf)) {
         fprintf(stderr, "login query fail: %s\n", mysql_error(conn->conn));
@@ -187,7 +186,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
         return ;
     }
-    printf("conn_t* conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);\n");
+
     MYSQL_RES *query_result = mysql_store_result(conn->conn);
     if (query_result == NULL) {
         fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn->conn));
@@ -199,7 +198,6 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
         return ;
     }
-    printf("MYSQL_RES *query_result = mysql_store_result(conn->conn);\n");
     //int num_fields = mysql_num_fields(query_result);
     //MYSQL_ROW row;
     // //C99 표준 사용하여 for 루프 내 변수 선언
@@ -211,18 +209,22 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     // }
 
     MYSQL_ROW row;
-    while ((row = mysql_fetch_row(query_result))) {
+    if ((row = mysql_fetch_row(query_result))) {
         printf("id: %s\n", row[0]);
         cJSON_AddNumberToObject(result_json, "type", 101);
         cJSON_AddStringToObject(result_json, "msg", "LOGIN SUCCESS");
         //strcpy(result_task.buf, cJSON_Print(result_json));
-        reserve_send(&now_session->send_bufs, cJSON_Print(result_json), strlen(cJSON_Print(result_json)));
-        if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
-            perror("epoll_ctl: add");
-        }
-        printf("%s\n", result_task.buf);
     }
-    printf("while ((row = mysql_fetch_row(query_result)))\n");
+    else
+    {
+        cJSON_AddNumberToObject(result_json, "type", 100);
+        cJSON_AddStringToObject(result_json, "msg", "LOGIN FAIL");
+    }
+    reserve_send(&now_session->send_bufs, cJSON_Print(result_json), strlen(cJSON_Print(result_json)));
+    if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
+        perror("epoll_ctl: add");
+    }
+
     mysql_free_result(query_result);
     release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
     cJSON_Delete(json_ptr);
