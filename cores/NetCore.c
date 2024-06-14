@@ -168,7 +168,7 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     MYSQL_RES *res;
     MYSQL_ROW row;
 
-    snprintf(query, sizeof(query), "SELECT COUNT(*) FROM signup_req WHERE login_id = '%s'", cJSON_Print(id_ptr));
+    snprintf(query, sizeof(query), "SELECT COUNT(*) FROM signup_req WHERE login_id = '%s'", cJSON_GetStringValue(id_ptr));
     if (mysql_query(conn->conn, query)) {
         fprintf(stderr, "SELECT failed: %s\n", mysql_error(conn->conn));
         cJSON_Delete(json_ptr);
