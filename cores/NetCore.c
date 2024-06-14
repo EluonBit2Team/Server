@@ -84,7 +84,8 @@ char* get_rear_send_buf_ptr(void_queue_t* vq)
 
 size_t get_rear_send_buf_size(void_queue_t* vq)
 {
-    return *((size_t*)get_rear_data(vq));
+    //return *((size_t*)get_rear_data(vq));
+    return ((send_buf_t*)get_rear_data(vq))->send_data_size;
 }
 
 void reserve_send(void_queue_t* vq, char* send_org, size_t send_size)
@@ -482,8 +483,8 @@ int run_server(epoll_net_core* server_ptr) {
                     continue ;
                 }
 
-                size_t sent = send(client_fd, get_rear_send_buf_ptr(&s_ptr->send_bufs), get_rear_send_buf_size(&s_ptr->send_bufs), 0);
-                printf("%ld / %s\n", get_rear_send_buf_size(&s_ptr->send_bufs), get_rear_send_buf_ptr(&s_ptr->send_bufs));
+                size_t sent = send(client_fd, send_buf_ptr, get_rear_send_buf_size(&s_ptr->send_bufs), 0);
+                printf("%ld / %s\n", get_rear_send_buf_size(&s_ptr->send_bufs), send_buf_ptr);
                 if (sent < 0) {
                     perror("send");
                     close(server_ptr->epoll_events[i].data.fd);
