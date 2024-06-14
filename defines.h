@@ -3,3 +3,4 @@
 #define EPOLL_SIZE MAX_CLIENT_NUM
 #define BUFF_SIZE 2048
 #define HEADER_SIZE sizeof(int)
+#define SHA2_HASH_LENGTH 255

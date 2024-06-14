@@ -132,6 +132,7 @@ void login_service(epoll_net_core* server_ptr, task* task) {
     {
         printf("pw: %s\n", pw_ptr->valuestring);
     }
+    
     cJSON_Delete(json_ptr);
 }
 
@@ -148,27 +149,74 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
     cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
 
-    printf("name: %s\n", cJSON_Print(name_ptr));
-    printf("id: %s\n", cJSON_Print(id_ptr));
-    printf("pw: %s\n", cJSON_Print(pw_ptr));
-    printf("phone: %s\n", cJSON_Print(phone_ptr));
-    printf("email: %s\n", cJSON_Print(email_ptr));
-    printf("dept: %s\n", cJSON_Print(dept_ptr));
-    printf("pos: %s\n", cJSON_Print(pos_ptr));
+    if (!name_ptr || !id_ptr || !pw_ptr || !phone_ptr || !email_ptr || !dept_ptr || !pos_ptr) {
+        fprintf(stderr, "Missing required fields in JSON.\n");
+        cJSON_Delete(json_ptr);
+        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
+        return;
+    }
+
+    printf("name: %s\n", name_ptr->valuestring);
+    printf("id: %s\n", cJSON_GetStringValue(id_ptr));
+    printf("pw: %s\n", cJSON_GetStringValue(pw_ptr));
+    printf("phone: %s\n", cJSON_GetStringValue(phone_ptr));
+    printf("email: %s\n", cJSON_GetStringValue(email_ptr));
+    printf("dept: %s\n", cJSON_GetStringValue(dept_ptr));
+    printf("pos: %s\n", cJSON_GetStringValue(pos_ptr));
     
     char query[1024];
-    printf("1\n");
-    snprintf(query, sizeof(query), "INSERT INTO signin_req (login_id, password, name, phone, email) VALUES ('%s','%s','%s','%s','%s')",
-                        cJSON_Print(id_ptr), cJSON_Print(pw_ptr), cJSON_Print(name_ptr), cJSON_Print(phone_ptr), 
-                        cJSON_Print(email_ptr));
-    printf("2\n");
-    if (mysql_query(conn->conn,query)) {
-        fprintf(stderr, "INSERT failed: %s\n", mysql_error(conn->conn));
-        mysql_close(conn->conn);
+    MYSQL_RES *res;
+    MYSQL_ROW row;
+
+    // Step 1: Check if login_id exists
+    snprintf(query, sizeof(query), "SELECT COUNT(*) FROM signup_req WHERE login_id = '%s'", cJSON_Print(id_ptr));
+    if (mysql_query(conn->conn, query)) {
+        fprintf(stderr, "SELECT failed: %s\n", mysql_error(conn->conn));
+        cJSON_Delete(json_ptr);
+        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
+        return;
     }
-    printf("3\n");
-    release_conn(&server_ptr->db.pools[USER_SETTING_D_IDX], conn);
+
+    res = mysql_store_result(conn->conn);
+    if (res == NULL) {
+        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn->conn));
+        cJSON_Delete(json_ptr);
+        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
+        return;
+    }
+
+    row = mysql_fetch_row(res);
+    int num_fields;
+    num_fields = mysql_num_fields(res);
+    for (int i = 0; i < num_fields; i++) {
+        printf("%s ", row[i] ? row[i] : "NULL");
+    }
+    printf("\n");
+    if (row && atoi(row[0]) > 0) {
+        printf("login_id already exists.\n");
+        mysql_free_result(res);
+        cJSON_Delete(json_ptr);
+        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
+        return;
+    }
+    mysql_free_result(res);
+    
+    // Step 2: Insert the new record if no duplicate is found
+    snprintf(query, sizeof(query), 
+             "INSERT INTO signin_req (login_id, password, name, phone, email) VALUES ('%s', '%s', '%s', '%s', '%s')",
+             cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), cJSON_GetStringValue(name_ptr), cJSON_GetStringValue(phone_ptr), cJSON_GetStringValue(email_ptr));
+
+    if (mysql_query(conn->conn, query)) {
+        fprintf(stderr, "INSERT failed: %s\n", mysql_error(conn->conn));
+        cJSON_Delete(json_ptr);
+        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
+        return;
+    }
+
+    printf("Record inserted successfully.\n");
+
     cJSON_Delete(json_ptr);
+    release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
 }
 
 void set_sock_nonblocking_mode(int sockFd) {
