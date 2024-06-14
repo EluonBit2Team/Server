@@ -209,6 +209,11 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     MYSQL_ROW row;
     while ((row = mysql_fetch_row(query_result))) {
         printf("id: %s\n", row[0]);
+        cJSON_AddNumberToObject(result_json, "type", 101);
+        cJSON_AddStringToObject(result_json, "msg", "LOGIN SUCCESS");
+        strcpy(result_task.buf, cJSON_Print(result_json));
+        reserve_send(&now_session->send_bufs, result_task.buf, result_task.task_data_len);
+        epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event);
     }
     printf("while ((row = mysql_fetch_row(query_result)))\n");
     mysql_free_result(query_result);

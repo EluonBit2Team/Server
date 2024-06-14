@@ -22,6 +22,7 @@ typedef struct mariadb_conn_pool {
     int* pool_idx_stack;
     size_t pool_idx_stack_top;
     sem_t pool_sem;
+    pthread_mutex_t pool_idx_mutex;
 } mariadb_conn_pool_t;
 
 bool init_mariadb_pool(mariadb_conn_pool_t* pool, size_t poolsize, const char* DB_NAME);
