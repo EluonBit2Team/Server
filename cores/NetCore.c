@@ -168,7 +168,6 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     MYSQL_RES *res;
     MYSQL_ROW row;
 
-    // Step 1: Check if login_id exists
     snprintf(query, sizeof(query), "SELECT COUNT(*) FROM signup_req WHERE login_id = '%s'", cJSON_Print(id_ptr));
     if (mysql_query(conn->conn, query)) {
         fprintf(stderr, "SELECT failed: %s\n", mysql_error(conn->conn));
@@ -186,12 +185,6 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     }
 
     row = mysql_fetch_row(res);
-    int num_fields;
-    num_fields = mysql_num_fields(res);
-    for (int i = 0; i < num_fields; i++) {
-        printf("%s ", row[i] ? row[i] : "NULL");
-    }
-    printf("\n");
     if (row && atoi(row[0]) > 0) {
         printf("login_id already exists.\n");
         mysql_free_result(res);
@@ -201,9 +194,8 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     }
     mysql_free_result(res);
     
-    // Step 2: Insert the new record if no duplicate is found
     snprintf(query, sizeof(query), 
-             "INSERT INTO signin_req (login_id, password, name, phone, email) VALUES ('%s', '%s', '%s', '%s', '%s')",
+             "INSERT INTO signup_req (login_id, password, name, phone, email) VALUES ('%s', '%s', '%s', '%s', '%s')",
              cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), cJSON_GetStringValue(name_ptr), cJSON_GetStringValue(phone_ptr), cJSON_GetStringValue(email_ptr));
 
     if (mysql_query(conn->conn, query)) {
