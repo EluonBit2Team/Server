@@ -156,13 +156,13 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
         return;
     }
 
-    printf("name: %s\n", cJSON_Print(name_ptr));
-    printf("id: %s\n", cJSON_Print(id_ptr));
-    printf("pw: %s\n", cJSON_Print(pw_ptr));
-    printf("phone: %s\n", cJSON_Print(phone_ptr));
-    printf("email: %s\n", cJSON_Print(email_ptr));
-    printf("dept: %s\n", cJSON_Print(dept_ptr));
-    printf("pos: %s\n", cJSON_Print(pos_ptr));
+    printf("name: %s\n", cJSON_GetStringValue(name_ptr));
+    printf("id: %s\n", cJSON_GetStringValue(id_ptr));
+    printf("pw: %s\n", cJSON_GetStringValue(pw_ptr));
+    printf("phone: %s\n", cJSON_GetStringValue(phone_ptr));
+    printf("email: %s\n", cJSON_GetStringValue(email_ptr));
+    printf("dept: %s\n", cJSON_GetStringValue(dept_ptr));
+    printf("pos: %s\n", cJSON_GetStringValue(pos_ptr));
     
     char query[1024];
     MYSQL_RES *res;
@@ -198,7 +198,7 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     // Step 2: Insert the new record if no duplicate is found
     snprintf(query, sizeof(query), 
              "INSERT INTO signin_req (login_id, password, name, phone, email) VALUES ('%s', '%s', '%s', '%s', '%s')",
-             cJSON_Print(id_ptr), cJSON_Print(pw_ptr), cJSON_Print(name_ptr), cJSON_Print(phone_ptr), cJSON_Print(email_ptr));
+             cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), cJSON_GetStringValue(name_ptr), cJSON_GetStringValue(phone_ptr), cJSON_GetStringValue(email_ptr));
 
     if (mysql_query(conn->conn, query)) {
         fprintf(stderr, "INSERT failed: %s\n", mysql_error(conn->conn));
