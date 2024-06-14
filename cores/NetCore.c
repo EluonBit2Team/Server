@@ -217,6 +217,10 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         cJSON_AddStringToObject(result_json, "msg", "LOGIN SUCCESS");
         strcpy(result_task.buf, cJSON_Print(result_json));
         reserve_send(&now_session->send_bufs, result_task.buf, result_task.task_data_len);
+        if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
+        perror("epoll_ctl: add");
+        close(task->req_client_fd);
+    }
         epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event);
         printf("%s\n", result_task.buf);
     }
