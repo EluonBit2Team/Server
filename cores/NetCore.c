@@ -214,7 +214,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
 
 void signup_service(epoll_net_core* server_ptr, task_t* task) {
     printf("signup_service\n");
-    conn_t* conn = get_conn(server_ptr->db.pools[USER_SETTING_D_IDX].pool);
+    conn_t* conn = get_conn(&server_ptr->db.pools[USER_SETTING_D_IDX].pool);
     cJSON* json_ptr = get_parsed_json(task->buf);
     cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "name");
     if (cJSON_IsString(name_ptr) == true)
@@ -267,7 +267,7 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
     release_conn(&server_ptr->db.pools[USER_SETTING_D_IDX], conn);
     cJSON_Delete(json_ptr);
     
-    if (mysql_query(conn,("INSERT INTO sign_req (login_id, password, name, phone, email, deptno, position) VALUES "
+    if (mysql_query(conn->conn,("INSERT INTO sign_req (login_id, password, name, phone, email, deptno, position) VALUES "
                             "('%s','%s','%s','%s','%s','%s','%s')",
                             id_ptr, pw_ptr, name_ptr, phone_ptr, email_ptr, dept_ptr, pos_ptr))) {
         fprintf(stderr, "INSERT failed\n");

@@ -11,6 +11,8 @@
         "mariadb.h": "c",
         "mariadb_pool.h": "c",
         "packet_converter.h": "c",
-        "defines.h": "c"
+        "defines.h": "c",
+        "mysql.h": "c",
+        "pthread.h": "c"
     }
 }
