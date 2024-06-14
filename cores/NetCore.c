@@ -483,7 +483,7 @@ int run_server(epoll_net_core* server_ptr) {
                 }
 
                 size_t sent = send(client_fd, get_rear_send_buf_ptr(&s_ptr->send_bufs), get_rear_send_buf_size(&s_ptr->send_bufs), 0);
-                write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, &s_ptr->send_bufs, 20); write(STDOUT_FILENO, "\n", 1);
+                printf("%ld / %s\n", get_rear_send_buf_size(&s_ptr->send_bufs), get_rear_send_buf_ptr(&s_ptr->send_bufs));
                 if (sent < 0) {
                     perror("send");
                     close(server_ptr->epoll_events[i].data.fd);
