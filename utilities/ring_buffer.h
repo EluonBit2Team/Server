@@ -8,8 +8,9 @@
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/socket.h>
 
-#define MAX_BUFF_SIZE 2048
+#define MAX_BUFF_SIZE  2048
 #define NEXT(index)   ((index+1) % MAX_BUFF_SIZE)
 #define HEADER_SIZE sizeof(int)
 

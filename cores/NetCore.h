@@ -95,8 +95,10 @@ char* get_rear_send_buf_ptr(void_queue_t* vq);
 size_t get_rear_send_buf_size(void_queue_t* vq);
 void reserve_send(void_queue_t* vq, char* send_org, size_t send_size);
 // ✨ 서비스 함수. 이런 형태의 함수들을 추가하여 서비스 추가. ✨
+
 void echo_service(epoll_net_core* server_ptr, task_t* task);
 void echo_service(epoll_net_core* server_ptr, task_t* task);
 void signup_service(epoll_net_core* server_ptr, task_t* task);
+
 
 #endif

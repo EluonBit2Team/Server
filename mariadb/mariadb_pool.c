@@ -42,6 +42,16 @@ bool init_mariadb_pool(mariadb_conn_pool_t* pool, size_t poolsize, const char* D
             }
             return false;
         }
+
+        if (mysql_set_character_set(pool->pool[i].conn, "utf8")) {
+            printf("%s mysql_set_character_set fail: %s\n", DB_NAME, mysql_error(pool->pool[i].conn));
+            free(pool->pool);
+            free(pool->pool_idx_stack);
+            for (int j = 0; j < i; j++) {
+                mysql_close(pool->pool[j].conn);
+            }
+            return false;
+        }
         pool->pool_idx_stack[i] = i;
     }
     pool->pool_idx_stack_top = poolsize - 1;

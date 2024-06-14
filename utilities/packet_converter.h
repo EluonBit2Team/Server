@@ -3,6 +3,7 @@
 
 #include "../cJSON/cJSON.h"
 #include "../defines.h"
+#include "../includes.h"
 
 int get_buffer_size(char* buf);
 cJSON* get_parsed_json(char* buf);
