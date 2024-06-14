@@ -3,7 +3,7 @@
 // (워커스레드들이)할 일의 정보를 담으면, 동기화 기법(뮤텍스)을 고려해서 담는 함수.
 bool enqueue_task(thread_pool_t* thread_pool, int req_client_fd, ring_buf *org_buf, int org_data_size)
 {
-    task new_task;
+    task_t new_task;
     if (ring_array(org_buf, new_task.buf) == false)
     {
         return false;
@@ -19,7 +19,7 @@ bool enqueue_task(thread_pool_t* thread_pool, int req_client_fd, ring_buf *org_b
 }
 
 // 워커스레드에서 할 일을 꺼낼때(des에 복사) 쓰는 함수.
-bool deqeueu_and_get_task(thread_pool_t* thread_pool, task* des)
+bool deqeueu_and_get_task(thread_pool_t* thread_pool, task_t* des)
 {
     pthread_mutex_lock(&thread_pool->task_mutex);
     if (dequeue(&thread_pool->task_queue, (void*)des) < 0)
@@ -44,7 +44,7 @@ void* work_routine(void *ptr)
         }
         pthread_mutex_unlock(&thread_pool->task_mutex);
 
-        task temp_task;
+        task_t temp_task;
         // 할 일을 temp_task에 복사하고
         // 미리 설정해둔 서비스 배열로, 적합한 함수 포인터를 호출하여 처리
         if (deqeueu_and_get_task(thread_pool, &temp_task) == true)
@@ -66,7 +66,7 @@ void init_worker_thread(epoll_net_core* server_ptr, thread_pool_t* thread_pool_t
 {
     pthread_mutex_init(&thread_pool_t_ptr->task_mutex, NULL);
     pthread_cond_init(&thread_pool_t_ptr->task_cond, NULL);
-    init_queue(&thread_pool_t_ptr->task_queue, sizeof(task));
+    init_queue(&thread_pool_t_ptr->task_queue, sizeof(task_t));
     for (int i = 0; i < WOKER_THREAD_NUM; i++)
     {
         pthread_create(&thread_pool_t_ptr->worker_threads[i], NULL, work_routine, server_ptr);
@@ -100,7 +100,7 @@ void reserve_send(void_queue_t* vq, char* send_org, size_t send_size)
 }
 
 // ✨ 서비스 함수. 이런 형태의 함수들을 추가하여 서비스 추가. ✨
-void echo_service(epoll_net_core* server_ptr, task* task) {
+void echo_service(epoll_net_core* server_ptr, task_t* task) {
     printf("echo_service\n");
     client_session_t* now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
     if (now_session == NULL)
@@ -119,23 +119,100 @@ void echo_service(epoll_net_core* server_ptr, task* task) {
     }
 }
 
-void login_service(epoll_net_core* server_ptr, task* task) {
+// SELECT sign_req_id as sri FROM signin_req WHERE id = sri.id, UNHEX(SHA2(PASS, SHA2_HASH_LENGTH)) = sri.pw
+void login_service(epoll_net_core* server_ptr, task_t* task) {
     printf("login_service\n");
+    task_t result_task;
+    cJSON* result_json = cJSON_CreateObject();
+    char SQL_buf[512];
+    struct epoll_event temp_send_event;
+    client_session_t* now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    temp_send_event.events = EPOLLOUT | EPOLLET;
+    temp_send_event.data.fd = now_session->fd;
+
     cJSON* json_ptr = get_parsed_json(task->buf);
-    cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "id");
-    if (cJSON_IsString(name_ptr) == true)
+    if (json_ptr == NULL)
     {
-        printf("name: %s\n", name_ptr->valuestring);
+        printf("%d user send invalid json\n", task->req_client_fd);
+        cJSON_AddNumberToObject(result_json, "type", 100);
+        cJSON_AddStringToObject(result_json, "msg", "user send invalid json");
+        strcpy(result_task.buf, cJSON_Print(result_json));
+        reserve_send(&now_session->send_bufs, result_task.buf, result_task.task_data_len);
+        epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event);
+        return ;
+    }
+
+    cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "id");
+    if (name_ptr == NULL)
+    {
+        printf("%d user send invalid json. Miss name\n", task->req_client_fd);
+        cJSON_AddNumberToObject(result_json, "type", 100);
+        cJSON_AddStringToObject(result_json, "msg", "user send invalid json. Miss name");
+        strcpy(result_task.buf, cJSON_Print(result_json));
+        reserve_send(&now_session->send_bufs, result_task.buf, result_task.task_data_len);
+        epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event);
+        return ;
     }
     cJSON* pw_ptr = cJSON_GetObjectItem(json_ptr, "pw");
-    if (cJSON_IsString(pw_ptr) == true)
+    if (pw_ptr == NULL)
     {
-        printf("pw: %s\n", pw_ptr->valuestring);
+        printf("%d user send invalid json. Miss pw\n", task->req_client_fd);
+        cJSON_AddNumberToObject(result_json, "type", 100);
+        cJSON_AddStringToObject(result_json, "msg", "user send invalid json. Miss pw");
+        strcpy(result_task.buf, cJSON_Print(result_json));
+        reserve_send(&now_session->send_bufs, result_task.buf, result_task.task_data_len);
+        epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event);
+        return ;
     }
+
+    // TODO: signup_req_id에서 관리자 기능 구현 후 유저 정보 DB테이블로 이관. 
+    snprintf(SQL_buf, sizeof(SQL_buf), 
+        "SELECT signup_req_id AS sri FROM signin_req WHERE %s = sri.id, \
+            UNHEX(SHA2(%s, SHA2_HASH_LENGTH)) = sri.pw",
+        cJSON_Print(name_ptr), cJSON_Print(pw_ptr));
+    conn_t* conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
+    if (mysql_query(conn->conn, SQL_buf)) {
+        fprintf(stderr, "login query fail: %s\n", mysql_error(conn->conn));
+        cJSON_AddNumberToObject(result_json, "type", 100);
+        cJSON_AddStringToObject(result_json, "msg", "DB error");
+        strcpy(result_task.buf, cJSON_Print(result_json));
+        reserve_send(&now_session->send_bufs, result_task.buf, result_task.task_data_len);
+        epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event);
+        return ;
+    }
+    
+    MYSQL_RES *query_result = mysql_store_result(conn->conn);
+    if (query_result == NULL) {
+        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn->conn));
+        cJSON_AddNumberToObject(result_json, "type", 100);
+        cJSON_AddStringToObject(result_json, "msg", "DB error");
+        strcpy(result_task.buf, cJSON_Print(result_json));
+        reserve_send(&now_session->send_bufs, result_task.buf, result_task.task_data_len);
+        epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event);
+        return ;
+    }
+
+    //int num_fields = mysql_num_fields(query_result);
+    //MYSQL_ROW row;
+    // //C99 표준 사용하여 for 루프 내 변수 선언
+    // while ((row = mysql_fetch_row(result))) {
+    //     for (int i = 0; i < num_fields; i++) {
+    //         printf("%s ", row[i] ? row[i] : "NULL");
+    //     }
+    //     printf("\n");
+    // }
+
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(query_result))) {
+        printf("id: %s\n", row[0]);
+    }
+
+    mysql_free_result(query_result);
+    release_conn(&server_ptr->db.pools[USER_SETTING_D_IDX], conn);
     cJSON_Delete(json_ptr);
 }
 
-void signup_service(epoll_net_core* server_ptr, task* task) {
+void signup_service(epoll_net_core* server_ptr, task_t* task) {
     printf("signup_service\n");
     conn_t* conn = get_conn(server_ptr->db.pools[USER_SETTING_D_IDX].pool);
     cJSON* json_ptr = get_parsed_json(task->buf);
@@ -170,10 +247,24 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
         printf("dept: %s\n", dept_ptr->valuestring);
     }
     cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
-    if (cJSON_IsString(pos_ptr) == true)
-    {
-        printf("pos: %s\n", pos_ptr->valuestring);
+
+    printf("name: %s\n", cJSON_Print(name_ptr));
+    printf("id: %s\n", cJSON_Print(id_ptr));
+    printf("pw: %s\n", cJSON_Print(pw_ptr));
+    printf("phone: %s\n", cJSON_Print(phone_ptr));
+    printf("email: %s\n", cJSON_Print(email_ptr));
+    printf("dept: %s\n", cJSON_Print(dept_ptr));
+    printf("pos: %s\n", cJSON_Print(pos_ptr));
+    
+    char query[1024];
+    snprintf(query, sizeof(query), "INSERT INTO signin_req (login_id, password, name, phone, email) VALUES ('%s','%s','%s','%s','%s')",
+                        cJSON_Print(id_ptr), cJSON_Print(pw_ptr), cJSON_Print(name_ptr), cJSON_Print(phone_ptr), 
+                        cJSON_Print(email_ptr));
+    if (mysql_query(conn->conn,query)) {
+        fprintf(stderr, "INSERT failed: %s\n", mysql_error(conn->conn));
     }
+
+    release_conn(&server_ptr->db.pools[USER_SETTING_D_IDX], conn);
     cJSON_Delete(json_ptr);
     
     if (mysql_query(conn,("INSERT INTO sign_req (login_id, password, name, phone, email, deptno, position) VALUES "
@@ -331,7 +422,7 @@ int run_server(epoll_net_core* server_ptr) {
                 }
                 
                 int input_size = ring_read(&s_ptr->recv_bufs, client_fd);
-                if (input_size == 0) {
+                if (input_size <= 0) {
                     disconnect_client(server_ptr, client_fd);
                     continue;
                 }
