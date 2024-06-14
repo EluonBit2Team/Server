@@ -127,6 +127,10 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     char SQL_buf[512];
     struct epoll_event temp_send_event;
     client_session_t* now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL)
+    {
+        printf("now_session NULL\n");
+    }
     temp_send_event.events = EPOLLOUT | EPOLLET;
     temp_send_event.data.fd = now_session->fd;
 
@@ -180,7 +184,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         // strcpy(result_task.buf, cJSON_Print(result_json));
         // reserve_send(&now_session->send_bufs, result_task.buf, result_task.task_data_len);
         // epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event);
-        release_conn(&server_ptr->db.pools[USER_SETTING_D_IDX], conn);
+        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
         return ;
     }
     printf("conn_t* conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);\n");
@@ -192,7 +196,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         // strcpy(result_task.buf, cJSON_Print(result_json));
         // reserve_send(&now_session->send_bufs, result_task.buf, result_task.task_data_len);
         // epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event);
-        release_conn(&server_ptr->db.pools[USER_SETTING_D_IDX], conn);
+        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
         return ;
     }
     printf("MYSQL_RES *query_result = mysql_store_result(conn->conn);\n");
@@ -218,7 +222,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     }
     printf("while ((row = mysql_fetch_row(query_result)))\n");
     mysql_free_result(query_result);
-    release_conn(&server_ptr->db.pools[USER_SETTING_D_IDX], conn);
+    release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
     cJSON_Delete(json_ptr);
 }
 
@@ -475,7 +479,7 @@ int run_server(epoll_net_core* server_ptr) {
                 }
 
                 size_t sent = send(client_fd, get_rear_send_buf_ptr(&s_ptr->send_bufs), get_rear_send_buf_size(&s_ptr->send_bufs), 0);
-                write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, &s_ptr->send_bufs, 10); write(STDOUT_FILENO, "\n", 1);
+                write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, &s_ptr->send_bufs, 20); write(STDOUT_FILENO, "\n", 1);
                 if (sent < 0) {
                     perror("send");
                     close(server_ptr->epoll_events[i].data.fd);
