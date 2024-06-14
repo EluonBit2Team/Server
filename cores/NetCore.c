@@ -165,17 +165,41 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     printf("pos: %s\n", cJSON_Print(pos_ptr));
     
     char query[1024];
+    MYSQL_RES *res;
+    MYSQL_ROW row;
 
-    if (mysql_query(conn->conn, "SELECT EXISTS (SELECT * FROM signup_req WHERE login_id = '%s')") ,cJSON_Print(id_ptr)) {
-        printf("login_id 중복!!\n");
+    // Step 1: Check if login_id exists
+    snprintf(query, sizeof(query), "SELECT COUNT(*) FROM signin_req WHERE login_id = '%s'", cJSON_Print(id_ptr));
+    if (mysql_query(conn->conn, query)) {
+        fprintf(stderr, "SELECT failed: %s\n", mysql_error(conn->conn));
+        cJSON_Delete(json_ptr);
+        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
         return;
     }
-    else {
-        snprintf(query, sizeof(query),  "INSERT INTO signup_req (login_id, password, name, phone, email) \
-                                         SELECT * FROM (SELECT '%s', '%s', '%s', '%s', '%s') AS tmp )",
-                        cJSON_Print(id_ptr), cJSON_Print(pw_ptr), cJSON_Print(name_ptr), cJSON_Print(phone_ptr), 
-                        cJSON_Print(email_ptr));
+
+    res = mysql_store_result(conn->conn);
+    if (res == NULL) {
+        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn->conn));
+        cJSON_Delete(json_ptr);
+        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
+        return;
     }
+
+    row = mysql_fetch_row(res);
+    if (row && atoi(row[0]) > 0) {
+        printf("login_id already exists.\n");
+        mysql_free_result(res);
+        cJSON_Delete(json_ptr);
+        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
+        return;
+    }
+    mysql_free_result(res);
+    
+    // Step 2: Insert the new record if no duplicate is found
+    snprintf(query, sizeof(query), 
+             "INSERT INTO signin_req (login_id, password, name, phone, email) VALUES ('%s', '%s', '%s', '%s', '%s')",
+             cJSON_Print(id_ptr), cJSON_Print(pw_ptr), cJSON_Print(name_ptr), cJSON_Print(phone_ptr), cJSON_Print(email_ptr));
+
     if (mysql_query(conn->conn, query)) {
         fprintf(stderr, "INSERT failed: %s\n", mysql_error(conn->conn));
         cJSON_Delete(json_ptr);
@@ -183,9 +207,10 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
         return;
     }
 
-    printf("SignUp Sucess!!\n");
-    release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
+    printf("Record inserted successfully.\n");
+
     cJSON_Delete(json_ptr);
+    release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
 }
 
 void set_sock_nonblocking_mode(int sockFd) {
