@@ -168,7 +168,7 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     MYSQL_RES *res;
     MYSQL_ROW row;
 
-    snprintf(query, sizeof(query), "SELECT COUNT(*) FROM signup_req WHERE login_id = '%s'", cJSON_Print(id_ptr));
+    snprintf(query, sizeof(query), "SELECT COUNT(*) FROM signup_req WHERE login_id = '%s'", cJSON_GetStringValue(id_ptr));
     if (mysql_query(conn->conn, query)) {
         fprintf(stderr, "SELECT failed: %s\n", mysql_error(conn->conn));
         cJSON_Delete(json_ptr);
@@ -195,8 +195,8 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     mysql_free_result(res);
     
     snprintf(query, sizeof(query), 
-             "INSERT INTO signup_req (login_id, password, name, phone, email) VALUES ('%s', '%s', '%s', '%s', '%s')",
-             cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), cJSON_GetStringValue(name_ptr), cJSON_GetStringValue(phone_ptr), cJSON_GetStringValue(email_ptr));
+             "INSERT INTO signup_req (login_id, password, name, phone, email) VALUES ('%s', UNHEX(SHA2('%s',%d)), '%s', '%s', '%s')",
+             cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH, cJSON_GetStringValue(name_ptr), cJSON_GetStringValue(phone_ptr), cJSON_GetStringValue(email_ptr));
 
     if (mysql_query(conn->conn, query)) {
         fprintf(stderr, "INSERT failed: %s\n", mysql_error(conn->conn));
@@ -207,8 +207,8 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
 
     printf("Record inserted successfully.\n");
 
-    cJSON_Delete(json_ptr);
     release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
+    cJSON_Delete(json_ptr);
 }
 
 void set_sock_nonblocking_mode(int sockFd) {
