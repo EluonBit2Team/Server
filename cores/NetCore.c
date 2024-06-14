@@ -167,7 +167,7 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     char query[1024];
     snprintf(query, sizeof(query),  "INSERT INTO signup_req (login_id, password, name, phone, email, dept, pos) "
                                     "SELECT * FROM (SELECT '%s', '%s', '%s', '%s', '%s', '%s', '%s') AS tmp "
-                                    "WHERE NOT EXISTS (SELECT 1 FROM signin_req WHERE login_id = '%s')",
+                                    "WHERE NOT EXISTS (SELECT 1 FROM signup_req WHERE login_id = '%s')",
                         cJSON_Print(id_ptr), cJSON_Print(pw_ptr), cJSON_Print(name_ptr), cJSON_Print(phone_ptr), 
                         cJSON_Print(email_ptr));
     if (mysql_query(conn->conn, query)) {
