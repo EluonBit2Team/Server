@@ -165,11 +165,17 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     printf("pos: %s\n", cJSON_Print(pos_ptr));
     
     char query[1024];
-    snprintf(query, sizeof(query),  "INSERT INTO signup_req (login_id, password, name, phone, email, dept, pos) "
-                                    "SELECT * FROM (SELECT '%s', '%s', '%s', '%s', '%s', '%s', '%s') AS tmp "
-                                    "WHERE NOT EXISTS (SELECT 1 FROM signup_req WHERE login_id = '%s')",
+
+    if (mysql_query(conn->conn, "SELECT EXISTS (SELECT * FROM signup_req WHERE login_id = '%s')") ,cJSON_Print(id_ptr)) {
+        printf("login_id 중복!!\n");
+        return;
+    }
+    else {
+        snprintf(query, sizeof(query),  "INSERT INTO signup_req (login_id, password, name, phone, email) \
+                                         SELECT * FROM (SELECT '%s', '%s', '%s', '%s', '%s') AS tmp )",
                         cJSON_Print(id_ptr), cJSON_Print(pw_ptr), cJSON_Print(name_ptr), cJSON_Print(phone_ptr), 
                         cJSON_Print(email_ptr));
+    }
     if (mysql_query(conn->conn, query)) {
         fprintf(stderr, "INSERT failed: %s\n", mysql_error(conn->conn));
         cJSON_Delete(json_ptr);
