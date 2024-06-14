@@ -156,7 +156,7 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
         return;
     }
 
-    printf("name: %s\n", cJSON_GetStringValue(name_ptr));
+    printf("name: %s\n", name_ptr->valuestring);
     printf("id: %s\n", cJSON_GetStringValue(id_ptr));
     printf("pw: %s\n", cJSON_GetStringValue(pw_ptr));
     printf("phone: %s\n", cJSON_GetStringValue(phone_ptr));
@@ -169,7 +169,7 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     MYSQL_ROW row;
 
     // Step 1: Check if login_id exists
-    snprintf(query, sizeof(query), "SELECT COUNT(*) FROM signin_req WHERE login_id = '%s'", cJSON_Print(id_ptr));
+    snprintf(query, sizeof(query), "SELECT COUNT(*) FROM signup_req WHERE login_id = '%s'", cJSON_Print(id_ptr));
     if (mysql_query(conn->conn, query)) {
         fprintf(stderr, "SELECT failed: %s\n", mysql_error(conn->conn));
         cJSON_Delete(json_ptr);
@@ -186,6 +186,12 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     }
 
     row = mysql_fetch_row(res);
+    int num_fields;
+    num_fields = mysql_num_fields(res);
+    for (int i = 0; i < num_fields; i++) {
+        printf("%s ", row[i] ? row[i] : "NULL");
+    }
+    printf("\n");
     if (row && atoi(row[0]) > 0) {
         printf("login_id already exists.\n");
         mysql_free_result(res);
