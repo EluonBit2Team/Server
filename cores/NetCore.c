@@ -235,8 +235,10 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
         goto cleanup_and_respond;
     }
 
+    printf("1\n");
     type = 101;
     msg = "SIGNUP SUCCESS";
+    printf("%s\n",msg);
     goto cleanup_and_respond;
 
 cleanup_and_respond:
