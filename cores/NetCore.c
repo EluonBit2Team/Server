@@ -163,7 +163,7 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
         goto cleanup_and_respond;
     }
     cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "name");
-    printf("%s %d\n",json_ptr,strlen(json_ptr));
+    printf("%s %d\n",&json_ptr,strlen(&json_ptr));
     if (json_ptr == NULL || strlen(json_ptr) == 0)
     {
         msg = "name passing error";
