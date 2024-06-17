@@ -130,7 +130,6 @@ void login_service(epoll_net_core* server_ptr, task* task) {
     MYSQL_RES *query_result = NULL;
     char SQL_buf[512];
 
-    //
     struct epoll_event temp_send_event;
     now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
     if (now_session == NULL)
@@ -223,7 +222,6 @@ cleanup_and_respond:
 void signup_service(epoll_net_core* server_ptr, task* task) {
     printf("signup_service\n");
     conn_t* conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
-    printf("connection success\n");
     char * msg = NULL;
     int type = 100;
     char query[1024];
@@ -231,6 +229,7 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     MYSQL_ROW row;
     client_session_t* now_session = NULL;
     struct epoll_event temp_send_event;
+
     now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
     if (now_session == NULL)
     {
@@ -389,6 +388,13 @@ void make_group_service(epoll_net_core* server_ptr, task* task)
         goto cleanup_and_respond;
     }
 
+    cJSON* message_ptr = cJSON_GetObjectItem(json_ptr, "message");
+    if (is_error_occured == false && uid_ptr == NULL)
+    {
+        msg = "user send invalid json. Miss message";
+        goto cleanup_and_respond;
+    }
+    printf("%s\n",cJSON_Print(message_ptr));
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT sign_req_id FROM signup_req AS sr WHERE '%s' = sr.login_id ",
         cJSON_GetStringValue(uid_ptr));
