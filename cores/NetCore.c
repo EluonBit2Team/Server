@@ -163,43 +163,43 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
         goto cleanup_and_respond;
     }
     cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "name");
-    if (name_ptr == NULL)
+    if (name_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0')
     {
         msg = "name parsing error";
         goto cleanup_and_respond;
     }
     cJSON* id_ptr = cJSON_GetObjectItem(json_ptr, "id");
-    if (id_ptr == NULL)
+    if (id_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0')
     {
         msg = "id parsing error";
         goto cleanup_and_respond;
     }
     cJSON* pw_ptr = cJSON_GetObjectItem(json_ptr, "pw");
-    if (pw_ptr == NULL)
+    if (pw_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0')
     {
         msg = "pw parsing error";
         goto cleanup_and_respond;
     }
     cJSON* phone_ptr = cJSON_GetObjectItem(json_ptr, "phone");
-    if (phone_ptr == NULL)
+    if (phone_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0')
     {
         msg = "phone parsing error";
         goto cleanup_and_respond;
     }
     cJSON* email_ptr = cJSON_GetObjectItem(json_ptr, "email");
-    if (email_ptr == NULL)
+    if (email_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0')
     {
         msg = "email parsing error";
         goto cleanup_and_respond;
     }
     cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
-    if (dept_ptr == NULL)
+    if (dept_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0')
     {
         msg = "dept parsing  error";
         goto cleanup_and_respond;
     }
     cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
-    if (pos_ptr == NULL)
+    if (pos_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0')
     {
         msg = "pow parsing error";
         goto cleanup_and_respond;
@@ -237,7 +237,7 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
 
     type = 101;
     msg = "SIGNUP SUCCESS";
-    goto cleanup_and_respond;
+    //goto cleanup_and_respond;
 
 cleanup_and_respond:
     printf("%d %s", task->req_client_fd, msg);
@@ -247,7 +247,6 @@ cleanup_and_respond:
     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
         perror("epoll_ctl: add");
     }
-
     if (conn != NULL)
     {
         release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
