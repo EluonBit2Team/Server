@@ -235,30 +235,37 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
         goto cleanup_and_respond;
     }
 
-    printf("1\n");
     type = 101;
     msg = "SIGNUP SUCCESS";
     printf("%s\n",msg);
     goto cleanup_and_respond;
 
 cleanup_and_respond:
-    printf("%d %s", task->req_client_fd, msg);
+    printf("%d %s\n", task->req_client_fd, msg);
     cJSON_AddNumberToObject(result_json, "type", type);
+    printf("1\n");
     cJSON_AddStringToObject(result_json, "msg", msg);
+    printf("2\n");
     reserve_send(&now_session->send_bufs, cJSON_Print(result_json), strlen(cJSON_Print(result_json)));
+    printf("3\n");
     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
         perror("epoll_ctl: add");
     }
+    printf("4\n");
     if (conn != NULL)
     {
         release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
     }
+    printf("5\n");
     if (query_result != NULL)
     {
         mysql_free_result(query_result);
     }
+    printf("6\n");
     cJSON_Delete(json_ptr);
+    printf("7\n");
     cJSON_Delete(result_json);
+    printf("8\n");
     return ;
 }
 
