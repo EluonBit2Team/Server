@@ -381,15 +381,15 @@ void make_group_service(epoll_net_core* server_ptr, task* task)
         goto cleanup_and_respond;
     }
 
-    cJSON* uid_ptr = cJSON_GetObjectItem(json_ptr, "uid");
-    if (is_error_occured == false && uid_ptr == NULL)
+    cJSON* id_ptr = cJSON_GetObjectItem(json_ptr, "id");
+    if (is_error_occured == false && id_ptr == NULL)
     {
         msg = "user send invalid json. Miss uid";
         goto cleanup_and_respond;
     }
 
     cJSON* message_ptr = cJSON_GetObjectItem(json_ptr, "message");
-    if (is_error_occured == false && uid_ptr == NULL)
+    if (is_error_occured == false && message_ptr == NULL)
     {
         msg = "user send invalid json. Miss message";
         goto cleanup_and_respond;
@@ -397,7 +397,7 @@ void make_group_service(epoll_net_core* server_ptr, task* task)
     printf("%s\n",cJSON_Print(message_ptr));
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT sign_req_id FROM signup_req AS sr WHERE '%s' = sr.login_id ",
-        cJSON_GetStringValue(uid_ptr));
+        cJSON_GetStringValue(id_ptr));
 
     conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
     if (mysql_query(conn->conn, SQL_buf)) {
