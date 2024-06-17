@@ -216,6 +216,7 @@ cleanup_and_respond:
         mysql_free_result(query_result);
     }
     cJSON_Delete(json_ptr);
+    cJSON_Delete(result_json);
     return ;
 }
 
@@ -248,43 +249,43 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "name");
     if (name_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0')
     {
-        msg = "name parsing error";
+        msg = "user send invalid json. Miss name";
         goto cleanup_and_respond;
     }
     cJSON* id_ptr = cJSON_GetObjectItem(json_ptr, "id");
     if (id_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0')
     {
-        msg = "id parsing error";
+        msg = "user send invalid json. Miss id";
         goto cleanup_and_respond;
     }
     cJSON* pw_ptr = cJSON_GetObjectItem(json_ptr, "pw");
     if (pw_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0')
     {
-        msg = "pw parsing error";
+        msg = "user send invalid json. Miss pw";
         goto cleanup_and_respond;
     }
     cJSON* phone_ptr = cJSON_GetObjectItem(json_ptr, "phone");
     if (phone_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0')
     {
-        msg = "phone parsing error";
+        msg = "user send invalid json. Miss phone";
         goto cleanup_and_respond;
     }
     cJSON* email_ptr = cJSON_GetObjectItem(json_ptr, "email");
     if (email_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0')
     {
-        msg = "email parsing error";
+        msg = "user send invalid json. Miss email";
         goto cleanup_and_respond;
     }
     cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
     if (dept_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0')
     {
-        msg = "dept parsing  error";
+        msg = "user send invalid json. Miss dept";
         goto cleanup_and_respond;
     }
     cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
     if (pos_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0')
     {
-        msg = "pow parsing error";
+        msg = "user send invalid json. Miss pos";
         goto cleanup_and_respond;
     }
 
@@ -321,38 +322,130 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
 
     type = 101;
     msg = "SIGNUP SUCCESS";
-    printf("%s\n",msg);
     goto cleanup_and_respond;
 
 cleanup_and_respond:
     printf("%d %s\n", task->req_client_fd, msg);
     cJSON_AddNumberToObject(result_json, "type", type);
-    printf("1\n");
     cJSON_AddStringToObject(result_json, "msg", msg);
-    printf("2\n");
     reserve_send(&now_session->send_bufs, cJSON_Print(result_json), strlen(cJSON_Print(result_json)));
-    printf("3\n");
     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
         perror("epoll_ctl: add");
     }
-    printf("4\n");
     if (conn != NULL)
     {
         release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
     }
-    printf("5\n");
     if (query_result != NULL)
     {
         mysql_free_result(query_result);
     }
-    printf("6\n");
     cJSON_Delete(json_ptr);
-    printf("7\n");
     cJSON_Delete(result_json);
-    printf("8\n");
     return ;
 }
 
+void make_group_service(epoll_net_core* server_ptr, task* task)
+{
+    printf("make_group_service\n");
+    bool is_error_occured = false;
+    int type = 100;
+    const char* msg = NULL;
+    cJSON* result_json = cJSON_CreateObject();
+    client_session_t* now_session = NULL;
+    conn_t* conn = NULL;
+    MYSQL_RES *query_result = NULL;
+    MYSQL_ROW row;
+    char SQL_buf[512];
+
+    struct epoll_event temp_send_event;
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL)
+    {
+        msg = "session error";
+        goto cleanup_and_respond;
+    }
+    temp_send_event.events = EPOLLOUT | EPOLLET;
+    temp_send_event.data.fd = now_session->fd;
+
+    cJSON* json_ptr = get_parsed_json(task->buf);
+    if (json_ptr == NULL)
+    {
+        msg = "user send invalid json";
+        goto cleanup_and_respond;
+    }
+
+    cJSON* groupname_ptr = cJSON_GetObjectItem(json_ptr, "groupname");
+    if (groupname_ptr == NULL)
+    {
+        msg = "user send invalid json. Miss groupname_ptr";
+        goto cleanup_and_respond;
+    }
+
+    cJSON* uid_ptr = cJSON_GetObjectItem(json_ptr, "uid");
+    if (is_error_occured == false && uid_ptr == NULL)
+    {
+        msg = "user send invalid json. Miss uid";
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf), 
+        "SELECT sign_req_id FROM signup_req AS sr WHERE '%s' = sr.login_id ",
+        cJSON_GetStringValue(uid_ptr));
+
+    conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
+    if (mysql_query(conn->conn, SQL_buf)) {
+        fprintf(stderr, "login query fail: %s\n", mysql_error(conn->conn));
+        msg = "DB error";
+        goto cleanup_and_respond;
+    }
+
+    query_result = mysql_store_result(conn->conn);
+    if (query_result == NULL) {
+        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn->conn));
+        msg = "DB error";
+        goto cleanup_and_respond;
+    }
+    
+    row = mysql_fetch_row(query_result);
+    if (row == NULL) {
+        fprintf(stderr, "No data fetched\n");
+        goto cleanup_and_respond;
+    }
+    char *uid_value = row[0];
+    mysql_free_result(query_result);
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO group_req (groupname, uid) VALUES ('%s', '%d')",cJSON_GetStringValue(groupname_ptr), uid_value);
+    if (mysql_query(conn, SQL_buf)) {
+        fprintf(stderr, "INSERT failed: %s\n", mysql_error(conn));
+        msg = "INSERT failed";
+        goto cleanup_and_respond;
+    }
+    
+    type = 101;
+    msg = "Make Group Success";
+    goto cleanup_and_respond;
+
+cleanup_and_respond:
+    printf("%d %s", task->req_client_fd, msg);
+    cJSON_AddNumberToObject(result_json, "type", type);
+    cJSON_AddStringToObject(result_json, "msg", msg);
+    reserve_send(&now_session->send_bufs, cJSON_Print(result_json), strlen(cJSON_Print(result_json)));
+    if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
+        perror("epoll_ctl: add");
+    }
+    if (conn != NULL)
+    {
+        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
+    }
+    if (query_result != NULL)
+    {
+        mysql_free_result(query_result);
+    }
+    cJSON_Delete(json_ptr);
+    cJSON_Delete(result_json);
+    return ;
+}
 void set_sock_nonblocking_mode(int sockFd) {
     int flag = fcntl(sockFd, F_GETFL, 0);
     fcntl(sockFd, F_SETFL, flag | O_NONBLOCK);
@@ -382,6 +475,7 @@ bool init_server(epoll_net_core* server_ptr) {
     server_ptr->function_array[ECHO_SERVICE_FUNC] = echo_service;
     server_ptr->function_array[LOGIN_SERV_FUNC] = login_service;
     server_ptr->function_array[SIGNUP_SERV_FUNC] = signup_service;
+    server_ptr->function_array[MAKE_GROUP_SERV_FUNC] = make_group_service;
 
     // 리슨소켓 생성
     server_ptr->listen_fd = socket(PF_INET, SOCK_STREAM, 0);
