@@ -39,7 +39,7 @@ struct st_task {
     int req_client_fd;  // 일감 요청한 클라이언트 fd
     char buf[BUFF_SIZE];// 처리할 일감
     int task_data_len;  // 처리할 일감이 어느정도 크기인지
-} typedef task_t;
+} typedef task;
 
 // 스레드풀.
 struct st_thread_pool {
@@ -56,7 +56,7 @@ typedef struct send_buf {
 } send_buf_t;
 
 struct st_epoll_net_core;   // 전방선언
-typedef void (*func_ptr)(struct st_epoll_net_core*, task_t*); // 서비스함수포인터 타입 지정.
+typedef void (*func_ptr)(struct st_epoll_net_core*, task*); // 서비스함수포인터 타입 지정.
 typedef struct st_epoll_net_core {
     bool is_run;     // 서버 내릴때 flase(지금은)
     int listen_fd;  // 서버 리슨용 소켓 fd
@@ -85,7 +85,7 @@ void* work_routine(void *ptr);
 // (워커스레드들이)할 일의 정보를 담으면, 동기화 기법(뮤텍스)을 고려해서 담는 함수.
 bool enqueue_task(thread_pool_t* thread_pool, int req_client_fd, ring_buf* org_buf, int org_data_size);
 // 워커스레드에서 할 일을 꺼낼때(des에 복사) 쓰는 함수.
-bool deqeueu_and_get_task(thread_pool_t* thread_pool, task_t* des);
+bool deqeueu_and_get_task(thread_pool_t* thread_pool, task* des);
 // accept시 동작 처리 함수
 int accept_client(epoll_net_core* server_ptr); 
 void disconnect_client(epoll_net_core* server_ptr, int client_fd);
@@ -95,7 +95,7 @@ char* get_rear_send_buf_ptr(void_queue_t* vq);
 size_t get_rear_send_buf_size(void_queue_t* vq);
 void reserve_send(void_queue_t* vq, char* send_org, size_t send_size);
 // ✨ 서비스 함수. 이런 형태의 함수들을 추가하여 서비스 추가. ✨
-void echo_service(epoll_net_core* server_ptr, task_t* task);
-void signup_service(epoll_net_core* server_ptr, task_t* task);
+void echo_service(epoll_net_core* server_ptr, task* task);
+void signup_service(epoll_net_core* server_ptr, task* task);
 
 #endif
