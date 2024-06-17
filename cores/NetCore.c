@@ -225,6 +225,7 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
         goto cleanup_and_respond;
     }
     mysql_free_result(query_result);
+    query_result = NULL;
     
     snprintf(query, sizeof(query), 
              "INSERT INTO signup_req (login_id, password, name, phone, email) VALUES ('%s', UNHEX(SHA2('%s',%d)), '%s', '%s', '%s')",
