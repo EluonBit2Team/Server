@@ -1,5 +1,8 @@
 #include "NetCore.h"
 
+#define TRY for (int i = 0; i < 1; i++)
+#define CONTI continue
+
 // (워커스레드들이)할 일의 정보를 담으면, 동기화 기법(뮤텍스)을 고려해서 담는 함수.
 bool enqueue_task(thread_pool_t* thread_pool, int req_client_fd, ring_buf *org_buf, int org_data_size)
 {
@@ -82,12 +85,14 @@ char* get_rear_send_buf_ptr(void_queue_t* vq)
     return ((send_buf_t*)get_rear_data(vq))->buf;
 }
 
+// todo : queue함수로 옮기기.
 size_t get_rear_send_buf_size(void_queue_t* vq)
 {
     //return *((size_t*)get_rear_data(vq));
     return ((send_buf_t*)get_rear_data(vq))->send_data_size;
 }
 
+// todo : 좀 더 일반적인 형태로. queueu를 받지 않고, serv랑 세션을 받게.
 void reserve_send(void_queue_t* vq, char* send_org, size_t send_size)
 {
     if (send_size > BUFF_SIZE)
@@ -123,14 +128,23 @@ void echo_service(epoll_net_core* server_ptr, task_t* task) {
 // SELECT sign_req_id as sri FROM signin_req WHERE id = sri.id, UNHEX(SHA2(PASS, SHA2_HASH_LENGTH)) = sri.pw
 void login_service(epoll_net_core* server_ptr, task_t* task) {
     printf("login_service\n");
+    bool is_error_occured = false;
     task_t result_task;
+    int type = 100;
+    const char* msg = NULL;
     cJSON* result_json = cJSON_CreateObject();
+    client_session_t* now_session = NULL;
+    conn_t* conn = NULL;
+    MYSQL_RES *query_result = NULL;
     char SQL_buf[512];
+
+    //
     struct epoll_event temp_send_event;
-    client_session_t* now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
     if (now_session == NULL)
     {
-        printf("now_session NULL\n");
+        msg = "session error";
+        goto cleanup_and_respond;
     }
     temp_send_event.events = EPOLLOUT | EPOLLET;
     temp_send_event.data.fd = now_session->fd;
@@ -138,37 +152,22 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     cJSON* json_ptr = get_parsed_json(task->buf);
     if (json_ptr == NULL)
     {
-        printf("%d user send invalid json\n", task->req_client_fd);
-        cJSON_AddNumberToObject(result_json, "type", 100);
-        cJSON_AddStringToObject(result_json, "msg", "user send invalid json");
-        strcpy(result_task.buf, cJSON_Print(result_json));
-        reserve_send(&now_session->send_bufs, result_task.buf, result_task.task_data_len);
-        epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event);
-        return ;
+        msg = "user send invalid json";
+        goto cleanup_and_respond;
     }
 
     cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "id");
     if (name_ptr == NULL)
     {
-        // printf("%d user send invalid json. Miss name\n", task->req_client_fd);
-        // cJSON_AddNumberToObject(result_json, "type", 100);
-        // cJSON_AddStringToObject(result_json, "msg", "user send invalid json. Miss name");
-        // strcpy(result_task.buf, cJSON_Print(result_json));
-        // reserve_send(&now_session->send_bufs, result_task.buf, result_task.task_data_len);
-        // epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event);
-        return ;
+        msg = "user send invalid json. Miss name";
+        goto cleanup_and_respond;
     }
 
     cJSON* pw_ptr = cJSON_GetObjectItem(json_ptr, "pw");
-    if (pw_ptr == NULL)
+    if (is_error_occured == false && pw_ptr == NULL)
     {
-        // printf("%d user send invalid json. Miss pw\n", task->req_client_fd);
-        // cJSON_AddNumberToObject(result_json, "type", 100);
-        // cJSON_AddStringToObject(result_json, "msg", "user send invalid json. Miss pw");
-        // strcpy(result_task.buf, cJSON_Print(result_json));
-        // reserve_send(&now_session->send_bufs, result_task.buf, result_task.task_data_len);
-        // epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event);
-        return ;
+        msg = "user send invalid json. Miss pw";
+        goto cleanup_and_respond;
     }
 
     // TODO: signup_req_id에서 관리자 기능 구현 후 유저 정보 DB테이블로 이관. 
@@ -179,56 +178,54 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     conn_t* conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
     if (mysql_query(conn->conn, SQL_buf)) {
         fprintf(stderr, "login query fail: %s\n", mysql_error(conn->conn));
-        // cJSON_AddNumberToObject(result_json, "type", 100);
-        // cJSON_AddStringToObject(result_json, "msg", "DB error");
-        // strcpy(result_task.buf, cJSON_Print(result_json));
-        // reserve_send(&now_session->send_bufs, result_task.buf, result_task.task_data_len);
-        // epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event);
-        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
-        return ;
+        msg = "DB error";
+        goto cleanup_and_respond;
     }
 
-    MYSQL_RES *query_result = mysql_store_result(conn->conn);
+    query_result = mysql_store_result(conn->conn);
     if (query_result == NULL) {
         fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn->conn));
-        // cJSON_AddNumberToObject(result_json, "type", 100);
-        // cJSON_AddStringToObject(result_json, "msg", "DB error");
-        // strcpy(result_task.buf, cJSON_Print(result_json));
-        // reserve_send(&now_session->send_bufs, result_task.buf, result_task.task_data_len);
-        // epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event);
-        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
-        return ;
+
+        msg = "DB error";
+        goto cleanup_and_respond;
     }
-    //int num_fields = mysql_num_fields(query_result);
-    //MYSQL_ROW row;
-    // //C99 표준 사용하여 for 루프 내 변수 선언
-    // while ((row = mysql_fetch_row(result))) {
-    //     for (int i = 0; i < num_fields; i++) {
-    //         printf("%s ", row[i] ? row[i] : "NULL");
-    //     }
-    //     printf("\n");
-    // }
 
     MYSQL_ROW row;
     if ((row = mysql_fetch_row(query_result))) {
-        printf("id: %s\n", row[0]);
-        cJSON_AddNumberToObject(result_json, "type", 101);
-        cJSON_AddStringToObject(result_json, "msg", "LOGIN SUCCESS");
-        //strcpy(result_task.buf, cJSON_Print(result_json));
+        type = 101;
+        msg = "LOGIN SUCCESS";
+        goto cleanup_and_respond;
     }
     else
     {
-        cJSON_AddNumberToObject(result_json, "type", 100);
-        cJSON_AddStringToObject(result_json, "msg", "LOGIN FAIL");
+        msg = "Invalid ID or PW";
+        goto cleanup_and_respond;
     }
+
+    reserve_send(&now_session->send_bufs, cJSON_Print(result_json), strlen(cJSON_Print(result_json)));
+    if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
+        perror("epoll_ctl: EPOLL_CTL_MOD");
+    }
+    return ;
+
+cleanup_and_respond:
+    printf("%d %s", task->req_client_fd, msg);
+    cJSON_AddNumberToObject(result_json, "type", type);
+    cJSON_AddStringToObject(result_json, "msg", msg);
     reserve_send(&now_session->send_bufs, cJSON_Print(result_json), strlen(cJSON_Print(result_json)));
     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
         perror("epoll_ctl: add");
     }
-
-    mysql_free_result(query_result);
-    release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
+    if (conn != NULL)
+    {
+        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
+    }
+    if (query_result != NULL)
+    {
+        mysql_free_result(query_result);
+    }
     cJSON_Delete(json_ptr);
+    return ;
 }
 
 void signup_service(epoll_net_core* server_ptr, task_t* task) {
