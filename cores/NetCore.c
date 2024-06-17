@@ -163,44 +163,43 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
         goto cleanup_and_respond;
     }
     cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "name");
-    printf("%s %d\n",name_ptr->valuestring,strlen(name_ptr->valuestring));
-    if (name_ptr->valuestring == NULL || strlen(name_ptr->valuestring) == 0)
+    if (name_ptr == NULL || strlen(cJSON_GetStringValue(name_ptr)) == 0)
     {
         msg = "name passing error";
         goto cleanup_and_respond;
     }
     cJSON* id_ptr = cJSON_GetObjectItem(json_ptr, "id");
-    if (json_ptr == NULL || strlen(json_ptr) == 0)
+    if (json_ptr == NULL || strlen(cJSON_GetStringValue(id_ptr)) == 0)
     {
         msg = "id passing error";
         goto cleanup_and_respond;
     }
     cJSON* pw_ptr = cJSON_GetObjectItem(json_ptr, "pw");
-    if (json_ptr == NULL || strlen(json_ptr) == 0)
+    if (json_ptr == NULL || strlen(cJSON_GetStringValue(pw_ptr)) == 0)
     {
         msg = "pw passing error";
         goto cleanup_and_respond;
     }
     cJSON* phone_ptr = cJSON_GetObjectItem(json_ptr, "phone");
-    if (json_ptr == NULL || strlen(json_ptr) == 0)
+    if (json_ptr == NULL || strlen(cJSON_GetStringValue(phone_ptr)) == 0)
     {
         msg = "phone passing error";
         goto cleanup_and_respond;
     }
     cJSON* email_ptr = cJSON_GetObjectItem(json_ptr, "email");
-    if (json_ptr == NULL || strlen(json_ptr) == 0)
+    if (json_ptr == NULL || strlen(cJSON_GetStringValue(email_ptr)) == 0)
     {
         msg = "email passing error";
         goto cleanup_and_respond;
     }
     cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
-    if (json_ptr == NULL || strlen(json_ptr) == 0)
+    if (json_ptr == NULL)
     {
         msg = "dept passing error";
         goto cleanup_and_respond;
     }
     cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
-    if (json_ptr == NULL || strlen(json_ptr) == 0)
+    if (json_ptr == NULL)
     {
         msg = "pos passing error";
         goto cleanup_and_respond;
