@@ -163,45 +163,45 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
         goto cleanup_and_respond;
     }
     cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "name");
-    if (json_ptr == NULL)
+    if (name_ptr == NULL)
     {
-        msg = "name passing error";
+        msg = "name parsing error";
         goto cleanup_and_respond;
     }
     cJSON* id_ptr = cJSON_GetObjectItem(json_ptr, "id");
-    if (json_ptr == NULL)
+    if (id_ptr == NULL)
     {
-        msg = "id passing error";
+        msg = "id parsing error";
         goto cleanup_and_respond;
     }
     cJSON* pw_ptr = cJSON_GetObjectItem(json_ptr, "pw");
-    if (json_ptr == NULL)
+    if (pw_ptr == NULL)
     {
-        msg = "pw passing error";
+        msg = "pw parsing error";
         goto cleanup_and_respond;
     }
     cJSON* phone_ptr = cJSON_GetObjectItem(json_ptr, "phone");
-    if (json_ptr == NULL)
+    if (phone_ptr == NULL)
     {
-        msg = "phone passing error";
+        msg = "phone parsing error";
         goto cleanup_and_respond;
     }
     cJSON* email_ptr = cJSON_GetObjectItem(json_ptr, "email");
-    if (json_ptr == NULL)
+    if (email_ptr == NULL)
     {
-        msg = "email passing error";
+        msg = "email parsing error";
         goto cleanup_and_respond;
     }
     cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
-    if (json_ptr == NULL)
+    if (dept_ptr == NULL)
     {
-        msg = "dept passing error";
+        msg = "dept parsing  error";
         goto cleanup_and_respond;
     }
     cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
-    if (json_ptr == NULL)
+    if (pos_ptr == NULL)
     {
-        msg = "pow passing error";
+        msg = "pow parsing error";
         goto cleanup_and_respond;
     }
 
@@ -243,11 +243,11 @@ cleanup_and_respond:
     printf("%d %s", task->req_client_fd, msg);
     cJSON_AddNumberToObject(result_json, "type", type);
     cJSON_AddStringToObject(result_json, "msg", msg);
-    reserve_send(&now_session->send_bufs, cJSON_Print(result_json), strlen(cJSON_GetStringValue(result_json)));
+    reserve_send(&now_session->send_bufs, cJSON_Print(result_json), strlen(cJSON_Print(result_json)));
     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
         perror("epoll_ctl: add");
     }
-    cJSON_Delete(json_ptr);
+
     if (conn != NULL)
     {
         release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
@@ -256,6 +256,8 @@ cleanup_and_respond:
     {
         mysql_free_result(query_result);
     }
+    cJSON_Delete(json_ptr);
+    cJSON_Delete(result_json);
     return ;
 }
 
