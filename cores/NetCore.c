@@ -166,7 +166,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         "SELECT sign_req_id FROM signup_req AS sr WHERE '%s' = sr.login_id AND UNHEX(SHA2('%s', %d)) = sr.password",
         cJSON_GetStringValue(name_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH);
 
-    conn_t* conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
+    conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
     if (mysql_query(conn->conn, SQL_buf)) {
         fprintf(stderr, "login query fail: %s\n", mysql_error(conn->conn));
         msg = "DB error";
