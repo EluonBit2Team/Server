@@ -375,26 +375,26 @@ void make_group_service(epoll_net_core* server_ptr, task* task)
     }
 
     cJSON* groupname_ptr = cJSON_GetObjectItem(json_ptr, "groupname");
-    if (groupname_ptr == NULL)
+    if (groupname_ptr == NULL || !cJSON_IsString(groupname_ptr) || groupname_ptr->valuestring == NULL)
     {
         msg = "user send invalid json. Miss groupname_ptr";
         goto cleanup_and_respond;
     }
 
     cJSON* id_ptr = cJSON_GetObjectItem(json_ptr, "id");
-    if (is_error_occured == false && id_ptr == NULL)
+    if (id_ptr == NULL || !cJSON_IsString(id_ptr) || id_ptr->valuestring == NULL)
     {
         msg = "user send invalid json. Miss uid";
         goto cleanup_and_respond;
     }
 
     cJSON* message_ptr = cJSON_GetObjectItem(json_ptr, "message");
-    if (is_error_occured == false && message_ptr == NULL)
+    if (message_ptr == NULL || !cJSON_IsString(message_ptr) || message_ptr->valuestring == NULL)
     {
         msg = "user send invalid json. Miss message";
         goto cleanup_and_respond;
     }
-    printf("%s\n",cJSON_Print(message_ptr));
+
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT sign_req_id FROM signup_req AS sr WHERE '%s' = sr.login_id ",
         cJSON_GetStringValue(id_ptr));
@@ -416,27 +416,34 @@ void make_group_service(epoll_net_core* server_ptr, task* task)
     row = mysql_fetch_row(query_result);
     if (row == NULL) {
         fprintf(stderr, "No data fetched\n");
+        msg = "No data fetched";
         goto cleanup_and_respond;
     }
-    char *uid_value = row[0];
+    
+    int uid_value = atoi(row[0]);  // Convert the result to an int
     mysql_free_result(query_result);
+    query_result = NULL;
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO group_req (groupname, uid) VALUES ('%s', '%d')",cJSON_GetStringValue(groupname_ptr), uid_value);
-    if (mysql_query(conn, SQL_buf)) {
-        fprintf(stderr, "INSERT failed: %s\n", mysql_error(conn));
+    snprintf(SQL_buf, sizeof(SQL_buf), 
+             "INSERT INTO group_req (groupname, uid) VALUES ('%s', '%d')",
+             cJSON_GetStringValue(groupname_ptr), uid_value);
+
+    if (mysql_query(conn->conn, SQL_buf)) {
+        fprintf(stderr, "INSERT failed: %s\n", mysql_error(conn->conn));
         msg = "INSERT failed";
         goto cleanup_and_respond;
     }
     
     type = 101;
     msg = "Make Group Success";
-    goto cleanup_and_respond;
 
 cleanup_and_respond:
     printf("%d %s", task->req_client_fd, msg);
     cJSON_AddNumberToObject(result_json, "type", type);
     cJSON_AddStringToObject(result_json, "msg", msg);
-    reserve_send(&now_session->send_bufs, cJSON_Print(result_json), strlen(cJSON_Print(result_json)));
+    char *response_str = cJSON_Print(result_json);
+    reserve_send(&now_session->send_bufs, response_str, strlen(response_str));
+    free(response_str);
     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
         perror("epoll_ctl: add");
     }
@@ -452,6 +459,7 @@ cleanup_and_respond:
     cJSON_Delete(result_json);
     return ;
 }
+
 void set_sock_nonblocking_mode(int sockFd) {
     int flag = fcntl(sockFd, F_GETFL, 0);
     fcntl(sockFd, F_SETFL, flag | O_NONBLOCK);
