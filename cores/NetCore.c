@@ -121,7 +121,6 @@ void echo_service(epoll_net_core* server_ptr, task* task) {
 
 void login_service(epoll_net_core* server_ptr, task* task) {
     printf("login_service\n");
-    bool is_error_occured = false;
     int type = 100;
     const char* msg = NULL;
     cJSON* result_json = cJSON_CreateObject();
@@ -155,7 +154,7 @@ void login_service(epoll_net_core* server_ptr, task* task) {
     }
 
     cJSON* pw_ptr = cJSON_GetObjectItem(json_ptr, "pw");
-    if (is_error_occured == false && pw_ptr == NULL)
+    if (pw_ptr == NULL)
     {
         msg = "user send invalid json. Miss pw";
         goto cleanup_and_respond;
@@ -168,15 +167,14 @@ void login_service(epoll_net_core* server_ptr, task* task) {
     conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
     if (mysql_query(conn->conn, SQL_buf)) {
         fprintf(stderr, "login query fail: %s\n", mysql_error(conn->conn));
-        msg = "DB error";
+        msg = "login query fail";
         goto cleanup_and_respond;
     }
 
     query_result = mysql_store_result(conn->conn);
     if (query_result == NULL) {
         fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn->conn));
-
-        msg = "DB error";
+        msg = "mysql_store_result failed";
         goto cleanup_and_respond;
     }
 
@@ -192,14 +190,11 @@ void login_service(epoll_net_core* server_ptr, task* task) {
         goto cleanup_and_respond;
     }
 
-    reserve_send(&now_session->send_bufs, cJSON_Print(result_json), strlen(cJSON_Print(result_json)));
-    if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
-        perror("epoll_ctl: EPOLL_CTL_MOD");
-    }
-    return ;
+    type = 101;
+    msg = "LOGIN SUCCESS";
 
 cleanup_and_respond:
-    printf("%d %s", task->req_client_fd, msg);
+    printf("%d %s\n", task->req_client_fd, msg);
     cJSON_AddNumberToObject(result_json, "type", type);
     cJSON_AddStringToObject(result_json, "msg", msg);
     reserve_send(&now_session->send_bufs, cJSON_Print(result_json), strlen(cJSON_Print(result_json)));
@@ -221,24 +216,27 @@ cleanup_and_respond:
 
 void signup_service(epoll_net_core* server_ptr, task* task) {
     printf("signup_service\n");
-    conn_t* conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
-    char * msg = NULL;
     int type = 100;
-    char query[1024];
-    MYSQL_RES *query_result;
-    MYSQL_ROW row;
+    const char* msg = NULL;
+    cJSON* result_json = cJSON_CreateObject();
     client_session_t* now_session = NULL;
-    struct epoll_event temp_send_event;
+    conn_t* conn = NULL;
+    MYSQL_RES *query_result = NULL;
+    MYSQL_ROW row;
+    char SQL_buf[1024];
 
+    conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
+    struct epoll_event temp_send_event;
     now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+
     if (now_session == NULL)
     {
         printf("now_session NULL\n");
+        goto cleanup_and_respond;
     }
     temp_send_event.events = EPOLLOUT | EPOLLET;
     temp_send_event.data.fd = now_session->fd;
 
-    cJSON* result_json = cJSON_CreateObject();
     cJSON* json_ptr = get_parsed_json(task->buf);
     if (json_ptr == NULL)
     {
@@ -288,8 +286,8 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
         goto cleanup_and_respond;
     }
 
-    snprintf(query, sizeof(query), "SELECT COUNT(*) FROM signup_req WHERE login_id = '%s'", cJSON_GetStringValue(id_ptr));
-    if (mysql_query(conn->conn, query)) {
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT COUNT(*) FROM signup_req WHERE login_id = '%s'", cJSON_GetStringValue(id_ptr));
+    if (mysql_query(conn->conn, SQL_buf)) {
         fprintf(stderr, "SELECT failed: %s\n", mysql_error(conn->conn));
         msg = "SELECT failed";
         goto cleanup_and_respond;
@@ -310,18 +308,17 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     mysql_free_result(query_result);
     query_result = NULL;
     
-    snprintf(query, sizeof(query), 
+    snprintf(SQL_buf, sizeof(SQL_buf), 
              "INSERT INTO signup_req (login_id, password, name, phone, email) VALUES ('%s', UNHEX(SHA2('%s',%d)), '%s', '%s', '%s')",
              cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH, cJSON_GetStringValue(name_ptr), cJSON_GetStringValue(phone_ptr), cJSON_GetStringValue(email_ptr));
 
-    if (mysql_query(conn->conn, query)) {
+    if (mysql_query(conn->conn, SQL_buf)) {
         msg = "INSERT failed";
         goto cleanup_and_respond;
     }
 
     type = 101;
     msg = "SIGNUP SUCCESS";
-    goto cleanup_and_respond;
 
 cleanup_and_respond:
     printf("%d %s\n", task->req_client_fd, msg);
@@ -347,7 +344,6 @@ cleanup_and_respond:
 void make_group_service(epoll_net_core* server_ptr, task* task)
 {
     printf("make_group_service\n");
-    bool is_error_occured = false;
     int type = 100;
     const char* msg = NULL;
     cJSON* result_json = cJSON_CreateObject();
@@ -375,21 +371,21 @@ void make_group_service(epoll_net_core* server_ptr, task* task)
     }
 
     cJSON* groupname_ptr = cJSON_GetObjectItem(json_ptr, "groupname");
-    if (groupname_ptr == NULL || !cJSON_IsString(groupname_ptr) || groupname_ptr->valuestring == NULL)
+    if (groupname_ptr == NULL || cJSON_GetStringValue(groupname_ptr)[0] == '\0')
     {
         msg = "user send invalid json. Miss groupname_ptr";
         goto cleanup_and_respond;
     }
 
     cJSON* id_ptr = cJSON_GetObjectItem(json_ptr, "id");
-    if (id_ptr == NULL || !cJSON_IsString(id_ptr) || id_ptr->valuestring == NULL)
+    if (id_ptr == NULL || cJSON_GetStringValue(groupname_ptr)[0] == '\0')
     {
         msg = "user send invalid json. Miss uid";
         goto cleanup_and_respond;
     }
 
     cJSON* message_ptr = cJSON_GetObjectItem(json_ptr, "message");
-    if (message_ptr == NULL || !cJSON_IsString(message_ptr) || message_ptr->valuestring == NULL)
+    if (message_ptr == NULL || cJSON_GetStringValue(groupname_ptr)[0] == '\0')
     {
         msg = "user send invalid json. Miss message";
         goto cleanup_and_respond;
@@ -419,8 +415,8 @@ void make_group_service(epoll_net_core* server_ptr, task* task)
         msg = "No data fetched";
         goto cleanup_and_respond;
     }
-    
-    int uid_value = atoi(row[0]);  // Convert the result to an int
+
+    int uid_value = atoi(row[0]);
     mysql_free_result(query_result);
     query_result = NULL;
 
