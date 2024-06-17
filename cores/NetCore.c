@@ -243,7 +243,7 @@ cleanup_and_respond:
     printf("%d %s", task->req_client_fd, msg);
     cJSON_AddNumberToObject(result_json, "type", type);
     cJSON_AddStringToObject(result_json, "msg", msg);
-    reserve_send(&now_session->send_bufs, cJSON_GetStringValue(result_json), strlen(cJSON_GetStringValuePrint(result_json)));
+    reserve_send(&now_session->send_bufs, cJSON_GetStringValue(result_json), strlen(cJSON_GetStringValue(result_json)));
     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
         perror("epoll_ctl: add");
     }
