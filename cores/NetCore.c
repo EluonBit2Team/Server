@@ -147,7 +147,7 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     MYSQL_ROW row;
     client_session_t* now_session = NULL;
     struct epoll_event temp_send_event;
-    //client_session_t* now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
     if (now_session == NULL)
     {
         printf("now_session NULL\n");
