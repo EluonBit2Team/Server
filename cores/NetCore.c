@@ -93,15 +93,19 @@ size_t get_rear_send_buf_size(void_queue_t* vq)
 }
 
 // todo : 좀 더 일반적인 형태로. queueu를 받지 않고, serv랑 세션을 받게.
-void reserve_send(void_queue_t* vq, char* send_org, size_t send_size)
+void reserve_send(void_queue_t* vq, char* send_org, int send_size)
 {
     if (send_size > BUFF_SIZE)
     {
         return ;
     }
     send_buf_t temp_send_buf;
+    // send_size는 int여야함.
+    send_size += sizeof(send_size);
     temp_send_buf.send_data_size = send_size;
-    memcpy(temp_send_buf.buf, send_org, send_size);
+
+    memcpy(temp_send_buf.buf, (char*)&send_size, sizeof(send_size));
+    memcpy(temp_send_buf.buf + sizeof(send_size), send_org, send_size);
     enqueue(vq, (void*)&temp_send_buf);
 }
 
@@ -168,10 +172,10 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     }
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT sign_req_id FROM signup_req AS sr WHERE '%s' = sr.login_id AND UNHEX(SHA2('%s', %d)) = sr.password",
+        "SELECT uid FROM user WHERE '%s' = user.login_id AND UNHEX(SHA2('%s', %d)) = user.password",
         cJSON_GetStringValue(name_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH);
 
-    conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
+    conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     if (mysql_query(conn->conn, SQL_buf)) {
         fprintf(stderr, "login query fail: %s\n", mysql_error(conn->conn));
         msg = "login query fail";
@@ -185,11 +189,10 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
+    int uid = -1;
     MYSQL_ROW row;
     if ((row = mysql_fetch_row(query_result))) {
-        type = 101;
-        msg = "LOGIN SUCCESS";
-        goto cleanup_and_respond;
+        uid = atoi(row[0]);
     }
     else
     {
@@ -197,6 +200,8 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
+    insert(&server_ptr->uid_hash, task->req_client_fd, uid);
+    printf("%d user login\n", find(&server_ptr->uid_hash, task->req_client_fd));
     type = 101;
     msg = "LOGIN SUCCESS";
 
@@ -210,7 +215,7 @@ cleanup_and_respond:
     }
     if (conn != NULL)
     {
-        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
+        release_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX], conn);
     }
     if (query_result != NULL)
     {
@@ -462,6 +467,51 @@ cleanup_and_respond:
     return ;
 }
 
+void group_list_serveice(epoll_net_core* server_ptr, task_t* task) {
+    printf("group_list_serveice\n");
+    int type = 100;
+    const char* msg = NULL;
+    cJSON* result_json = cJSON_CreateObject();
+    client_session_t* now_session = NULL;
+    conn_t* conn = NULL;
+    MYSQL_RES *query_result = NULL;
+    MYSQL_ROW row;
+    char SQL_buf[512];
+    
+    struct epoll_event temp_send_event;
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL)
+    {
+        msg = "session error";
+        goto cleanup_and_respond;
+    }
+    temp_send_event.events = EPOLLOUT | EPOLLET;
+    temp_send_event.data.fd = now_session->fd;
+
+
+
+cleanup_and_respond:
+    printf("%d %s", task->req_client_fd, msg);
+    cJSON_AddNumberToObject(result_json, "type", type);
+    cJSON_AddStringToObject(result_json, "msg", msg);
+    char *response_str = cJSON_Print(result_json);
+    reserve_send(&now_session->send_bufs, response_str, strlen(response_str));
+    free(response_str);
+    if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
+        perror("epoll_ctl: add");
+    }
+    if (conn != NULL)
+    {
+        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
+    }
+    if (query_result != NULL)
+    {
+        mysql_free_result(query_result);
+    }
+    cJSON_Delete(result_json);
+    return ;
+}
+
 void set_sock_nonblocking_mode(int sockFd) {
     int flag = fcntl(sockFd, F_GETFL, 0);
     fcntl(sockFd, F_SETFL, flag | O_NONBLOCK);
@@ -476,6 +526,7 @@ bool init_server(epoll_net_core* server_ptr) {
     }
     // 세션 초기화
     init_session_pool(&server_ptr->session_pool, MAX_CLIENT_NUM);
+    init_hash_map(&server_ptr->uid_hash, MAX_CLIENT_NUM);
 
     // 서버 주소 설정
     server_ptr->is_run = false;
@@ -675,5 +726,6 @@ void down_server(epoll_net_core* server_ptr) {
        pthread_join(server_ptr->thread_pool.worker_threads[i], NULL);
     }
     close_all_sessions(&server_ptr->session_pool);
+    clear_hash_map(&server_ptr->uid_hash);
     close_mariadb(&server_ptr->db);
 }

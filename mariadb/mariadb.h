@@ -13,7 +13,7 @@
 #define LOG_DB "log_db"
 
 #define TOTAL_DB_NUM 5
-#define USER_SETTING_D_IDX 0
+#define USER_SETTING_DB_IDX 0
 #define CHAT_GROUP_DB_IDX 1
 #define STATISTIC_DB_IDX 2
 #define USER_REQUEST_DB_IDX 3

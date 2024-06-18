@@ -18,6 +18,7 @@
 #include "../utilities/packet_converter.h"
 #include "../mariadb/mariadb.h"
 #include "../defines.h"
+#include "uid_hash_map.h"
 
 #include "session.h"
 
@@ -52,7 +53,7 @@ struct st_thread_pool {
 } typedef thread_pool_t;
 
 typedef struct send_buf {
-    size_t send_data_size;
+    int send_data_size;
     char buf[BUFF_SIZE];
 } send_buf_t;
 
@@ -65,6 +66,7 @@ typedef struct st_epoll_net_core {
     func_ptr function_array[SERVICE_FUNC_NUM]; // 서비스 배열
     session_pool_t session_pool;
     struct sockaddr_in listen_addr; // 리슨용 소켓 주소 담는 자료형
+    uid_hash_map_t uid_hash;
     
     int epoll_fd; 
     struct epoll_event* epoll_events;
@@ -94,10 +96,11 @@ void set_sock_nonblocking_mode(int sockFd) ;
 
 char* get_rear_send_buf_ptr(void_queue_t* vq);
 size_t get_rear_send_buf_size(void_queue_t* vq);
-void reserve_send(void_queue_t* vq, char* send_org, size_t send_size);
+void reserve_send(void_queue_t* vq, char* send_org, int send_size);
 // ✨ 서비스 함수. 이런 형태의 함수들을 추가하여 서비스 추가. ✨
 void echo_service(epoll_net_core* server_ptr, task_t* task);
 void signup_service(epoll_net_core* server_ptr, task_t* task);
 void make_group_service(epoll_net_core* server_ptr, task_t* task);
+void group_list_serveice(epoll_net_core* server_ptr, task_t* task);
 
 #endif
