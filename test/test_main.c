@@ -17,75 +17,45 @@
 
 // gcc -o t_main.out test_main.c -L/usr/lib64/mysql -lmysqlclient -std=c99
 
-void finish_with_error(MYSQL *con) {
-    fprintf(stderr, "%s\n", mysql_error(con));
-    mysql_close(con);
-    exit(1);
+void insert_dummy_data(MYSQL *con) {
+    char query[1024];
+    int i;
+    time_t t;
+    struct tm *tm_info;
+    char current_time[20];
+    srand(time(NULL));
+    time(&t);
+    tm_info = localtime(&t);
+    strftime(current_time, sizeof(current_time), "%Y-%m-%d %H:%M:%S", tm_info);
+
+    for (i = 1; i <= 25; i++) {
+        snprintf(query, sizeof(query), 
+            "INSERT INTO user (login_id, password, name, phone, email, did, position, role, last_login_date, create_date) VALUES "
+            "('login_id%d', UNHEX(SHA2('password%d', 256)), 'name%d', 'phone%d', 'email%d', %d, %d, %d, '%s', '%s')",
+            i, i, i, i, i, 1 + rand() % 3, 1 + rand() % 3, 1 + rand() % 3, current_time, current_time);
+
+        if (mysql_query(con, query)) {
+            fprintf(stderr, "INSERT failed: %s\n", mysql_error(con));
+            return;
+        }
+    }
+
+    printf("25 dummy records inserted successfully.\n");
 }
 
 int main() {
-    // MYSQL *con = mysql_init(NULL);
+    MYSQL *conn = mysql_init(NULL);
 
-    // if (con == NULL) {
-    //     fprintf(stderr, "mysql_init() failed\n");
-    //     exit(1);
-    // }
-
-    // if (mysql_real_connect(con, DB_IP, DB_USER_NAME, DB_USER_PASS, USER_REQUEST_DB, DB_PORT, NULL, 0) == NULL) {
-    //     finish_with_error(con);
-    // }
-
-    // if (mysql_query(con, "SELECT * FROM signin_req")) {
-    //     finish_with_error(con);
-    // }
-
-    // char query[1024];
-    // snprintf(query, sizeof(query), "INSERT INTO sign_req(login_id, password, name, phone, email, deptno, position) VALUES('1','2','3','4','5','6','7')");
-    
-    // char query[1024];
-    // snprintf(query, sizeof(query), "INSERT INTO signin_req (login_id, password, name, phone, email, deptno, position) VALUES ('%s','%s','%s','%s','%s','%s','%s')",
-    //                     'asdf','qwer','asdf','qwer','asdf','qwer','asdf');
-
-    
-    // if (mysql_query(con,query)) {
-    //     fprintf(stderr, "INSERT failed\n");
-    //     mysql_close(con);
-    // }
-    // MYSQL_RES *result = mysql_store_result(con);
-
-    // if (result == NULL) {
-    //     finish_with_error(con);
-    // }
-
-    // int num_fields = mysql_num_fields(result);
-
-    // MYSQL_ROW row;
-
-    // // //C99 표준 사용하여 for 루프 내 변수 선언
-    // // while ((row = mysql_fetch_row(result))) {
-    // //     for (int i = 0; i < num_fields; i++) {
-    // //         printf("%s ", row[i] ? row[i] : "NULL");
-    // //     }
-    // //     printf("\n");
-    // // }
-
-    // mysql_free_result(result);
-    // mysql_close(con);
-    chatdb_t db;
-    init_mariadb(&db);
-    printf("init\n");
-    conn_t* conn = get_conn(&db.pools[USER_REQUEST_DB_IDX]);
-    printf("get conn\n");
-    char query[1024];
-    snprintf(query, sizeof(query), "INSERT INTO signin_req(login_id, password, name, phone, email, deptno, position) VALUES('1','2','3','4','5','6','7')");
-    printf("snprintf\n");
-    if (mysql_query(conn->conn, query)) {
-        fprintf(stderr, "INSERT failed\n");
-        mysql_close(conn->conn);
+    if (conn == NULL) {
+        fprintf(stderr, "mysql_init() failed\n");
+        exit(1);
     }
-    printf("mysql_query\n");
-    release_conn(&db.pools[USER_REQUEST_DB_IDX], conn);
-    printf("mysql_query\n");
-    close_mariadb(&db);
-    return 0;
+
+    if (mysql_real_connect(conn, DB_IP, DB_USER_NAME, DB_USER_PASS, USER_SETTING_DB, DB_PORT, NULL, 0) == NULL) {
+        fprintf(stderr, "login query fail: %s\n", mysql_error(conn));
+    }
+    insert_dummy_data(conn);
+    mysql_close(conn);
+
+    return EXIT_SUCCESS;
 }
