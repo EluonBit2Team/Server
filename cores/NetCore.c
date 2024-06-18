@@ -203,8 +203,9 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
 
     insert(&server_ptr->uid_hash, task->req_client_fd, uid);
     printf("%d user login\n", find(&server_ptr->uid_hash, task->req_client_fd));
-    type = 101;
+    type = 2;
     msg = "LOGIN SUCCESS";
+    goto cleanup_and_respond;
 
 cleanup_and_respond:
     printf("%d %s\n", task->req_client_fd, msg);
@@ -286,13 +287,13 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
-    if (dept_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0')
+    if (dept_ptr == NULL)
     {
         msg = "user send invalid json. Miss dept";
         goto cleanup_and_respond;
     }
     cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
-    if (pos_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0')
+    if (pos_ptr == NULL)
     {
         msg = "user send invalid json. Miss pos";
         goto cleanup_and_respond;
@@ -321,15 +322,16 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
     query_result = NULL;
     
     snprintf(SQL_buf, sizeof(SQL_buf), 
-             "INSERT INTO signup_req (login_id, password, name, phone, email) VALUES ('%s', UNHEX(SHA2('%s',%d)), '%s', '%s', '%s')",
-             cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH, cJSON_GetStringValue(name_ptr), cJSON_GetStringValue(phone_ptr), cJSON_GetStringValue(email_ptr));
+             "INSERT INTO signup_req (login_id, password, name, phone, email, dept, pos) VALUES ('%s', UNHEX(SHA2('%s',%d)), '%s', '%s', '%s', '%d', '%d')",
+             cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH, cJSON_GetStringValue(name_ptr), \
+             cJSON_GetStringValue(phone_ptr), cJSON_GetStringValue(email_ptr), cJSON_GetNumberValue(dept_ptr),cJSON_GetNumberValue(pos_ptr));
 
     if (mysql_query(conn->conn, SQL_buf)) {
         msg = "INSERT failed";
         goto cleanup_and_respond;
     }
 
-    type = 101;
+    type = 1;
     msg = "SIGNUP SUCCESS";
     goto cleanup_and_respond;
 
@@ -354,6 +356,7 @@ cleanup_and_respond:
     cJSON_Delete(result_json);
     return ;
 }
+
 
 void make_group_service(epoll_net_core* server_ptr, task_t* task)
 {
@@ -411,7 +414,7 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
 
     conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
     if (mysql_query(conn->conn, SQL_buf)) {
-        fprintf(stderr, "login query fail: %s\n", mysql_error(conn->conn));
+        fprintf(stderr, "query fail: %s\n", mysql_error(conn->conn));
         msg = "DB error";
         goto cleanup_and_respond;
     }
@@ -444,7 +447,7 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
         goto cleanup_and_respond;
     }
     
-    type = 101;
+    type = 4;
     msg = "Make Group Success";
 
 cleanup_and_respond:
@@ -470,8 +473,8 @@ cleanup_and_respond:
     return ;
 }
 
-void group_list_serveice(epoll_net_core* server_ptr, task_t* task) {
-    printf("group_list_serveice\n");
+void user_list(epoll_net_core* server_ptr, task* task) {
+    printf("user_list_service\n");
     int type = 100;
     const char* msg = NULL;
     cJSON* result_json = cJSON_CreateObject();
@@ -479,8 +482,27 @@ void group_list_serveice(epoll_net_core* server_ptr, task_t* task) {
     conn_t* conn = NULL;
     MYSQL_RES *query_result = NULL;
     MYSQL_ROW row;
-    char SQL_buf[512];
-    
+    char SQL_buf[1024];
+
+    cJSON* json_ptr = get_parsed_json(task->buf);
+    if (json_ptr == NULL)
+    {
+        msg = "user send invalid json";
+        goto cleanup_and_respond;
+    }
+
+    cJSON* page_ptr = cJSON_GetObjectItem(json_ptr, "page");
+    if (page_ptr == NULL || !cJSON_IsNumber(page_ptr))
+    {
+        msg = "user send invalid json. Miss page";
+        goto cleanup_and_respond;
+    }
+
+    int page = cJSON_GetNumberValue(page_ptr);
+
+    int limit = 10;
+    int offset = (page - 1) * limit;
+
     struct epoll_event temp_send_event;
     now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
     if (now_session == NULL)
@@ -491,12 +513,45 @@ void group_list_serveice(epoll_net_core* server_ptr, task_t* task) {
     temp_send_event.events = EPOLLOUT | EPOLLET;
     temp_send_event.data.fd = now_session->fd;
 
+    snprintf(SQL_buf, sizeof(SQL_buf), 
+        "SELECT u.name, u.position, d.dept_name FROM user u JOIN dept d ON u.did = d.did LIMIT %d OFFSET %d", limit, offset);
 
+    conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
+    if (mysql_query(conn->conn, SQL_buf)) {
+        fprintf(stderr, "query fail: %s\n", mysql_error(conn->conn));
+        msg = "DB error";
+        goto cleanup_and_respond;
+    }
+
+    query_result = mysql_store_result(conn->conn);
+    if (query_result == NULL) {
+        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn->conn));
+        msg = "DB error";
+        goto cleanup_and_respond;
+    }
+    
+    cJSON* users_array = cJSON_CreateArray();
+    while ((row = mysql_fetch_row(query_result))) {
+        cJSON* user_obj = cJSON_CreateObject();
+        cJSON_AddStringToObject(user_obj, "name", row[0]);
+        cJSON_AddStringToObject(user_obj, "position", row[1]);
+        cJSON_AddStringToObject(user_obj, "dept_name", row[2]);
+        cJSON_AddItemToArray(users_array, user_obj);
+    }
+
+    if (cJSON_GetArraySize(users_array) == 0) {
+        msg = "No data fetched";
+        goto cleanup_and_respond;
+    }
+
+    type = 5;
+    msg = "User List Send Success";
 
 cleanup_and_respond:
     printf("%d %s", task->req_client_fd, msg);
     cJSON_AddNumberToObject(result_json, "type", type);
     cJSON_AddStringToObject(result_json, "msg", msg);
+    cJSON_AddItemToObject(result_json, "users", users_array);
     char *response_str = cJSON_Print(result_json);
     reserve_send(&now_session->send_bufs, response_str, strlen(response_str));
     free(response_str);
@@ -511,6 +566,7 @@ cleanup_and_respond:
     {
         mysql_free_result(query_result);
     }
+    cJSON_Delete(json_ptr);
     cJSON_Delete(result_json);
     return ;
 }
@@ -546,6 +602,7 @@ bool init_server(epoll_net_core* server_ptr) {
     server_ptr->function_array[LOGIN_SERV_FUNC] = login_service;
     server_ptr->function_array[SIGNUP_SERV_FUNC] = signup_service;
     server_ptr->function_array[MAKE_GROUP_SERV_FUNC] = make_group_service;
+    server_ptr->function_array[USER_LIST_SERV_FUNC] = user_list;
 
     // 리슨소켓 생성
     server_ptr->listen_fd = socket(PF_INET, SOCK_STREAM, 0);
