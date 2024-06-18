@@ -466,6 +466,25 @@ void user_list(epoll_net_core* server_ptr, task* task) {
     MYSQL_ROW row;
     char SQL_buf[512];
 
+    cJSON* json_ptr = get_parsed_json(task->buf);
+    if (json_ptr == NULL)
+    {
+        msg = "user send invalid json";
+        goto cleanup_and_respond;
+    }
+
+    cJSON* page_ptr = cJSON_GetObjectItem(json_ptr, "page");
+    if (page_ptr == NULL || !cJSON_IsNumber(page_ptr))
+    {
+        msg = "user send invalid json. Miss page";
+        goto cleanup_and_respond;
+    }
+
+    int page = cJSON_GetNumberValue(page_ptr);
+
+    int limit = 10;
+    int offset = (page - 1) * limit;
+
     struct epoll_event temp_send_event;
     now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
     if (now_session == NULL)
@@ -484,7 +503,7 @@ void user_list(epoll_net_core* server_ptr, task* task) {
     }
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT u.name, u.position, d.dept_name FROM user u JOIN dept d ON u.deptno = d.deptno");
+        "SELECT u.name, u.position, d.dept_name FROM user u JOIN dept d ON u.deptno = d.deptno LIMIT %d OFFSET %d", limit, offset);
 
     conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
     if (mysql_query(conn->conn, SQL_buf)) {
