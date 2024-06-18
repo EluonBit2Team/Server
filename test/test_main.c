@@ -58,7 +58,7 @@ void insert_chat_dummy_data(MYSQL *con) {
         snprintf(query, sizeof(query), 
             "INSERT INTO user (mid, uid, gid, text, timestamp) VALUES "
             "('%d', '%d', '%d', '%s','%s')",
-            //1 + rand() % 100, 1 + rand() % , 1 + rand() % 3,, current_time);
+            1 + rand() % 100, 1 + rand() % , 1 + rand() % 3, , current_time);
 
         if (mysql_query(con, query)) {
             fprintf(stderr, "INSERT failed: %s\n", mysql_error(con));
@@ -66,7 +66,7 @@ void insert_chat_dummy_data(MYSQL *con) {
         }
     }
 
-    printf("25 dummy records inserted successfully.\n");
+    printf("100 dummy records inserted successfully.\n");
 }
 
 int main() {
