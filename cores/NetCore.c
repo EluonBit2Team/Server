@@ -320,16 +320,17 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
     mysql_free_result(query_result);
     query_result = NULL;
     
+    printf("1\n");
     snprintf(SQL_buf, sizeof(SQL_buf), 
              "INSERT INTO signup_req (login_id, password, name, phone, email, dept, pos) VALUES ('%s', UNHEX(SHA2('%s',%d)), '%s', '%s', '%s', '%d', '%d')",
              cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH, cJSON_GetStringValue(name_ptr), \
              cJSON_GetStringValue(phone_ptr), cJSON_GetStringValue(email_ptr), cJSON_GetNumberValue(dept_ptr),cJSON_GetNumberValue(pos_ptr));
-
+    printf("2\n");
     if (mysql_query(conn->conn, SQL_buf)) {
         msg = "INSERT failed";
         goto cleanup_and_respond;
     }
-
+    printf("3\n");
     type = 1;
     msg = "SIGNUP SUCCESS";
     goto cleanup_and_respond;
@@ -338,6 +339,7 @@ cleanup_and_respond:
     printf("%d %s\n", task->req_client_fd, msg);
     cJSON_AddNumberToObject(result_json, "type", type);
     cJSON_AddStringToObject(result_json, "msg", msg);
+    printf("4\n");
     reserve_send(&now_session->send_bufs, cJSON_Print(result_json), strlen(cJSON_Print(result_json)));
 
     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
@@ -351,6 +353,7 @@ cleanup_and_respond:
     {
         mysql_free_result(query_result);
     }
+    printf("5\n");
     cJSON_Delete(json_ptr);
     cJSON_Delete(result_json);
     return ;
