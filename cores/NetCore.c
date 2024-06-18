@@ -465,7 +465,7 @@ void user_list(epoll_net_core* server_ptr, task* task) {
     conn_t* conn = NULL;
     MYSQL_RES *query_result = NULL;
     MYSQL_ROW row;
-    char SQL_buf[512];
+    char SQL_buf[1024];
 
     cJSON* json_ptr = get_parsed_json(task->buf);
     if (json_ptr == NULL)
@@ -521,7 +521,6 @@ void user_list(epoll_net_core* server_ptr, task* task) {
         cJSON_AddStringToObject(user_obj, "dept_name", row[2]);
         cJSON_AddItemToArray(users_array, user_obj);
     }
-    cJSON_AddItemToObject(result_json, "users", users_array);
 
     if (cJSON_GetArraySize(users_array) == 0) {
         msg = "No data fetched";
