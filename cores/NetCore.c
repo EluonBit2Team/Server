@@ -495,13 +495,6 @@ void user_list(epoll_net_core* server_ptr, task* task) {
     temp_send_event.events = EPOLLOUT | EPOLLET;
     temp_send_event.data.fd = now_session->fd;
 
-    cJSON* json_ptr = get_parsed_json(task->buf);
-    if (json_ptr == NULL)
-    {
-        msg = "user send invalid json";
-        goto cleanup_and_respond;
-    }
-
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT u.name, u.position, d.dept_name FROM user u JOIN dept d ON u.deptno = d.deptno LIMIT %d OFFSET %d", limit, offset);
 
