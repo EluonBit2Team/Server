@@ -294,7 +294,7 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss dept";
         goto cleanup_and_respond;
     }
-    cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "position");
+    cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
     if (pos_ptr == NULL)
     {
         msg = "user send invalid json. Miss pos";
