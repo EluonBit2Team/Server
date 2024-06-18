@@ -33,6 +33,7 @@
 #define MSG_SERV_FUNC 3
 #define MAKE_GROUP_SERV_FUNC 4
 #define USER_LIST_SERV_FUNC 5
+#define GROUP_LIST_SERV_FUNC 6
 
 #define WOKER_THREAD_NUM 4
 
@@ -103,6 +104,6 @@ void echo_service(epoll_net_core* server_ptr, task_t* task);
 void signup_service(epoll_net_core* server_ptr, task_t* task);
 void make_group_service(epoll_net_core* server_ptr, task_t* task);
 void user_list_service(epoll_net_core* server_ptr, task_t* task);
-
+void group_list_service(epoll_net_core* server_ptr, task_t* task);
 
 #endif
