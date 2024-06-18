@@ -11,6 +11,11 @@
         "mariadb.h": "c",
         "mariadb_pool.h": "c",
         "packet_converter.h": "c",
-        "defines.h": "c"
+        "defines.h": "c",
+        "mysql.h": "c",
+        "pthread.h": "c",
+        "uthash.h": "c",
+        "user_id_hash_map.h": "c",
+        "uid_hash_map.h": "c"
     }
 }
