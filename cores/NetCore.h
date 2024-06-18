@@ -30,6 +30,7 @@
 #define SIGNUP_SERV_FUNC 1
 #define LOGIN_SERV_FUNC 2
 #define MSG_SERV_FUNC 3
+#define MAKE_GROUP_SERV_FUNC 4
 
 #define WOKER_THREAD_NUM 4
 
@@ -97,5 +98,5 @@ void reserve_send(void_queue_t* vq, char* send_org, size_t send_size);
 // ✨ 서비스 함수. 이런 형태의 함수들을 추가하여 서비스 추가. ✨
 void echo_service(epoll_net_core* server_ptr, task* task);
 void signup_service(epoll_net_core* server_ptr, task* task);
-
+void make_group_service(epoll_net_core* server_ptr, task* task);
 #endif
