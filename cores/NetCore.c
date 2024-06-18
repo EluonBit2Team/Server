@@ -569,6 +569,87 @@ cleanup_and_respond:
     return ;
 }
 
+void group_list_service(epoll_net_core* server_ptr, task_t* task) {
+    printf("group_list_service\n");
+    int type = 100;
+    const char* msg = NULL;
+    cJSON* result_json = cJSON_CreateObject();
+    client_session_t* now_session = NULL;
+    conn_t* conn = NULL;
+    MYSQL_RES *query_result = NULL;
+    MYSQL_ROW row;
+    char SQL_buf[512];
+
+    cJSON* json_ptr = get_parsed_json(task->buf);
+    if (json_ptr == NULL)
+    {
+        msg = "user send invalid json";
+        goto cleanup_and_respond;
+    }
+
+    struct epoll_event temp_send_event;
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL)
+    {
+        msg = "session error";
+        goto cleanup_and_respond;
+    }
+    temp_send_event.events = EPOLLOUT | EPOLLET;
+    temp_send_event.data.fd = now_session->fd;
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT cg.groupname FROM chat_group AS cg");
+
+    conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
+    if (mysql_query(conn->conn, SQL_buf)) {
+        fprintf(stderr, "query fail: %s\n", mysql_error(conn->conn));
+        msg = "DB error";
+        goto cleanup_and_respond;
+    }
+
+    query_result = mysql_store_result(conn->conn);
+    if (query_result == NULL) {
+        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn->conn));
+        msg = "DB error";
+        goto cleanup_and_respond;
+    }
+    
+    cJSON* group_list = cJSON_CreateArray();
+    while ((row = mysql_fetch_row(query_result))) {
+        cJSON_AddItemToArray(group_list, cJSON_CreateString(row[0]));
+    }
+
+    type = 6;
+
+cleanup_and_respond:
+    printf("%d %s", task->req_client_fd, msg);
+    cJSON_AddNumberToObject(result_json, "type", type);
+    if (msg != NULL)
+    {
+        cJSON_AddStringToObject(result_json, "msg", msg);
+    }
+    else
+    {
+        cJSON_AddItemToObject(result_json, "groups", group_list);
+    }
+    char *response_str = cJSON_Print(result_json);
+    reserve_send(&now_session->send_bufs, response_str, strlen(response_str));
+    free(response_str);
+    if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
+        perror("epoll_ctl: add");
+    }
+    if (conn != NULL)
+    {
+        release_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX], conn);
+    }
+    if (query_result != NULL)
+    {
+        mysql_free_result(query_result);
+    }
+    cJSON_Delete(json_ptr);
+    cJSON_Delete(result_json);
+    return ;
+}
+
 void set_sock_nonblocking_mode(int sockFd) {
     int flag = fcntl(sockFd, F_GETFL, 0);
     fcntl(sockFd, F_SETFL, flag | O_NONBLOCK);
