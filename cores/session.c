@@ -77,8 +77,9 @@ int close_session(session_pool_t* pool_ptr, client_session_t* session)
     if (temp_session != NULL) {
         HASH_DEL(pool_ptr->hash_map_by_fd, session);
     }
-
-    close(session->fd);
+    else {
+        printf("session find error\n");
+    }
     reset_session(session);
 }
 

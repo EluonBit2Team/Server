@@ -106,6 +106,7 @@ void reserve_send(void_queue_t* vq, char* send_org, int send_size)
 
     memcpy(temp_send_buf.buf, (char*)&send_size, sizeof(send_size));
     memcpy(temp_send_buf.buf + sizeof(send_size), send_org, send_size);
+    write(STDOUT_FILENO, "enqueue:", 8); write(STDOUT_FILENO, temp_send_buf.buf, send_size); write(STDOUT_FILENO, "\n", 1);
     enqueue(vq, (void*)&temp_send_buf);
 }
 
@@ -330,12 +331,14 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
 
     type = 101;
     msg = "SIGNUP SUCCESS";
+    goto cleanup_and_respond;
 
 cleanup_and_respond:
     printf("%d %s\n", task->req_client_fd, msg);
     cJSON_AddNumberToObject(result_json, "type", type);
     cJSON_AddStringToObject(result_json, "msg", msg);
     reserve_send(&now_session->send_bufs, cJSON_Print(result_json), strlen(cJSON_Print(result_json)));
+
     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
         perror("epoll_ctl: add");
     }
@@ -594,6 +597,7 @@ void disconnect_client(epoll_net_core* server_ptr, int client_fd)
     {
         close_session(&server_ptr->session_pool, session_ptr);
     }
+    
     close(client_fd);
     printf("disconnect:%d\n", client_fd);
 }
@@ -684,7 +688,7 @@ int run_server(epoll_net_core* server_ptr) {
                 {
                     continue ;
                 }
-
+                printf("send session id:%ld, fd:%d", s_ptr->session_idx, s_ptr->fd);
                 char* send_buf_ptr = get_rear_send_buf_ptr(&s_ptr->send_bufs);
                 if (send_buf_ptr == NULL)
                 {
