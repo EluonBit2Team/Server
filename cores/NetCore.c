@@ -688,7 +688,7 @@ int run_server(epoll_net_core* server_ptr) {
                 {
                     continue ;
                 }
-                printf("send session id:%ld, fd:%d", s_ptr->session_idx, s_ptr->fd);
+                printf("send session id:%ld, fd:%d\n", s_ptr->session_idx, s_ptr->fd);
                 char* send_buf_ptr = get_rear_send_buf_ptr(&s_ptr->send_bufs);
                 if (send_buf_ptr == NULL)
                 {
