@@ -130,7 +130,6 @@ void echo_service(epoll_net_core* server_ptr, task_t* task) {
     }
 }
 
-// SELECT sign_req_id as sri FROM signin_req WHERE id = sri.id, UNHEX(SHA2(PASS, SHA2_HASH_LENGTH)) = sri.pw
 void login_service(epoll_net_core* server_ptr, task_t* task) {
     printf("login_service\n");
     int type = 100;
@@ -357,7 +356,6 @@ cleanup_and_respond:
     return ;
 }
 
-
 void make_group_service(epoll_net_core* server_ptr, task_t* task)
 {
     printf("make_group_service\n");
@@ -473,7 +471,7 @@ cleanup_and_respond:
     return ;
 }
 
-void user_list(epoll_net_core* server_ptr, task* task) {
+void user_list_service(epoll_net_core* server_ptr, task_t* task) {
     printf("user_list_service\n");
     int type = 100;
     const char* msg = NULL;
@@ -602,7 +600,7 @@ bool init_server(epoll_net_core* server_ptr) {
     server_ptr->function_array[LOGIN_SERV_FUNC] = login_service;
     server_ptr->function_array[SIGNUP_SERV_FUNC] = signup_service;
     server_ptr->function_array[MAKE_GROUP_SERV_FUNC] = make_group_service;
-    server_ptr->function_array[USER_LIST_SERV_FUNC] = user_list;
+    server_ptr->function_array[USER_LIST_SERV_FUNC] = user_list_service;
 
     // 리슨소켓 생성
     server_ptr->listen_fd = socket(PF_INET, SOCK_STREAM, 0);
