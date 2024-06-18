@@ -498,7 +498,7 @@ void user_list(epoll_net_core* server_ptr, task* task) {
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT u.name, u.position, d.dept_name FROM user u JOIN dept d ON u.deptno = d.deptno LIMIT %d OFFSET %d", limit, offset);
 
-    conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
+    conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     if (mysql_query(conn->conn, SQL_buf)) {
         fprintf(stderr, "query fail: %s\n", mysql_error(conn->conn));
         msg = "DB error";
