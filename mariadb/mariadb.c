@@ -15,6 +15,7 @@ bool init_mariadb(chatdb_t* db)
     db->db_sizes[LOG_DB_IDX] = 2; // 관리자
     for (int i = 0; i < TOTAL_DB_NUM; i++)
     {
+        printf("%s init\n", db->db_names[i]);
         if(init_mariadb_pool(&db->pools[i], db->db_sizes[i], db->db_names[i]) == false)
         {
             for (int j = 0; j < i; j++)
@@ -23,7 +24,7 @@ bool init_mariadb(chatdb_t* db)
             }
             return false;
         }
-        printf("%s init done\n", db->db_names[i]);
+        //printf("%s init done : %d - %d\n", db->db_names[i], db->pools[i].pool_idx_stack_top, db->pools[i].pool_idx_stack[db->pools[i].pool_idx_stack_top]);
     }
     return true;
 }

@@ -17,7 +17,7 @@
 
 // gcc -o t_main.out test_main.c -L/usr/lib64/mysql -lmysqlclient -std=c99
 
-void insert_dummy_data(MYSQL *con) {
+void insert_user_dummy_data(MYSQL *con) {
     char query[1024];
     int i;
     time_t t;
@@ -43,6 +43,32 @@ void insert_dummy_data(MYSQL *con) {
     printf("25 dummy records inserted successfully.\n");
 }
 
+void insert_chat_dummy_data(MYSQL *con) {
+    char query[1024];
+    int i;
+    time_t t;
+    struct tm *tm_info;
+    char current_time[20];
+    srand(time(NULL));
+    time(&t);
+    tm_info = localtime(&t);
+    strftime(current_time, sizeof(current_time), "%Y-%m-%d %H:%M:%S", tm_info);
+
+    for (i = 1; i <= 100; i++) {
+        snprintf(query, sizeof(query), 
+            "INSERT INTO user (mid, uid, gid, text, timestamp) VALUES "
+            "('%d', '%d', '%d', '%s','%s')",
+            //1 + rand() % 100, 1 + rand() % , 1 + rand() % 3,, current_time);
+
+        if (mysql_query(con, query)) {
+            fprintf(stderr, "INSERT failed: %s\n", mysql_error(con));
+            return;
+        }
+    }
+
+    printf("25 dummy records inserted successfully.\n");
+}
+
 int main() {
     MYSQL *conn = mysql_init(NULL);
 
@@ -51,10 +77,10 @@ int main() {
         exit(1);
     }
 
-    if (mysql_real_connect(conn, DB_IP, DB_USER_NAME, DB_USER_PASS, USER_SETTING_DB, DB_PORT, NULL, 0) == NULL) {
+    if (mysql_real_connect(conn, DB_IP, DB_USER_NAME, DB_USER_PASS, LOG_DB, DB_PORT, NULL, 0) == NULL) {
         fprintf(stderr, "login query fail: %s\n", mysql_error(conn));
     }
-    insert_dummy_data(conn);
+    insert_chat_dummy_data(conn);
     mysql_close(conn);
 
     return EXIT_SUCCESS;
