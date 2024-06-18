@@ -190,7 +190,7 @@ void login_service(epoll_net_core* server_ptr, task* task) {
         goto cleanup_and_respond;
     }
 
-    type = 101;
+    type = 2;
     msg = "LOGIN SUCCESS";
 
 cleanup_and_respond:
@@ -274,13 +274,13 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
         goto cleanup_and_respond;
     }
     cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
-    if (dept_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0')
+    if (dept_ptr == NULL)
     {
         msg = "user send invalid json. Miss dept";
         goto cleanup_and_respond;
     }
     cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
-    if (pos_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0')
+    if (pos_ptr == NULL)
     {
         msg = "user send invalid json. Miss pos";
         goto cleanup_and_respond;
@@ -309,15 +309,16 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     query_result = NULL;
     
     snprintf(SQL_buf, sizeof(SQL_buf), 
-             "INSERT INTO signup_req (login_id, password, name, phone, email) VALUES ('%s', UNHEX(SHA2('%s',%d)), '%s', '%s', '%s')",
-             cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH, cJSON_GetStringValue(name_ptr), cJSON_GetStringValue(phone_ptr), cJSON_GetStringValue(email_ptr));
+             "INSERT INTO signup_req (login_id, password, name, phone, email, dept, pos) VALUES ('%s', UNHEX(SHA2('%s',%d)), '%s', '%s', '%s', '%d', '%d')",
+             cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH, cJSON_GetStringValue(name_ptr), \
+             cJSON_GetStringValue(phone_ptr), cJSON_GetStringValue(email_ptr), cJSON_GetNumberValue(dept_ptr),cJSON_GetNumberValue(pos_ptr));
 
     if (mysql_query(conn->conn, SQL_buf)) {
         msg = "INSERT failed";
         goto cleanup_and_respond;
     }
 
-    type = 101;
+    type = 1;
     msg = "SIGNUP SUCCESS";
 
 cleanup_and_respond:
@@ -429,7 +430,7 @@ void make_group_service(epoll_net_core* server_ptr, task* task) {
         goto cleanup_and_respond;
     }
     
-    type = 101;
+    type = 4;
     msg = "Make Group Success";
 
 cleanup_and_respond:
@@ -527,13 +528,14 @@ void user_list(epoll_net_core* server_ptr, task* task) {
         goto cleanup_and_respond;
     }
 
-    type = 101;
+    type = 5;
     msg = "User List Send Success";
 
 cleanup_and_respond:
     printf("%d %s", task->req_client_fd, msg);
     cJSON_AddNumberToObject(result_json, "type", type);
     cJSON_AddStringToObject(result_json, "msg", msg);
+    cJSON_AddItemToObject(result_json, "users", users_array);
     char *response_str = cJSON_Print(result_json);
     reserve_send(&now_session->send_bufs, response_str, strlen(response_str));
     free(response_str);
