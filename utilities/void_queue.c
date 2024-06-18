@@ -15,7 +15,6 @@ void reset_queue(void_queue_t* queue) {
         cur = temp_pre;
     }
     queue->rear_node = NULL;
-    queue->type_default_size = 0;
 }
 
 int enqueue(void_queue_t* queue, const void* data_org) {

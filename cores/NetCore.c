@@ -1,9 +1,12 @@
 #include "NetCore.h"
 
+#define TRY for (int i = 0; i < 1; i++)
+#define CONTI continue
+
 // (워커스레드들이)할 일의 정보를 담으면, 동기화 기법(뮤텍스)을 고려해서 담는 함수.
 bool enqueue_task(thread_pool_t* thread_pool, int req_client_fd, ring_buf *org_buf, int org_data_size)
 {
-    task new_task;
+    task_t new_task;
     if (ring_array(org_buf, new_task.buf) == false)
     {
         return false;
@@ -19,7 +22,7 @@ bool enqueue_task(thread_pool_t* thread_pool, int req_client_fd, ring_buf *org_b
 }
 
 // 워커스레드에서 할 일을 꺼낼때(des에 복사) 쓰는 함수.
-bool deqeueu_and_get_task(thread_pool_t* thread_pool, task* des)
+bool deqeueu_and_get_task(thread_pool_t* thread_pool, task_t* des)
 {
     pthread_mutex_lock(&thread_pool->task_mutex);
     if (dequeue(&thread_pool->task_queue, (void*)des) < 0)
@@ -44,7 +47,7 @@ void* work_routine(void *ptr)
         }
         pthread_mutex_unlock(&thread_pool->task_mutex);
 
-        task temp_task;
+        task_t temp_task;
         // 할 일을 temp_task에 복사하고
         // 미리 설정해둔 서비스 배열로, 적합한 함수 포인터를 호출하여 처리
         if (deqeueu_and_get_task(thread_pool, &temp_task) == true)
@@ -66,7 +69,7 @@ void init_worker_thread(epoll_net_core* server_ptr, thread_pool_t* thread_pool_t
 {
     pthread_mutex_init(&thread_pool_t_ptr->task_mutex, NULL);
     pthread_cond_init(&thread_pool_t_ptr->task_cond, NULL);
-    init_queue(&thread_pool_t_ptr->task_queue, sizeof(task));
+    init_queue(&thread_pool_t_ptr->task_queue, sizeof(task_t));
     for (int i = 0; i < WOKER_THREAD_NUM; i++)
     {
         pthread_create(&thread_pool_t_ptr->worker_threads[i], NULL, work_routine, server_ptr);
@@ -82,25 +85,33 @@ char* get_rear_send_buf_ptr(void_queue_t* vq)
     return ((send_buf_t*)get_rear_data(vq))->buf;
 }
 
+// todo : queue함수로 옮기기.
 size_t get_rear_send_buf_size(void_queue_t* vq)
 {
-    return *((size_t*)get_rear_data(vq));
+    //return *((size_t*)get_rear_data(vq));
+    return ((send_buf_t*)get_rear_data(vq))->send_data_size;
 }
 
-void reserve_send(void_queue_t* vq, char* send_org, size_t send_size)
+// todo : 좀 더 일반적인 형태로. queueu를 받지 않고, serv랑 세션을 받게.
+void reserve_send(void_queue_t* vq, char* send_org, int send_size)
 {
     if (send_size > BUFF_SIZE)
     {
         return ;
     }
     send_buf_t temp_send_buf;
+    // send_size는 int여야함.
+    send_size += sizeof(send_size);
     temp_send_buf.send_data_size = send_size;
-    memcpy(temp_send_buf.buf, send_org, send_size);
+
+    memcpy(temp_send_buf.buf, (char*)&send_size, sizeof(send_size));
+    memcpy(temp_send_buf.buf + sizeof(send_size), send_org, send_size);
+    //write(STDOUT_FILENO, "enqueue:", 8); write(STDOUT_FILENO, temp_send_buf.buf, send_size); write(STDOUT_FILENO, "\n", 1);
     enqueue(vq, (void*)&temp_send_buf);
 }
 
 // ✨ 서비스 함수. 이런 형태의 함수들을 추가하여 서비스 추가. ✨
-void echo_service(epoll_net_core* server_ptr, task* task) {
+void echo_service(epoll_net_core* server_ptr, task_t* task) {
     printf("echo_service\n");
     client_session_t* now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
     if (now_session == NULL)
@@ -119,7 +130,8 @@ void echo_service(epoll_net_core* server_ptr, task* task) {
     }
 }
 
-void login_service(epoll_net_core* server_ptr, task* task) {
+// SELECT sign_req_id as sri FROM signin_req WHERE id = sri.id, UNHEX(SHA2(PASS, SHA2_HASH_LENGTH)) = sri.pw
+void login_service(epoll_net_core* server_ptr, task_t* task) {
     printf("login_service\n");
     int type = 100;
     const char* msg = NULL;
@@ -161,10 +173,10 @@ void login_service(epoll_net_core* server_ptr, task* task) {
     }
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT sign_req_id FROM signup_req AS sr WHERE '%s' = sr.login_id AND UNHEX(SHA2('%s', %d)) = sr.password",
+        "SELECT uid FROM user WHERE '%s' = user.login_id AND UNHEX(SHA2('%s', %d)) = user.password",
         cJSON_GetStringValue(name_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH);
 
-    conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
+    conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     if (mysql_query(conn->conn, SQL_buf)) {
         fprintf(stderr, "login query fail: %s\n", mysql_error(conn->conn));
         msg = "login query fail";
@@ -178,11 +190,10 @@ void login_service(epoll_net_core* server_ptr, task* task) {
         goto cleanup_and_respond;
     }
 
+    int uid = -1;
     MYSQL_ROW row;
     if ((row = mysql_fetch_row(query_result))) {
-        type = 101;
-        msg = "LOGIN SUCCESS";
-        goto cleanup_and_respond;
+        uid = atoi(row[0]);
     }
     else
     {
@@ -190,8 +201,11 @@ void login_service(epoll_net_core* server_ptr, task* task) {
         goto cleanup_and_respond;
     }
 
-    type = 101;
+    insert(&server_ptr->uid_hash, task->req_client_fd, uid);
+    printf("%d user login\n", find(&server_ptr->uid_hash, task->req_client_fd));
+    type = 2;
     msg = "LOGIN SUCCESS";
+    goto cleanup_and_respond;
 
 cleanup_and_respond:
     printf("%d %s\n", task->req_client_fd, msg);
@@ -203,18 +217,17 @@ cleanup_and_respond:
     }
     if (conn != NULL)
     {
-        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
+        release_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX], conn);
     }
     if (query_result != NULL)
     {
         mysql_free_result(query_result);
     }
     cJSON_Delete(json_ptr);
-    cJSON_Delete(result_json);
     return ;
 }
 
-void signup_service(epoll_net_core* server_ptr, task* task) {
+void signup_service(epoll_net_core* server_ptr, task_t* task) {
     printf("signup_service\n");
     int type = 100;
     const char* msg = NULL;
@@ -274,13 +287,13 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
         goto cleanup_and_respond;
     }
     cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
-    if (dept_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0')
+    if (dept_ptr == NULL)
     {
         msg = "user send invalid json. Miss dept";
         goto cleanup_and_respond;
     }
     cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
-    if (pos_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0')
+    if (pos_ptr == NULL)
     {
         msg = "user send invalid json. Miss pos";
         goto cleanup_and_respond;
@@ -309,22 +322,25 @@ void signup_service(epoll_net_core* server_ptr, task* task) {
     query_result = NULL;
     
     snprintf(SQL_buf, sizeof(SQL_buf), 
-             "INSERT INTO signup_req (login_id, password, name, phone, email) VALUES ('%s', UNHEX(SHA2('%s',%d)), '%s', '%s', '%s')",
-             cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH, cJSON_GetStringValue(name_ptr), cJSON_GetStringValue(phone_ptr), cJSON_GetStringValue(email_ptr));
+             "INSERT INTO signup_req (login_id, password, name, phone, email, dept, pos) VALUES ('%s', UNHEX(SHA2('%s',%d)), '%s', '%s', '%s', '%d', '%d')",
+             cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH, cJSON_GetStringValue(name_ptr), \
+             cJSON_GetStringValue(phone_ptr), cJSON_GetStringValue(email_ptr), cJSON_GetNumberValue(dept_ptr),cJSON_GetNumberValue(pos_ptr));
 
     if (mysql_query(conn->conn, SQL_buf)) {
         msg = "INSERT failed";
         goto cleanup_and_respond;
     }
 
-    type = 101;
+    type = 1;
     msg = "SIGNUP SUCCESS";
+    goto cleanup_and_respond;
 
 cleanup_and_respond:
     printf("%d %s\n", task->req_client_fd, msg);
     cJSON_AddNumberToObject(result_json, "type", type);
     cJSON_AddStringToObject(result_json, "msg", msg);
     reserve_send(&now_session->send_bufs, cJSON_Print(result_json), strlen(cJSON_Print(result_json)));
+
     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
         perror("epoll_ctl: add");
     }
@@ -341,7 +357,8 @@ cleanup_and_respond:
     return ;
 }
 
-void make_group_service(epoll_net_core* server_ptr, task* task)
+
+void make_group_service(epoll_net_core* server_ptr, task_t* task)
 {
     printf("make_group_service\n");
     int type = 100;
@@ -397,7 +414,7 @@ void make_group_service(epoll_net_core* server_ptr, task* task)
 
     conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
     if (mysql_query(conn->conn, SQL_buf)) {
-        fprintf(stderr, "login query fail: %s\n", mysql_error(conn->conn));
+        fprintf(stderr, "query fail: %s\n", mysql_error(conn->conn));
         msg = "DB error";
         goto cleanup_and_respond;
     }
@@ -430,13 +447,111 @@ void make_group_service(epoll_net_core* server_ptr, task* task)
         goto cleanup_and_respond;
     }
     
-    type = 101;
+    type = 4;
     msg = "Make Group Success";
 
 cleanup_and_respond:
     printf("%d %s", task->req_client_fd, msg);
     cJSON_AddNumberToObject(result_json, "type", type);
     cJSON_AddStringToObject(result_json, "msg", msg);
+    char *response_str = cJSON_Print(result_json);
+    reserve_send(&now_session->send_bufs, response_str, strlen(response_str));
+    free(response_str);
+    if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
+        perror("epoll_ctl: add");
+    }
+    if (conn != NULL)
+    {
+        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
+    }
+    if (query_result != NULL)
+    {
+        mysql_free_result(query_result);
+    }
+    cJSON_Delete(json_ptr);
+    cJSON_Delete(result_json);
+    return ;
+}
+
+void user_list(epoll_net_core* server_ptr, task* task) {
+    printf("user_list_service\n");
+    int type = 100;
+    const char* msg = NULL;
+    cJSON* result_json = cJSON_CreateObject();
+    client_session_t* now_session = NULL;
+    conn_t* conn = NULL;
+    MYSQL_RES *query_result = NULL;
+    MYSQL_ROW row;
+    char SQL_buf[1024];
+
+    cJSON* json_ptr = get_parsed_json(task->buf);
+    if (json_ptr == NULL)
+    {
+        msg = "user send invalid json";
+        goto cleanup_and_respond;
+    }
+
+    cJSON* page_ptr = cJSON_GetObjectItem(json_ptr, "page");
+    if (page_ptr == NULL || !cJSON_IsNumber(page_ptr))
+    {
+        msg = "user send invalid json. Miss page";
+        goto cleanup_and_respond;
+    }
+
+    int page = cJSON_GetNumberValue(page_ptr);
+
+    int limit = 10;
+    int offset = (page - 1) * limit;
+
+    struct epoll_event temp_send_event;
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL)
+    {
+        msg = "session error";
+        goto cleanup_and_respond;
+    }
+    temp_send_event.events = EPOLLOUT | EPOLLET;
+    temp_send_event.data.fd = now_session->fd;
+
+    snprintf(SQL_buf, sizeof(SQL_buf), 
+        "SELECT u.name, u.position, d.dept_name FROM user u JOIN dept d ON u.did = d.did LIMIT %d OFFSET %d", limit, offset);
+
+    conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
+    if (mysql_query(conn->conn, SQL_buf)) {
+        fprintf(stderr, "query fail: %s\n", mysql_error(conn->conn));
+        msg = "DB error";
+        goto cleanup_and_respond;
+    }
+
+    query_result = mysql_store_result(conn->conn);
+    if (query_result == NULL) {
+        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn->conn));
+        msg = "DB error";
+        goto cleanup_and_respond;
+    }
+    
+    cJSON* users_array = cJSON_CreateArray();
+    while ((row = mysql_fetch_row(query_result))) {
+        cJSON* user_obj = cJSON_CreateObject();
+        cJSON_AddStringToObject(user_obj, "name", row[0]);
+        cJSON_AddStringToObject(user_obj, "position", row[1]);
+        cJSON_AddStringToObject(user_obj, "dept_name", row[2]);
+        cJSON_AddItemToArray(users_array, user_obj);
+    }
+
+    if (cJSON_GetArraySize(users_array) == 0) {
+        msg = "No data fetched";
+        goto cleanup_and_respond;
+    }
+
+    type = 5;
+    msg = "User List Send Success";
+
+cleanup_and_respond:
+    printf("%d %s", task->req_client_fd, msg);
+    cJSON_AddNumberToObject(result_json, "type", type);
+    cJSON_AddStringToObject(result_json, "msg", msg);
+    cJSON_AddItemToObject(result_json, "users", users_array);
     char *response_str = cJSON_Print(result_json);
     reserve_send(&now_session->send_bufs, response_str, strlen(response_str));
     free(response_str);
@@ -470,6 +585,7 @@ bool init_server(epoll_net_core* server_ptr) {
     }
     // 세션 초기화
     init_session_pool(&server_ptr->session_pool, MAX_CLIENT_NUM);
+    init_hash_map(&server_ptr->uid_hash, MAX_CLIENT_NUM);
 
     // 서버 주소 설정
     server_ptr->is_run = false;
@@ -486,6 +602,7 @@ bool init_server(epoll_net_core* server_ptr) {
     server_ptr->function_array[LOGIN_SERV_FUNC] = login_service;
     server_ptr->function_array[SIGNUP_SERV_FUNC] = signup_service;
     server_ptr->function_array[MAKE_GROUP_SERV_FUNC] = make_group_service;
+    server_ptr->function_array[USER_LIST_SERV_FUNC] = user_list;
 
     // 리슨소켓 생성
     server_ptr->listen_fd = socket(PF_INET, SOCK_STREAM, 0);
@@ -537,6 +654,7 @@ void disconnect_client(epoll_net_core* server_ptr, int client_fd)
     {
         close_session(&server_ptr->session_pool, session_ptr);
     }
+    
     close(client_fd);
     printf("disconnect:%d\n", client_fd);
 }
@@ -601,7 +719,7 @@ int run_server(epoll_net_core* server_ptr) {
                 }
                 
                 int input_size = ring_read(&s_ptr->recv_bufs, client_fd);
-                if (input_size == 0) {
+                if (input_size <= 0) {
                     disconnect_client(server_ptr, client_fd);
                     continue;
                 }
@@ -627,15 +745,15 @@ int run_server(epoll_net_core* server_ptr) {
                 {
                     continue ;
                 }
-
+                //printf("send session id:%ld, fd:%d\n", s_ptr->session_idx, s_ptr->fd);
                 char* send_buf_ptr = get_rear_send_buf_ptr(&s_ptr->send_bufs);
                 if (send_buf_ptr == NULL)
                 {
                     continue ;
                 }
 
-                size_t sent = send(client_fd, get_rear_send_buf_ptr(&s_ptr->send_bufs), get_rear_send_buf_size(&s_ptr->send_bufs), 0);
-                write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, &s_ptr->send_bufs, 10); write(STDOUT_FILENO, "\n", 1);
+                size_t sent = send(client_fd, send_buf_ptr, get_rear_send_buf_size(&s_ptr->send_bufs), 0);
+                write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, send_buf_ptr, get_rear_send_buf_size(&s_ptr->send_bufs)); write(STDOUT_FILENO, "\n", 1);
                 if (sent < 0) {
                     perror("send");
                     close(server_ptr->epoll_events[i].data.fd);
@@ -669,5 +787,6 @@ void down_server(epoll_net_core* server_ptr) {
        pthread_join(server_ptr->thread_pool.worker_threads[i], NULL);
     }
     close_all_sessions(&server_ptr->session_pool);
+    clear_hash_map(&server_ptr->uid_hash);
     close_mariadb(&server_ptr->db);
 }

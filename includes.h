@@ -9,6 +9,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "cJSON/cJSON.h"
 
