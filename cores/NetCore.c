@@ -325,7 +325,7 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
     
     printf("1\n");
     snprintf(SQL_buf, sizeof(SQL_buf), 
-             "INSERT INTO signup_req (login_id, password, name, phone, email, deptno, pos) VALUES ('%s', UNHEX(SHA2('%s',%d)), '%s', '%s', '%s', '%d', '%d')",
+             "INSERT INTO signup_req (login_id, password, name, phone, email, deptno, position) VALUES ('%s', UNHEX(SHA2('%s',%d)), '%s', '%s', '%s', '%d', '%d')",
              cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH, cJSON_GetStringValue(name_ptr), \
              cJSON_GetStringValue(phone_ptr), cJSON_GetStringValue(email_ptr), cJSON_GetNumberValue(dept_ptr),cJSON_GetNumberValue(pos_ptr));
     printf("2\n");
