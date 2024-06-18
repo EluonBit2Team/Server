@@ -3,6 +3,7 @@
 bool init_mariadb_pool(mariadb_conn_pool_t* pool, size_t poolsize, const char* DB_NAME) {
     const int CONN_TIMEOUT_SEC = DB_CONN_TIMEOUT_SEC;
     sem_init(&pool->pool_sem, 0, poolsize);
+    pthread_mutex_init(&pool->pool_idx_mutex, NULL);
     pool->poolsize = poolsize;
     pool->pool = (conn_t*)malloc(sizeof(conn_t) * poolsize);
     if (pool->pool == NULL) {
@@ -72,9 +73,12 @@ void close_mariadb_pool(mariadb_conn_pool_t* pool)
 conn_t* get_conn(mariadb_conn_pool_t* pool)
 {
     sem_wait(&pool->pool_sem);
+    pthread_mutex_lock(&pool->pool_idx_mutex);
     int availableIdx = pool->pool_idx_stack[pool->pool_idx_stack_top];
+    printf("%ld idx db pool stack pop\n", pool->pool_idx_stack_top);
     --pool->pool_idx_stack_top;
     conn_t* rt = &pool->pool[availableIdx];
+    pthread_mutex_unlock(&pool->pool_idx_mutex);
     sem_post(&pool->pool_sem);
     return rt;
 }
@@ -82,7 +86,10 @@ conn_t* get_conn(mariadb_conn_pool_t* pool)
 void release_conn(mariadb_conn_pool_t* pool, conn_t* conn)
 {
     sem_wait(&pool->pool_sem);
+    pthread_mutex_lock(&pool->pool_idx_mutex);
     ++pool->pool_idx_stack_top;
     pool->pool_idx_stack[pool->pool_idx_stack_top] = conn->idx;
+    printf("%ld idx db pool stack push\n", pool->pool_idx_stack_top);
+    pthread_mutex_unlock(&pool->pool_idx_mutex);
     sem_post(&pool->pool_sem);
 }

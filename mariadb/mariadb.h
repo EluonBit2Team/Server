@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 #include <pthread.h>
-#include <mysql/mysql.h>
+
 #include "mariadb_pool.h"
 
 #define USER_SETTING_DB "user_setting_db"

@@ -10,7 +10,7 @@ UTILS = $(patsubst %.h,$(UTILS_DIR)/%.c,$(UTILS_HEADER))
 UTILS_OBJECT = $(UTILS:.c=.o)
 
 CORE_DIR = cores
-CORE_HEADER = NetCore.h session.h
+CORE_HEADER = NetCore.h session.h uid_hash_map.h
 CORE_SRC = $(patsubst %.h,$(CORE_DIR)/%.c,$(CORE_HEADER))
 CORE_OBJECT = $(CORE_SRC:.c=.o)
 
@@ -28,7 +28,7 @@ MARIADB_OBJECT = $(MARIADB_SRC:.c=.o)
 all : $(TARGET)
 
 $(TARGET) : $(CORE_OBJECT) $(UTILS_OBJECT) $(MAIN_OBJECT) $(MARIADB_OBJECT) $(JSON_AR)
-	$(GCC) -o $@ $(LINK_THREAD_FLAG) $(LINK_MARIA_FLAG) $?
+	$(GCC) -o $@ $? $(LINK_THREAD_FLAG) $(LINK_MARIA_FLAG) 
 
 $(JSON_AR) : 
 	make -C $(JSON_SUBDIR)
