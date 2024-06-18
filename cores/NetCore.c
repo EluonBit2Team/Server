@@ -247,7 +247,7 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
     if (now_session == NULL)
     {
         printf("now_session NULL\n");
-        goto cleanup_and_respond;~
+        goto cleanup_and_respond;
     }
     temp_send_event.events = EPOLLOUT | EPOLLET;
     temp_send_event.data.fd = now_session->fd;
