@@ -106,7 +106,7 @@ void reserve_send(void_queue_t* vq, char* send_org, int send_size)
 
     memcpy(temp_send_buf.buf, (char*)&send_size, sizeof(send_size));
     memcpy(temp_send_buf.buf + sizeof(send_size), send_org, send_size);
-    write(STDOUT_FILENO, "enqueue:", 8); write(STDOUT_FILENO, temp_send_buf.buf, send_size); write(STDOUT_FILENO, "\n", 1);
+    //write(STDOUT_FILENO, "enqueue:", 8); write(STDOUT_FILENO, temp_send_buf.buf, send_size); write(STDOUT_FILENO, "\n", 1);
     enqueue(vq, (void*)&temp_send_buf);
 }
 
@@ -688,7 +688,7 @@ int run_server(epoll_net_core* server_ptr) {
                 {
                     continue ;
                 }
-                printf("send session id:%ld, fd:%d\n", s_ptr->session_idx, s_ptr->fd);
+                //printf("send session id:%ld, fd:%d\n", s_ptr->session_idx, s_ptr->fd);
                 char* send_buf_ptr = get_rear_send_buf_ptr(&s_ptr->send_bufs);
                 if (send_buf_ptr == NULL)
                 {
