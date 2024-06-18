@@ -31,6 +31,7 @@ bool init_mariadb_pool(mariadb_conn_pool_t* pool, size_t poolsize, const char* D
             }
             return false;
         }
+        printf("\t%d : %p\n", i, pool->pool[i].conn);
         mysql_options(pool->pool[i].conn, MYSQL_OPT_CONNECT_TIMEOUT, &CONN_TIMEOUT_SEC);
         MYSQL* rt_ptr = mysql_real_connect(pool->pool[i].conn, DB_IP, DB_USER_NAME, DB_USER_PASS, DB_NAME, DB_PORT, NULL, 0);
         if (rt_ptr == NULL)
@@ -75,7 +76,7 @@ conn_t* get_conn(mariadb_conn_pool_t* pool)
     sem_wait(&pool->pool_sem);
     pthread_mutex_lock(&pool->pool_idx_mutex);
     int availableIdx = pool->pool_idx_stack[pool->pool_idx_stack_top];
-    printf("%ld idx db pool stack pop\n", pool->pool_idx_stack_top);
+    printf("stackIdx:%ld, poolIdx:%ld, poolPtr:%p pop\n", pool->pool_idx_stack_top, availableIdx, &pool->pool[availableIdx]);
     --pool->pool_idx_stack_top;
     conn_t* rt = &pool->pool[availableIdx];
     pthread_mutex_unlock(&pool->pool_idx_mutex);
@@ -89,7 +90,7 @@ void release_conn(mariadb_conn_pool_t* pool, conn_t* conn)
     pthread_mutex_lock(&pool->pool_idx_mutex);
     ++pool->pool_idx_stack_top;
     pool->pool_idx_stack[pool->pool_idx_stack_top] = conn->idx;
-    printf("%ld idx db pool stack push\n", pool->pool_idx_stack_top);
+    printf("stackIdx:%ld, poolIdx:%ld, poolPtr:%p pop\n", pool->pool_idx_stack_top, pool->pool_idx_stack[pool->pool_idx_stack_top], &pool->pool[pool->pool_idx_stack[pool->pool_idx_stack_top]]);
     pthread_mutex_unlock(&pool->pool_idx_mutex);
     sem_post(&pool->pool_sem);
 }
