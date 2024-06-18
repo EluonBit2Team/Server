@@ -496,7 +496,7 @@ void user_list(epoll_net_core* server_ptr, task* task) {
     temp_send_event.data.fd = now_session->fd;
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT u.name, u.position, d.dept_name FROM user u JOIN dept d ON u.deptno = d.did LIMIT %d OFFSET %d", limit, offset);
+        "SELECT u.name, u.position, d.dept_name FROM user u JOIN dept d ON u.did = d.did LIMIT %d OFFSET %d", limit, offset);
 
     conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     if (mysql_query(conn->conn, SQL_buf)) {
