@@ -58,9 +58,9 @@ bool init_mariadb_pool(mariadb_conn_pool_t* pool, size_t poolsize, const char* D
     pool->pool_idx_stack_top = poolsize - 1;
     for (int i = 0; i < poolsize; i++)
     {
-        printf("%d번째 conn:%lp\t", i, pool->pool[i].conn);
+        printf("%d번째 conn:%p\t", i, pool->pool[i].conn);
     }
-    printf("top:%d top_idx:%d top:%lp\n", pool->pool_idx_stack_top, pool->pool_idx_stack[pool->pool_idx_stack_top], pool->pool[pool->pool_idx_stack[pool->pool_idx_stack_top]].conn);
+    printf("top:%ld top_idx:%d top:%p\n", pool->pool_idx_stack_top, pool->pool_idx_stack[pool->pool_idx_stack_top], pool->pool[pool->pool_idx_stack[pool->pool_idx_stack_top]].conn);
     return true;
 }
 
@@ -80,7 +80,7 @@ conn_t* get_conn(mariadb_conn_pool_t* pool)
     sem_wait(&pool->pool_sem);
     pthread_mutex_lock(&pool->pool_idx_mutex);
     int availableIdx = pool->pool_idx_stack[pool->pool_idx_stack_top];
-    printf("top:%ld, top_idx:%ld, top:%p pop\n", pool->pool_idx_stack_top, pool->pool_idx_stack[pool->pool_idx_stack_top], pool->pool[pool->pool_idx_stack[pool->pool_idx_stack_top]].conn);
+    printf("top:%ld, top_idx:%d, top:%p pop\n", pool->pool_idx_stack_top, pool->pool_idx_stack[pool->pool_idx_stack_top], pool->pool[pool->pool_idx_stack[pool->pool_idx_stack_top]].conn);
     --pool->pool_idx_stack_top;
     conn_t* rt = &pool->pool[availableIdx];
     pthread_mutex_unlock(&pool->pool_idx_mutex);
@@ -94,7 +94,7 @@ void release_conn(mariadb_conn_pool_t* pool, conn_t* conn)
     pthread_mutex_lock(&pool->pool_idx_mutex);
     ++pool->pool_idx_stack_top;
     pool->pool_idx_stack[pool->pool_idx_stack_top] = conn->idx;
-    printf("top:%ld, top_idx:%ld, top:%p release\n", pool->pool_idx_stack_top, pool->pool_idx_stack[pool->pool_idx_stack_top], pool->pool[pool->pool_idx_stack[pool->pool_idx_stack_top]].conn);
+    printf("top:%ld, top_idx:%d, top:%p release\n", pool->pool_idx_stack_top, pool->pool_idx_stack[pool->pool_idx_stack_top], pool->pool[pool->pool_idx_stack[pool->pool_idx_stack_top]].conn);
     pthread_mutex_unlock(&pool->pool_idx_mutex);
     sem_post(&pool->pool_sem);
 }
