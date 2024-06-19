@@ -63,13 +63,14 @@ typedef struct send_buf {
 struct st_epoll_net_core;   // 전방선언
 typedef void (*func_ptr)(struct st_epoll_net_core*, task_t*); // 서비스함수포인터 타입 지정.
 typedef struct st_epoll_net_core {
-    bool is_run;     // 서버 내릴때 flase(지금은)
+    bool is_run;    // 서버 내릴때 flase(지금은)
     int listen_fd;  // 서버 리슨용 소켓 fd
 
     func_ptr function_array[SERVICE_FUNC_NUM]; // 서비스 배열
     session_pool_t session_pool;
     struct sockaddr_in listen_addr; // 리슨용 소켓 주소 담는 자료형
-    uid_hash_map_t uid_hash;
+    int_hash_map_t fd_to_uid_hash;
+    int_hash_map_t uid_to_fd_hash;
     
     int epoll_fd; 
     struct epoll_event* epoll_events;

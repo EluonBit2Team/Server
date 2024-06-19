@@ -1,9 +1,9 @@
 #include "uid_hash_map.h"
 
-void init_hash_map(uid_hash_map_t* hash_map_ptr, size_t map_limit) {
+void init_hash_map(int_hash_map_t* hash_map_ptr, size_t map_limit) {
     pthread_mutex_init(&hash_map_ptr->hash_map_mutex, NULL);
     hash_map_ptr->map_limit = map_limit;
-    hash_map_ptr->node_pool = (uid_node_t*)malloc(sizeof(uid_node_t) * map_limit);
+    hash_map_ptr->node_pool = (int_hash_entry_t*)malloc(sizeof(int_hash_entry_t) * map_limit);
     hash_map_ptr->node_pool_idx_stack = (size_t*)malloc(sizeof(size_t) * map_limit);
     if (hash_map_ptr->node_pool == NULL || hash_map_ptr->node_pool_idx_stack == NULL)
     {
@@ -18,7 +18,7 @@ void init_hash_map(uid_hash_map_t* hash_map_ptr, size_t map_limit) {
     hash_map_ptr->hash_map = NULL;
 }
 
-bool insert(uid_hash_map_t* hash_map_ptr, int fd_key, int uid_value) {
+bool insert(int_hash_map_t* hash_map_ptr, int key, int value) {
     pthread_mutex_lock(&hash_map_ptr->hash_map_mutex);
     if (hash_map_ptr->idx_stack_top_idx == 0)
     {
@@ -26,41 +26,41 @@ bool insert(uid_hash_map_t* hash_map_ptr, int fd_key, int uid_value) {
         return false;
     }
     size_t empty_node_idx = hash_map_ptr->node_pool_idx_stack[hash_map_ptr->idx_stack_top_idx--];
-    uid_node_t* empty_node = &hash_map_ptr->node_pool[empty_node_idx];
-    empty_node->fd_key = fd_key;
-    empty_node->uid_value = uid_value;
-    HASH_ADD_INT(hash_map_ptr->hash_map, fd_key, empty_node);
+    int_hash_entry_t* empty_entry = &hash_map_ptr->node_pool[empty_node_idx];
+    empty_entry->key = key;
+    empty_entry->value = value;
+    HASH_ADD_INT(hash_map_ptr->hash_map, key, empty_entry);
     pthread_mutex_unlock(&hash_map_ptr->hash_map_mutex);
     return true;
 }
 
-int find(uid_hash_map_t* hash_map_ptr, int fd_key) {
+int find(int_hash_map_t* hash_map_ptr, int key) {
     pthread_mutex_lock(&hash_map_ptr->hash_map_mutex);
-    uid_node_t* value = NULL;
-    HASH_FIND_INT(hash_map_ptr->hash_map, &fd_key, value);
-    if (value == NULL) {
+    int_hash_entry_t* find_entry = NULL;
+    HASH_FIND_INT(hash_map_ptr->hash_map, &key, find_entry);
+    if (find_entry == NULL) {
         pthread_mutex_unlock(&hash_map_ptr->hash_map_mutex);
         return -1;
     }
     pthread_mutex_unlock(&hash_map_ptr->hash_map_mutex);
-    return value->uid_value;
+    return find_entry->value;
 }
 
-void erase(uid_hash_map_t* hash_map_ptr, int fd_key) {
+void erase(int_hash_map_t* hash_map_ptr, int key) {
     pthread_mutex_lock(&hash_map_ptr->hash_map_mutex);
-    uid_node_t* value = NULL;
-    HASH_FIND_INT(hash_map_ptr->hash_map, &fd_key, value);
-    if (value == NULL) {
+    int_hash_entry_t* find_entry = NULL;
+    HASH_FIND_INT(hash_map_ptr->hash_map, &key, find_entry);
+    if (find_entry == NULL) {
         pthread_mutex_unlock(&hash_map_ptr->hash_map_mutex);
         return ;
     }
     ++hash_map_ptr->idx_stack_top_idx;
-    hash_map_ptr->node_pool_idx_stack[hash_map_ptr->idx_stack_top_idx] = value->node_idx;
-    HASH_DEL(hash_map_ptr->hash_map, value);
+    hash_map_ptr->node_pool_idx_stack[hash_map_ptr->idx_stack_top_idx] = find_entry->node_idx;
+    HASH_DEL(hash_map_ptr->hash_map, find_entry);
     pthread_mutex_unlock(&hash_map_ptr->hash_map_mutex);
 }
 
-void clear_hash_map(uid_hash_map_t* hash_map_ptr) {
+void clear_hash_map(int_hash_map_t* hash_map_ptr) {
     pthread_mutex_destroy(&hash_map_ptr->hash_map_mutex);
     free(hash_map_ptr->node_pool);
     free(hash_map_ptr->node_pool_idx_stack);
