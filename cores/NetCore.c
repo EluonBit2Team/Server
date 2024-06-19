@@ -765,11 +765,6 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
     }
 
     int gid_value = atoi(row[0]);
-    if (gid_value == NULL) {
-        msg = "DB_error";
-        goto cleanup_and_respond;
-    }
-    
     mysql_free_result(query_result);
     query_result = NULL;
 
@@ -781,16 +776,16 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
             goto cleanup_and_respond;
         }
 
-        snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user_setting WHERE username = '%s'", cJSON_GetStringValue(user_item));
-        if (mysql_query(conn2, SQL_buf)) {
-            fprintf(stderr, "SELECT failed: %s\n", mysql_error(conn2));
+        snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE username = '%s'", cJSON_GetStringValue(user_item));
+        if (mysql_query(conn2->conn, SQL_buf)) {
+            fprintf(stderr, "SELECT failed: %s\n", mysql_error(conn2->conn));
             msg = "DB error";
             goto cleanup_and_respond;
         }
 
-        query_result = mysql_store_result(conn2);
+        query_result = mysql_store_result(conn2->conn);
         if (query_result == NULL) {
-            fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn2));
+            fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn2->conn));
             msg = "DB error";
             goto cleanup_and_respond;
         }
@@ -808,8 +803,8 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
         query_result = NULL;
 
         snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO group_member (uid, gid) VALUES ('%d', '%d')", useruid_value, gid_value);
-        if (mysql_query(conn1, SQL_buf)) {
-            fprintf(stderr, "INSERT failed: %s\n", mysql_error(conn1));
+        if (mysql_query(conn1->conn, SQL_buf)) {
+            fprintf(stderr, "INSERT failed: %s\n", mysql_error(conn1->conn));
             msg = "INSERT failed";
             goto cleanup_and_respond;
         }
