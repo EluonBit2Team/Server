@@ -201,6 +201,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     }
 
     insert(&server_ptr->fd_to_uid_hash, task->req_client_fd, uid);
+    insert(&server_ptr->uid_to_fd_hash, uid, task->req_client_fd);
     printf("%d user login\n", find(&server_ptr->fd_to_uid_hash, task->req_client_fd));
     type = 2;
     msg = "LOGIN SUCCESS";
@@ -520,7 +521,7 @@ void user_list_service(epoll_net_core* server_ptr, task_t* task) {
     temp_send_event.data.fd = now_session->fd;
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT u.name, u.position, d.dept_name FROM user u JOIN dept d ON u.did = d.did LIMIT %d OFFSET %d", limit, offset);
+        "SELECT u.name, jp.position_name, d.dept_name FROM user u JOIN dept d ON u.did = d.did JOIN job_position jp ON jp.pid = u.position LIMIT %d OFFSET %d", limit, offset);
 
     conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     if (mysql_query(conn->conn, SQL_buf)) {
@@ -659,7 +660,187 @@ cleanup_and_respond:
 }
 
 void add_member_service(epoll_net_core* server_ptr, task_t* task) {
+    printf("make_group_service\n");
+    int type = 100;
+    const char* msg = NULL;
+    cJSON* result_json = cJSON_CreateObject();
+    client_session_t* now_session = NULL;
+    conn_t* conn1 = NULL;
+    conn_t* conn2 = NULL;
+    MYSQL_RES *query_result = NULL;
+    MYSQL_ROW row;
+    char SQL_buf[512];
     
+    conn1 = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
+    conn2 = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
+    
+    int host_uid = find(&server_ptr->fd_to_uid_hash, task->req_client_fd);
+
+    struct epoll_event temp_send_event;
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL)
+    {
+        msg = "session error";
+        goto cleanup_and_respond;
+    }
+    temp_send_event.events = EPOLLOUT | EPOLLET;
+    temp_send_event.data.fd = now_session->fd;
+
+    cJSON* json_ptr = get_parsed_json(task->buf);
+    if (json_ptr == NULL)
+    {
+        msg = "user send invalid json";
+        goto cleanup_and_respond;
+    }
+
+    cJSON* groupname_ptr = cJSON_GetObjectItem(json_ptr, "groupname");
+    if (groupname_ptr == NULL || cJSON_GetStringValue(groupname_ptr)[0] == '\0')
+    {
+        msg = "user send invalid json. Miss groupname_ptr";
+        goto cleanup_and_respond;
+    }
+
+    cJSON* username_ptr = cJSON_GetObjectItem(json_ptr, "username");
+    if (username_ptr == NULL || !cJSON_IsArray(username_ptr))
+    {
+        msg = "user send invalid json. Miss uid";
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf), 
+        "SELECT is_host FROM group_member WHERE '%d' = uid",
+        host_uid);
+
+    if (mysql_query(conn1->conn, SQL_buf)) {
+        fprintf(stderr, "SELECT failed: %s\n", mysql_error(conn1->conn));
+        msg = "DB error";
+        goto cleanup_and_respond;
+    }
+
+    query_result = mysql_store_result(conn1->conn);
+    if (query_result == NULL) {
+        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn1->conn));
+        msg = "DB error";
+        goto cleanup_and_respond;
+    }
+    
+    row = mysql_fetch_row(query_result);
+    if (row == NULL) {
+        fprintf(stderr, "No data fetched\n");
+        msg = "No data fetched";
+        goto cleanup_and_respond;
+    }
+
+    int is_host_value = atoi(row[0]);
+    if (!is_host_value) {
+        msg = "You are not host!!!!";
+        goto cleanup_and_respond;
+    }
+
+    mysql_free_result(query_result);
+    query_result = NULL;
+
+    snprintf(SQL_buf, sizeof(SQL_buf), 
+        "SELECT gid FROM group WHERE '%s' = groupname",
+        host_uid);
+
+    if (mysql_query(conn1->conn, SQL_buf)) {
+        fprintf(stderr, "SELECT failed: %s\n", mysql_error(conn1->conn));
+        msg = "DB error";
+        goto cleanup_and_respond;
+    }
+
+    query_result = mysql_store_result(conn1->conn);
+    if (query_result == NULL) {
+        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn1->conn));
+        msg = "DB error";
+        goto cleanup_and_respond;
+    }
+    
+    row = mysql_fetch_row(query_result);
+    if (row == NULL) {
+        fprintf(stderr, "No data fetched\n");
+        msg = "No data fetched";
+        goto cleanup_and_respond;
+    }
+
+    int gid_value = atoi(row[0]);
+    if (gid_value == NULL) {
+        msg = "DB_error";
+        goto cleanup_and_respond;
+    }
+    
+    mysql_free_result(query_result);
+    query_result = NULL;
+
+    int array_size = cJSON_GetArraySize(username_ptr);
+    for (int i = 0; i < array_size; i++) {
+        cJSON* user_item = cJSON_GetArrayItem(username_ptr, i);
+        if (user_item == NULL || cJSON_GetStringValue(user_item)[0] == '\0') {
+            msg = "Invalid JSON: Empty username in users list";
+            goto cleanup_and_respond;
+        }
+
+        snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user_setting WHERE username = '%s'", cJSON_GetStringValue(user_item));
+        if (mysql_query(conn2, SQL_buf)) {
+            fprintf(stderr, "SELECT failed: %s\n", mysql_error(conn2));
+            msg = "DB error";
+            goto cleanup_and_respond;
+        }
+
+        query_result = mysql_store_result(conn2);
+        if (query_result == NULL) {
+            fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn2));
+            msg = "DB error";
+            goto cleanup_and_respond;
+        }
+
+        row = mysql_fetch_row(query_result);
+        if (row == NULL) {
+            fprintf(stderr, "No data fetched for user: %s\n", cJSON_GetStringValue(user_item));
+            msg = "No data fetched";
+            mysql_free_result(query_result);
+            goto cleanup_and_respond;
+        }
+
+        int useruid_value = atoi(row[0]);
+        mysql_free_result(query_result);
+        query_result = NULL;
+
+        snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO group_member (uid, gid) VALUES ('%d', '%d')", useruid_value, gid_value);
+        if (mysql_query(conn1, SQL_buf)) {
+            fprintf(stderr, "INSERT failed: %s\n", mysql_error(conn1));
+            msg = "INSERT failed";
+            goto cleanup_and_respond;
+        }
+    }
+    type = 7;
+    msg = "Add Group Member Success";
+    goto cleanup_and_respond;
+
+cleanup_and_respond:
+    printf("%d %s", task->req_client_fd, msg);
+    cJSON_AddNumberToObject(result_json, "type", type);
+    cJSON_AddStringToObject(result_json, "msg", msg);
+    char *response_str = cJSON_Print(result_json);
+    reserve_send(&now_session->send_bufs, response_str, strlen(response_str));
+    free(response_str);
+    if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
+        perror("epoll_ctl: add");
+    }
+    if ((conn1 != NULL) || (conn2 != NULL))
+    {
+        release_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX], conn1);
+        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn2);
+    }
+
+    if (query_result != NULL)
+    {
+        mysql_free_result(query_result);
+    }
+    cJSON_Delete(json_ptr);
+    cJSON_Delete(result_json);
+    return ;
 }
 
 void set_sock_nonblocking_mode(int sockFd) {
