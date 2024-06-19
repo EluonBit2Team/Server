@@ -17,6 +17,9 @@
 #define LOG_DB "log_db"
 #define TEXT_LENGTH 10  // 랜덤 문자열 길이
 
+
+// gcc -o t_main.out test_main.c -L/usr/lib64/mysql -lmysqlclient -std=c99
+
 void generate_random_text(char *text, size_t length) {
     static const char charset[] = "abcdefghijklmnopqrstuvwxyz";
     for (size_t i = 0; i < length; i++) {
@@ -71,8 +74,8 @@ void insert_chat_dummy_data(MYSQL *con) {
         generate_random_text(text, TEXT_LENGTH);
 
         snprintf(query, sizeof(query),
-            "INSERT INTO massage_log (mid, uid, gid, text, timestamp) VALUES "
-            "(%d, %d, %d, '%s', '%s')",
+            "INSERT INTO massage_log (mid, uid, gid, text, timestamp) VALUES \
+            (%d, %d, %d, '%s', '%s')",
             i, 1 + rand() % 100, 1 + rand() % 3, text, current_time);
 
         if (mysql_query(con, query)) {
@@ -84,6 +87,20 @@ void insert_chat_dummy_data(MYSQL *con) {
     printf("100 dummy records inserted successfully.\n");
 }
 
+void insert_group_member_dummy_data(MYSQL *con) {
+    char query[1024];
+    int i;
+    for (i = 1; i <= 7; i++) {
+        snprintf(query, sizeof(query), "INSERT INTO group_member (uid, gid, is_host) VALUES (%d, %d, %d)", i + 50, i, 1);
+
+        if (mysql_query(con, query)) {
+            fprintf(stderr, "INSERT failed: %s\n", mysql_error(con));
+            return;
+        }
+    }
+    printf("7 dummy record inserted successfully.\n");
+}
+
 MYSQL* setup_database_connection() {
     MYSQL *conn = mysql_init(NULL);
 
@@ -92,7 +109,7 @@ MYSQL* setup_database_connection() {
         exit(1);
     }
 
-    if (mysql_real_connect(conn, DB_IP, DB_USER_NAME, DB_USER_PASS, LOG_DB, DB_PORT, NULL, 0) == NULL) {
+    if (mysql_real_connect(conn, DB_IP, DB_USER_NAME, DB_USER_PASS, CHAT_GROUP_DB, DB_PORT, NULL, 0) == NULL) {
         fprintf(stderr, "Connection failed: %s\n", mysql_error(conn));
         mysql_close(conn);
         exit(1);
@@ -104,7 +121,7 @@ MYSQL* setup_database_connection() {
 int main() {
     MYSQL *conn = setup_database_connection();
 
-    insert_chat_dummy_data(conn);
+    insert_group_member_dummy_data(conn);
 
     mysql_close(conn);
 

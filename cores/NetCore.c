@@ -456,11 +456,11 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
 
 cleanup_and_respond:
     printf("%d %s", task->req_client_fd, msg);
-    cJSON_AddNumberToObject(result_json, "type", type);
-    cJSON_AddStringToObject(result_json, "msg", msg);
-    char *response_str = cJSON_Print(result_json);
-    reserve_send(&now_session->send_bufs, response_str, strlen(response_str));
-    free(response_str);
+    // cJSON_AddNumberToObject(result_json, "type", type);
+    // cJSON_AddStringToObject(result_json, "msg", msg);
+    // char *response_str = cJSON_Print(result_json);
+    // reserve_send(&now_session->send_bufs, response_str, strlen(response_str));
+    // free(response_str);
     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
         perror("epoll_ctl: add");
     }
@@ -658,6 +658,10 @@ cleanup_and_respond:
     return ;
 }
 
+void add_member_service(epoll_net_core* server_ptr, task_t* task) {
+    
+}
+
 void set_sock_nonblocking_mode(int sockFd) {
     int flag = fcntl(sockFd, F_GETFL, 0);
     fcntl(sockFd, F_SETFL, flag | O_NONBLOCK);
@@ -691,6 +695,7 @@ bool init_server(epoll_net_core* server_ptr) {
     server_ptr->function_array[MAKE_GROUP_SERV_FUNC] = make_group_service;
     server_ptr->function_array[USER_LIST_SERV_FUNC] = user_list_service;
     server_ptr->function_array[GROUP_LIST_SERV_FUNC] = group_list_service;
+    server_ptr->function_array[ADD_MEMBER_SERV_FUNC] = add_member_service;
 
     // 리슨소켓 생성
     server_ptr->listen_fd = socket(PF_INET, SOCK_STREAM, 0);
