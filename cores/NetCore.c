@@ -200,8 +200,8 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    insert(&server_ptr->uid_hash, task->req_client_fd, uid);
-    printf("%d user login\n", find(&server_ptr->uid_hash, task->req_client_fd));
+    insert(&server_ptr->fd_to_uid_hash, task->req_client_fd, uid);
+    printf("%d user login\n", find(&server_ptr->fd_to_uid_hash, task->req_client_fd));
     type = 2;
     msg = "LOGIN SUCCESS";
     goto cleanup_and_respond;
@@ -671,7 +671,8 @@ bool init_server(epoll_net_core* server_ptr) {
     }
     // 세션 초기화
     init_session_pool(&server_ptr->session_pool, MAX_CLIENT_NUM);
-    init_hash_map(&server_ptr->uid_hash, MAX_CLIENT_NUM);
+    init_hash_map(&server_ptr->fd_to_uid_hash, MAX_CLIENT_NUM);
+    init_hash_map(&server_ptr->uid_to_fd_hash, MAX_CLIENT_NUM);
 
     // 서버 주소 설정
     server_ptr->is_run = false;
@@ -874,6 +875,7 @@ void down_server(epoll_net_core* server_ptr) {
        pthread_join(server_ptr->thread_pool.worker_threads[i], NULL);
     }
     close_all_sessions(&server_ptr->session_pool);
-    clear_hash_map(&server_ptr->uid_hash);
+    clear_hash_map(&server_ptr->fd_to_uid_hash);
+    clear_hash_map(&server_ptr->uid_to_fd_hash);
     close_mariadb(&server_ptr->db);
 }
