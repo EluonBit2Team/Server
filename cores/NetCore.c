@@ -413,7 +413,7 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
     }
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT u_id FROM user AS u WHERE '%s' = login_id ",
+        "SELECT uid FROM user AS u WHERE '%s' = login_id ",
         cJSON_GetStringValue(id_ptr));
 
     if (mysql_query(conn1->conn, SQL_buf)) {
@@ -421,7 +421,7 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
         msg = "DB error";
         goto cleanup_and_respond;
     }
-    
+
     query_result = mysql_store_result(conn1->conn);
     if (query_result == NULL) {
         fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn1->conn));
