@@ -370,7 +370,8 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
     const char* msg = NULL;
     cJSON* result_json = cJSON_CreateObject();
     client_session_t* now_session = NULL;
-    conn_t* conn = NULL;
+    conn_t* conn1 = NULL;
+    conn_t* conn2 = NULL;
     MYSQL_RES *query_result = NULL;
     MYSQL_ROW row;
     char SQL_buf[512];
@@ -414,19 +415,19 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
     }
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT sign_req_id FROM signup_req AS sr WHERE '%s' = sr.login_id ",
+        "SELECT login_id FROM user AS u WHERE '%s' = u.login_id ",
         cJSON_GetStringValue(id_ptr));
 
-    conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
-    if (mysql_query(conn->conn, SQL_buf)) {
-        fprintf(stderr, "query fail: %s\n", mysql_error(conn->conn));
+    conn1 = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
+    if (mysql_query(conn1->conn, SQL_buf)) {
+        fprintf(stderr, "query fail: %s\n", mysql_error(conn1->conn));
         msg = "DB error";
         goto cleanup_and_respond;
     }
 
-    query_result = mysql_store_result(conn->conn);
+    query_result = mysql_store_result(conn1->conn);
     if (query_result == NULL) {
-        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn->conn));
+        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn1->conn));
         msg = "DB error";
         goto cleanup_and_respond;
     }
@@ -442,12 +443,20 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
     mysql_free_result(query_result);
     query_result = NULL;
 
-    snprintf(SQL_buf, sizeof(SQL_buf), 
-             "INSERT INTO group_req (groupname, uid) VALUES ('%s', '%d')",
-             cJSON_GetStringValue(groupname_ptr), uid_value);
+    
 
-    if (mysql_query(conn->conn, SQL_buf)) {
-        fprintf(stderr, "INSERT failed: %s\n", mysql_error(conn->conn));
+    conn2 = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
+    if (mysql_query(conn2->conn, SQL_buf)) {
+        fprintf(stderr, "query fail: %s\n", mysql_error(conn2->conn));
+        msg = "DB error";
+        goto cleanup_and_respond;
+    }
+    snprintf(SQL_buf, sizeof(SQL_buf), 
+        "INSERT INTO group_req (groupname, uid) VALUES ('%s', '%d')",
+        cJSON_GetStringValue(groupname_ptr), uid_value);
+
+    if (mysql_query(conn2->conn, SQL_buf)) {
+        fprintf(stderr, "INSERT failed: %s\n", mysql_error(conn2->conn));
         msg = "INSERT failed";
         goto cleanup_and_respond;
     }
@@ -465,10 +474,12 @@ cleanup_and_respond:
     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
         perror("epoll_ctl: add");
     }
-    if (conn != NULL)
+    if ((conn1 != NULL) || (conn2 != NULL))
     {
-        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn);
+        release_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX], conn1);
+        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], conn2);
     }
+
     if (query_result != NULL)
     {
         mysql_free_result(query_result);
