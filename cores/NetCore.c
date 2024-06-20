@@ -1289,7 +1289,7 @@ void down_server(epoll_net_core* server_ptr) {
     char SQL_buf[512];
     conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO server_log (downtime) SELECT NOW() WHERE NOT EXISTS (SELECT 1 FROM server_log WHERE downtime IS NOT NULL);");
+    snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO server_log (downtime) SELECT (NOW()) WHERE NOT EXISTS (SELECT 1 FROM server_log WHERE downtime IS NOT NULL);");
     if (mysql_query(conn->conn, SQL_buf)) {
         fprintf(stderr, "UPDATE server_log timestamp failed: %s\n", mysql_error(conn->conn));
     }
