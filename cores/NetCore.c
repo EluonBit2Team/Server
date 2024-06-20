@@ -1265,6 +1265,18 @@ int run_server(epoll_net_core* server_ptr) {
 
 void down_server(epoll_net_core* server_ptr) {
     printf("down server\n");
+    conn_t* conn = NULL;
+    char SQL_buf[512];
+    conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO server_log (timestamp, server_status) VALUES (NOW(), 0)");
+    if (mysql_query(conn->conn, SQL_buf)) {
+        fprintf(stderr, "UPDATE server_log timestamp failed: %s\n", mysql_error(conn->conn));
+    }
+    if (conn != NULL) {
+        release_conn(&server_ptr->db.pools[LOG_DB_IDX], conn);
+    }
+
     server_ptr->is_run = false;
     close(server_ptr->listen_fd);
     close(server_ptr->epoll_fd);
