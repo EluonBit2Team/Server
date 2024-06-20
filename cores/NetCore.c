@@ -696,7 +696,7 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
     
     chat_group_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
     user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
-    
+
     int host_uid = find(&server_ptr->fd_to_uid_hash, task->req_client_fd);
 
     struct epoll_event temp_send_event;
@@ -729,7 +729,7 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss id";
         goto cleanup_and_respond;
     }
-    printf("1\n");
+
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT is_host FROM group_member WHERE uid = '%d'",
         host_uid);
@@ -739,21 +739,21 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "DB error";
         goto cleanup_and_respond;
     }
-    printf("2\n");
+
     query_result = mysql_store_result(chat_group_conn->conn);
     if (query_result == NULL) {
         fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(chat_group_conn->conn));
         msg = "DB error";
         goto cleanup_and_respond;
     }
-    
+
     row = mysql_fetch_row(query_result);
     if (row == NULL) {
         fprintf(stderr, "No data fetched\n");
         msg = "No data fetched";
         goto cleanup_and_respond;
     }
-    printf("3\n");
+
     int is_host_value = atoi(row[0]);
     if (!is_host_value) {
         msg = "You are not host!!!!";
@@ -762,35 +762,35 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
 
     mysql_free_result(query_result);
     query_result = NULL;
-    printf("4\n");
+
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT gid FROM chat_group WHERE groupname = '%s'",
         cJSON_GetStringValue(groupname_ptr));
-    printf("4-1\n");
+
     if (mysql_query(chat_group_conn->conn, SQL_buf)) {
         fprintf(stderr, "SELECT failed: %s\n", mysql_error(chat_group_conn->conn));
         msg = "DB error";
         goto cleanup_and_respond;
     }
-    printf("5\n");
+
     query_result = mysql_store_result(chat_group_conn->conn);
     if (query_result == NULL) {
         fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(chat_group_conn->conn));
         msg = "DB error";
         goto cleanup_and_respond;
     }
-    
+
     row = mysql_fetch_row(query_result);
     if (row == NULL) {
         fprintf(stderr, "No data fetched\n");
         msg = "No data fetched";
         goto cleanup_and_respond;
     }
-    printf("6\n");
+
     int gid_value = atoi(row[0]);
     mysql_free_result(query_result);
     query_result = NULL;
-    printf("7\n");
+
     int array_size = cJSON_GetArraySize(id_ptr);
     for (int i = 0; i < array_size; i++) {
         cJSON* user_item = cJSON_GetArrayItem(id_ptr, i);
@@ -821,11 +821,11 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
             goto cleanup_and_respond;
         }
 
-        int useruid_value = atoi(row[0]);
+        int uid_value = atoi(row[0]);
         mysql_free_result(query_result);
         query_result = NULL;
 
-        snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO group_member (uid, gid) VALUES ('%d', '%d')", useruid_value, gid_value);
+        snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO group_member (uid, gid, is_host) VALUES ('%d', '%d',0)", uid_value, gid_value);
         if (mysql_query(chat_group_conn->conn, SQL_buf)) {
             fprintf(stderr, "INSERT failed: %s\n", mysql_error(chat_group_conn->conn));
             msg = "INSERT failed"; 
