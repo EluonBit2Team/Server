@@ -88,6 +88,7 @@ typedef struct st_epoll_net_core {
 bool init_server(epoll_net_core* server_ptr) ;
 int run_server(epoll_net_core* server_ptr) ;
 void down_server(epoll_net_core* server_ptr);
+void set_serverlog(epoll_net_core* server_ptr);
 
 // 스레드 풀 관련 초기화
 void init_worker_thread(epoll_net_core* server_ptr, thread_pool_t* thread_pool_t_ptr);
