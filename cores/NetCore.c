@@ -766,7 +766,7 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT gid FROM chat_group WHERE groupname = '%s'",
         cJSON_GetStringValue(groupname_ptr));
-
+    printf("4-1\n");
     if (mysql_query(chat_group_conn->conn, SQL_buf)) {
         fprintf(stderr, "SELECT failed: %s\n", mysql_error(chat_group_conn->conn));
         msg = "DB error";
