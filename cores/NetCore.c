@@ -930,7 +930,7 @@ void disconnect_client(epoll_net_core* server_ptr, int client_fd)
     char SQL_buf[512];
     conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
 
-    snprintf(SQL_buf, sizeof(SQL_buf),"UPDATE client_lof SET logout_time = NOW() WHERE uid = %d",find(&server_ptr->fd_to_uid_hash, client_fd));
+    snprintf(SQL_buf, sizeof(SQL_buf),"UPDATE client_log SET logout_time = NOW() WHERE uid = %d",find(&server_ptr->fd_to_uid_hash, client_fd));
     if (mysql_query(conn->conn, SQL_buf)) {
         fprintf(stderr, "login query fail: %s\n", mysql_error(conn->conn));
     }
