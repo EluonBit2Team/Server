@@ -931,6 +931,9 @@ void disconnect_client(epoll_net_core* server_ptr, int client_fd)
     conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
 
     snprintf(SQL_buf, sizeof(SQL_buf),"UPDATE user SET logout_time = NOW() WHERE uid = %d",find(&server_ptr->fd_to_uid_hash, client_fd));
+    if (mysql_query(conn->conn, SQL_buf)) {
+        fprintf(stderr, "login query fail: %s\n", mysql_error(conn->conn));
+    }
     epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_DEL, client_fd, NULL);
     client_session_t* session_ptr = find_session_by_fd(&server_ptr->session_pool, client_fd);
     if (session_ptr == NULL)
