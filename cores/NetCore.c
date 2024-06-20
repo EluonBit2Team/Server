@@ -538,7 +538,7 @@ void user_list_service(epoll_net_core* server_ptr, task_t* task) {
     temp_send_event.data.fd = now_session->fd;
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT u.name, jp.position_name, d.dept_name FROM user u LEFT JOIN dept d ON u.did = d.did LEFT JOIN job_position jp ON jp.pid = u.position LIMIT %d OFFSET %d", limit, offset);
+        "SELECT u.login_id, u.name, jp.position_name, d.dept_name FROM user u LEFT JOIN dept d ON u.did = d.did LEFT JOIN job_position jp ON jp.pid = u.position LIMIT %d OFFSET %d", limit, offset);
 
     conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     if (mysql_query(conn->conn, SQL_buf)) {
@@ -557,9 +557,10 @@ void user_list_service(epoll_net_core* server_ptr, task_t* task) {
     cJSON* users_array = cJSON_CreateArray();
     while ((row = mysql_fetch_row(query_result))) {
         cJSON* user_obj = cJSON_CreateObject();
-        cJSON_AddStringToObject(user_obj, "name", row[0]);
-        cJSON_AddStringToObject(user_obj, "position", row[1]);
-        cJSON_AddStringToObject(user_obj, "dept_name", row[2]);
+        cJSON_AddStringToObject(user_obj, "id", row[0]);
+        cJSON_AddStringToObject(user_obj, "name", row[1]);
+        cJSON_AddStringToObject(user_obj, "position", row[2]);
+        cJSON_AddStringToObject(user_obj, "dept_name", row[3]);
         cJSON_AddItemToArray(users_array, user_obj);
     }
 
@@ -1127,6 +1128,31 @@ void disconnect_client(epoll_net_core* server_ptr, int client_fd)
     printf("disconnect:%d\n", client_fd);
 }
 
+void set_serverlog(epoll_net_core* server_ptr) {
+    conn_t* conn = NULL;
+    char SQL_buf[512];
+    conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE client_log SET logout_time = NOW() WHERE logout_time IS NULL");
+    if (mysql_query(conn->conn, SQL_buf)) {
+        fprintf(stderr, "UPDATE client_log failed: %s\n", mysql_error(conn->conn));
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE server_log SET downtime = NOW() WHERE downtime IS NULL");
+    if (mysql_query(conn->conn, SQL_buf)) {
+        fprintf(stderr, "UPDATE server_log server_status failed: %s\n", mysql_error(conn->conn));
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO server_log (uptime) VALUES (NOW())");
+    if (mysql_query(conn->conn, SQL_buf)) {
+        fprintf(stderr, "UPDATE server_log timestamp failed: %s\n", mysql_error(conn->conn));
+    }
+
+    if (conn != NULL) {
+        release_conn(&server_ptr->db.pools[LOG_DB_IDX], conn);
+    }
+}
+
 int run_server(epoll_net_core* server_ptr) {
     server_ptr->is_run = true;
 
@@ -1167,6 +1193,8 @@ int run_server(epoll_net_core* server_ptr) {
     if (rt_val < 0) {
         printf("epoll_ctl Error : %d\n", errno);
     }
+
+    set_serverlog(server_ptr);
 
     // 메인 스레드(main함수에서 run_server()까지 호출한 메인 흐름)가 epoll_wait로 io완료 대기
     while (server_ptr->is_run == true) {
@@ -1256,6 +1284,18 @@ int run_server(epoll_net_core* server_ptr) {
 }
 
 void down_server(epoll_net_core* server_ptr) {
+    printf("down server\n");
+    conn_t* conn = NULL;
+    char SQL_buf[512];
+    conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO server_log (downtime) SELECT NOW() WHERE NOT EXISTS (SELECT 1 FROM server_log WHERE downtime IS NOT NULL);");
+    if (mysql_query(conn->conn, SQL_buf)) {
+        fprintf(stderr, "UPDATE server_log timestamp failed: %s\n", mysql_error(conn->conn));
+    }
+    if (conn != NULL) {
+        release_conn(&server_ptr->db.pools[LOG_DB_IDX], conn);
+    }
     server_ptr->is_run = false;
     epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_DEL, server_ptr->listen_fd, NULL);
     close_all_sessions(server_ptr->epoll_fd, &server_ptr->session_pool);
