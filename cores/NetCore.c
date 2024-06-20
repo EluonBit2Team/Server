@@ -732,7 +732,7 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT is_host FROM group_member WHERE uid = '%d'",
-        cJSON_GetStringValue(groupname_ptr));
+        host_uid);
 
     if (mysql_query(chat_group_conn->conn, SQL_buf)) {
         fprintf(stderr, "SELECT failed: %s\n", mysql_error(chat_group_conn->conn));
@@ -765,7 +765,7 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT gid FROM group WHERE groupname = '%s'",
-        host_uid);
+        cJSON_GetStringValue(groupname_ptr));
 
     if (mysql_query(chat_group_conn->conn, SQL_buf)) {
         fprintf(stderr, "SELECT failed: %s\n", mysql_error(chat_group_conn->conn));
