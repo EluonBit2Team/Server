@@ -849,6 +849,9 @@ bool init_server(epoll_net_core* server_ptr) {
     server_ptr->function_array[MAKE_GROUP_SERV_FUNC] = make_group_service;
     server_ptr->function_array[USER_LIST_SERV_FUNC] = user_list_service;
     server_ptr->function_array[GROUP_LIST_SERV_FUNC] = group_list_service;
+    server_ptr->function_array[MNG_REQ_LIST_SERV_FUNC] = Mng_req_list_servce;
+// #define MNG_SIGNON_APPROVE_SERV_FUNC 9
+// #define MNG_GROUP_APPROVE_SERV_FUNC 10
 
     // 리슨소켓 생성
     server_ptr->listen_fd = socket(PF_INET, SOCK_STREAM, 0);
