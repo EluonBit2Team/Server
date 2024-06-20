@@ -702,7 +702,7 @@ void Mng_req_list_servce(epoll_net_core* server_ptr, task_t* task) {
     }
 
     // 유저 권한 확인 
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT user.uid FROM user WEHRE user.uid = %d AND user.role = 1", uid);
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT user.uid FROM user WHERE user.uid = %d AND user.role = 1", uid);
     user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     if (mysql_query(user_setting_conn->conn, SQL_buf)) {
         fprintf(stderr, "query fail: %s\n", mysql_error(user_setting_conn->conn));
@@ -747,7 +747,7 @@ void Mng_req_list_servce(epoll_net_core* server_ptr, task_t* task) {
     }
 
     // 그룹 요청 리스트
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT group_name, memo FROM signup_req");
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT groupname, memo FROM group_req");
     user_req_conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
     if (mysql_query(user_req_conn->conn, SQL_buf)) {
         fprintf(stderr, "query fail: %s\n", mysql_error(user_req_conn->conn));
