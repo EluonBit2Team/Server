@@ -535,7 +535,7 @@ void user_list_service(epoll_net_core* server_ptr, task_t* task) {
     temp_send_event.data.fd = now_session->fd;
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT u.name, jp.position_name, d.dept_name FROM user u LEFT JOIN dept d ON u.did = d.did LEFT JOIN job_position jp ON jp.pid = u.position LIMIT %d OFFSET %d", limit, offset);
+        "SELECT u.login_id u.name, jp.position_name, d.dept_name FROM user u LEFT JOIN dept d ON u.did = d.did LEFT JOIN job_position jp ON jp.pid = u.position LIMIT %d OFFSET %d", limit, offset);
 
     conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     if (mysql_query(conn->conn, SQL_buf)) {
@@ -554,9 +554,10 @@ void user_list_service(epoll_net_core* server_ptr, task_t* task) {
     cJSON* users_array = cJSON_CreateArray();
     while ((row = mysql_fetch_row(query_result))) {
         cJSON* user_obj = cJSON_CreateObject();
-        cJSON_AddStringToObject(user_obj, "name", row[0]);
-        cJSON_AddStringToObject(user_obj, "position", row[1]);
-        cJSON_AddStringToObject(user_obj, "dept_name", row[2]);
+        cJSON_AddStringToObject(user_obj, "id", row[0]);
+        cJSON_AddStringToObject(user_obj, "name", row[1]);
+        cJSON_AddStringToObject(user_obj, "position", row[2]);
+        cJSON_AddStringToObject(user_obj, "dept_name", row[3]);
         cJSON_AddItemToArray(users_array, user_obj);
     }
 
