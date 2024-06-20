@@ -1107,8 +1107,6 @@ void group_member_service(epoll_net_core* server_ptr, task_t* task) {
 
         mysql_free_result(query_result);
         query_result = NULL;
-        release_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX], conn_user_set_db);
-        conn_user_set_db = NULL;
     }
 
     if (cJSON_GetArraySize(users_array) == 0) {
