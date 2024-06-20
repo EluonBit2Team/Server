@@ -1025,8 +1025,8 @@ void group_member_service(epoll_net_core* server_ptr, task_t* task) {
     const char* msg = NULL;
     cJSON* result_json = cJSON_CreateObject();
     client_session_t* now_session = NULL;
-    conn_t* conn_user_set_db = NULL;
-    conn_t* conn_chat_group_db = NULL;
+    conn_t* user_set_conn = NULL;
+    conn_t* chat_group_conn = NULL;
     MYSQL_RES *query_result = NULL;
     MYSQL_ROW row;
     char SQL_buf[1024];
@@ -1058,16 +1058,16 @@ void group_member_service(epoll_net_core* server_ptr, task_t* task) {
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT uid FROM group_member gm JOIN chat_group cg ON cg.gid = gm.gid WHERE cg.groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
 
-    conn_chat_group_db = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
-    if (mysql_query(conn_chat_group_db->conn, SQL_buf)) {
-        fprintf(stderr, "query fail: %s\n", mysql_error(conn_chat_group_db->conn));
+    user_set_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
+    if (mysql_query(user_set_conn->conn, SQL_buf)) {
+        fprintf(stderr, "query fail: %s\n", mysql_error(user_set_conn->conn));
         msg = "DB error";
         goto cleanup_and_respond;
     }
 
-    query_result = mysql_store_result(conn_chat_group_db->conn);
+    query_result = mysql_store_result(user_set_conn->conn);
     if (query_result == NULL) {
-        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn_chat_group_db->conn));
+        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(user_set_conn->conn));
         msg = "DB error";
         goto cleanup_and_respond;
     }
@@ -1082,16 +1082,16 @@ void group_member_service(epoll_net_core* server_ptr, task_t* task) {
             "WHERE u.uid = %d", 
             uid);
 
-        conn_user_set_db = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
-        if (mysql_query(conn_user_set_db->conn, SQL_buf)) {
-            fprintf(stderr, "query fail: %s\n", mysql_error(conn_user_set_db->conn));
+        chat_group_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
+        if (mysql_query(chat_group_conn->conn, SQL_buf)) {
+            fprintf(stderr, "query fail: %s\n", mysql_error(chat_group_conn->conn));
             msg = "DB error";
             goto cleanup_and_respond;
         }
 
-        query_result = mysql_store_result(conn_user_set_db->conn);
+        query_result = mysql_store_result(chat_group_conn->conn);
         if (query_result == NULL) {
-            fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn_user_set_db->conn));
+            fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(chat_group_conn->conn));
             msg = "DB error";
             goto cleanup_and_respond;
         }
@@ -1128,11 +1128,14 @@ cleanup_and_respond:
     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
         perror("epoll_ctl: add");
     }
-    if ((conn_user_set_db != NULL) || (conn_chat_group_db != NULL))
-    {
-        release_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX], conn_user_set_db);
-        release_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX], conn_chat_group_db);
+    if ((user_set_conn != NULL)) {
+        release_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX], user_set_conn);
     }
+
+    if ((chat_group_conn != NULL)) {
+        release_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX], chat_group_conn);
+    }
+    
     if (query_result != NULL)
     {
         mysql_free_result(query_result);
