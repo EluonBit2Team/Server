@@ -1,6 +1,6 @@
 #include "mariadb_pool.h"
 
-bool init_mariadb_pool(mariadb_conn_pool_t* pool, size_t poolsize, const char* DB_NAME) {
+bool init_mariadb_pool(mariadb_conn_pool_t* pool, size_t poolsize, int db_idx, const char* DB_NAME) {
     const int CONN_TIMEOUT_SEC = DB_CONN_TIMEOUT_SEC;
     sem_init(&pool->pool_sem, 0, poolsize);
     pthread_mutex_init(&pool->pool_idx_mutex, NULL);
@@ -21,6 +21,7 @@ bool init_mariadb_pool(mariadb_conn_pool_t* pool, size_t poolsize, const char* D
     for (int i = 0; i < poolsize; i++)
     {
         pool->pool[i].idx = i;
+        pool->pool[i].db_idx = db_idx;
         pool->pool[i].conn = mysql_init(0);
         if (pool->pool[i].conn == NULL) {
             printf("%s conn init fail: %s\n", DB_NAME, mysql_error(pool->pool[i].conn));

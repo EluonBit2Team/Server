@@ -1,18 +1,16 @@
-GCC = gcc -g
+GCC = gcc
 C_FLAGS = -std=c99
 LINK_THREAD_FLAG = -lpthread
 LINK_MARIA_FLAG = -I/usr/include/mysql -L/usr/lib64/mysql -lmysqlclient
 TARGET = epoll_server.out
 
 UTILS_DIR = utilities
-UTILS_HEADER = ring_buffer.h void_queue.h packet_converter.h
-UTILS = $(patsubst %.h,$(UTILS_DIR)/%.c,$(UTILS_HEADER))
-UTILS_OBJECT = $(UTILS:.c=.o)
+UTILS_FILES = ring_buffer.c void_queue.c packet_converter.c
+UTILS_OBJECT = $(patsubst %.c,$(UTILS_DIR)/%.o,$(UTILS_FILES))
 
 CORE_DIR = cores
-CORE_HEADER = NetCore.h session.h uid_hash_map.h
-CORE_SRC = $(patsubst %.h,$(CORE_DIR)/%.c,$(CORE_HEADER))
-CORE_OBJECT = $(CORE_SRC:.c=.o)
+CORE_FILES = NetCore.c session.c uid_hash_map.c service.c
+CORE_OBJECT = $(patsubst %.c,$(CORE_DIR)/%.o,$(CORE_FILES))
 
 MAIN = main.c
 MAIN_OBJECT = $(MAIN:.c=.o)
@@ -21,9 +19,8 @@ JSON_SUBDIR = cJSON
 JSON_AR = $(JSON_SUBDIR)/cJSON.a
 
 MARIADB_DIR = mariadb
-MARIADB_HEADER = mariadb_pool.h mariadb.h
-MARIADB_SRC = $(patsubst %.h,$(MARIADB_DIR)/%.c,$(MARIADB_HEADER))
-MARIADB_OBJECT = $(MARIADB_SRC:.c=.o)
+MARIADB_FILES = mariadb_pool.c mariadb.c
+MARIADB_OBJECT = $(patsubst %.c,$(MARIADB_DIR)/%.o,$(MARIADB_FILES))
 
 all : $(TARGET)
 
