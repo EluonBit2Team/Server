@@ -1417,6 +1417,7 @@ void down_server(epoll_net_core* server_ptr) {
     conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
 
     snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE server_log SET downtime = NOW() WHERE downtime IS NULL;");
+
     if (mysql_query(conn->conn, SQL_buf)) {
         fprintf(stderr, "UPDATE server_log timestamp failed: %s\n", mysql_error(conn->conn));
     }
