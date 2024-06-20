@@ -1117,6 +1117,31 @@ void disconnect_client(epoll_net_core* server_ptr, int client_fd)
     printf("disconnect:%d\n", client_fd);
 }
 
+void set_serverlog(epoll_net_core* server_ptr) {
+    conn_t* conn = NULL;
+    char SQL_buf[512];
+    conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE client_log SET logout_time = NOW() WHERE logout_time IS NULL");
+    if (mysql_query(conn->conn, SQL_buf)) {
+        fprintf(stderr, "UPDATE client_log failed: %s\n", mysql_error(conn->conn));
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE server_log SET server_status = 0 WHERE server_status IS NULL");
+    if (mysql_query(conn->conn, SQL_buf)) {
+        fprintf(stderr, "UPDATE server_log server_status failed: %s\n", mysql_error(conn->conn));
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE server_log SET timestamp = NOW(), server_status = 0");
+    if (mysql_query(conn->conn, SQL_buf)) {
+        fprintf(stderr, "UPDATE server_log timestamp failed: %s\n", mysql_error(conn->conn));
+    }
+
+    if (conn != NULL) {
+        release_conn(&server_ptr->db.pools[LOG_DB_IDX], conn);
+    }
+}
+
 int run_server(epoll_net_core* server_ptr) {
     server_ptr->is_run = true;
 
@@ -1150,6 +1175,9 @@ int run_server(epoll_net_core* server_ptr) {
     if (rt_val < 0) {
         printf("epoll_ctl Error : %d\n", errno);
     }
+
+    // DB에 서버 시작 시간 기록 및 NULL값 세팅
+    set_serverlog(server_ptr);
 
     // 메인 스레드(main함수에서 run_server()까지 호출한 메인 흐름)가 epoll_wait로 io완료 대기
     while (server_ptr->is_run == true) {
