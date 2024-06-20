@@ -722,7 +722,7 @@ void Mng_req_list_servce(epoll_net_core* server_ptr, task_t* task) {
     }
 
     // 유저 요청 리스트
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT sign_req_id, login_id, name, phone, email FROM signup_req");
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id, name, phone, email FROM signup_req");
     user_req_conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
     if (mysql_query(user_req_conn->conn, SQL_buf)) {
         fprintf(stderr, "query fail: %s\n", mysql_error(user_req_conn->conn));
@@ -738,11 +738,10 @@ void Mng_req_list_servce(epoll_net_core* server_ptr, task_t* task) {
     cJSON* signup_req_list = cJSON_CreateArray();
     while ((row = mysql_fetch_row(signup_req_query_result))) {
         cJSON* signup_req_obj = cJSON_CreateArray();
-        cJSON_AddStringToObject(signup_req_obj, "sign_up_id", row[0]);
-        cJSON_AddStringToObject(signup_req_obj, "login_id", row[1]);
-        cJSON_AddStringToObject(signup_req_obj, "name", row[2]);
-        cJSON_AddStringToObject(signup_req_obj, "phone", row[3]);
-        cJSON_AddStringToObject(signup_req_obj, "email", row[4]);
+        cJSON_AddStringToObject(signup_req_obj, "login_id", row[0]);
+        cJSON_AddStringToObject(signup_req_obj, "name", row[1]);
+        cJSON_AddStringToObject(signup_req_obj, "phone", row[2]);
+        cJSON_AddStringToObject(signup_req_obj, "email", row[3]);
         cJSON_AddItemToArray(signup_req_list, signup_req_obj);
         cJSON_Delete(signup_req_obj);
     }
@@ -793,11 +792,11 @@ cleanup_and_respond:
     }
     if (user_setting_conn != NULL)
     {
-        release_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX], user_setting_conn);
+        release_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX], user_setting_conn);
     }
     if (user_req_conn != NULL)
     {
-        release_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX], user_req_conn);
+        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], user_req_conn);
     }
     if (is_mng_query_result != NULL)
     {
