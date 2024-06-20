@@ -821,11 +821,11 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
             goto cleanup_and_respond;
         }
 
-        int useruid_value = atoi(row[0]);
+        int uid_value = atoi(row[0]);
         mysql_free_result(query_result);
         query_result = NULL;
 
-        snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO group_member (uid, gid, is_host) VALUES ('%d', '%d', 0)", useruid_value, gid_value);
+        snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO group_member (uid, gid, is_host) VALUES ('%d', '%d', 0)", uid_value, gid_value);
         if (mysql_query(chat_group_conn->conn, SQL_buf)) {
             fprintf(stderr, "INSERT failed: %s\n", mysql_error(chat_group_conn->conn));
             msg = "INSERT failed"; 
