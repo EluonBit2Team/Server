@@ -107,4 +107,6 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task);
 void user_list_service(epoll_net_core* server_ptr, task_t* task);
 void group_list_service(epoll_net_core* server_ptr, task_t* task);
 
+void Mng_req_list_servce(epoll_net_core* server_ptr, task_t* task);
+
 #endif
