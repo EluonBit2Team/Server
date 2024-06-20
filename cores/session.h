@@ -1,6 +1,7 @@
 #ifndef SESSION_H
 #define SESSION_H
 
+#include <sys/epoll.h>
 #include "../utilities/ring_buffer.h"
 #include "../utilities/uthash.h"
 #include "../utilities/void_queue.h"
@@ -29,6 +30,6 @@ int init_session_pool(session_pool_t* pool_ptr, size_t session_size);
 client_session_t* assign_session(session_pool_t* pool_ptr, int fd);
 client_session_t* find_session_by_fd(session_pool_t* pool_ptr, int fd);
 int close_session(session_pool_t* pool_ptr, client_session_t* session);
-void close_all_sessions(session_pool_t* pool_ptr);
+void close_all_sessions(int epoll_fd, session_pool_t* pool_ptr);
 
 #endif

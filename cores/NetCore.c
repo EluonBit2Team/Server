@@ -42,11 +42,14 @@ void* work_routine(void *ptr)
     while (1) {
         // 큐에 할 일이 쌓일때까지 컨디션벨류를 이용해 대기
         pthread_mutex_lock(&thread_pool->task_mutex);
-        while (is_empty(&thread_pool->task_queue) == true) {
+        while (is_empty(&thread_pool->task_queue) == true && server_ptr->is_run == true) {
             pthread_cond_wait(&thread_pool->task_cond, &thread_pool->task_mutex);
         }
         pthread_mutex_unlock(&thread_pool->task_mutex);
-
+        if (server_ptr->is_run == false)
+        {
+            break;
+        }
         task_t temp_task;
         // 할 일을 temp_task에 복사하고
         // 미리 설정해둔 서비스 배열로, 적합한 함수 포인터를 호출하여 처리
@@ -917,6 +920,7 @@ void Mng_req_list_servce(epoll_net_core* server_ptr, task_t* task) {
 
     // 유저 요청 리스트
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id, name, phone, email FROM signup_req");
+    printf("%s\n", SQL_buf);
     user_req_conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
     if (mysql_query(user_req_conn->conn, SQL_buf)) {
         fprintf(stderr, "query fail: %s\n", mysql_error(user_req_conn->conn));
@@ -937,11 +941,13 @@ void Mng_req_list_servce(epoll_net_core* server_ptr, task_t* task) {
         cJSON_AddStringToObject(signup_req_obj, "phone", row[2]);
         cJSON_AddStringToObject(signup_req_obj, "email", row[3]);
         cJSON_AddItemToArray(signup_req_list, signup_req_obj);
-        cJSON_Delete(signup_req_obj);
+        //cJSON_Delete(signup_req_obj);
     }
+    printf("signup_req_list done\n");
 
     // 그룹 요청 리스트
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT groupname, memo FROM group_req");
+    printf("%s\n", SQL_buf);
     if (mysql_query(user_req_conn->conn, SQL_buf)) {
         fprintf(stderr, "query fail: %s\n", mysql_error(user_req_conn->conn));
         msg = "DB error";
@@ -954,19 +960,20 @@ void Mng_req_list_servce(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     cJSON* group_req_list = cJSON_CreateArray();
-    while ((row = mysql_fetch_row(signup_req_query_result))) {
+    while ((row = mysql_fetch_row(group_req_query_result))) {
         cJSON* group_req_obj = cJSON_CreateArray();
         cJSON_AddStringToObject(group_req_obj, "group_name", row[0]);
         cJSON_AddStringToObject(group_req_obj, "memo", row[1]);
         cJSON_AddItemToArray(group_req_list, group_req_obj);
-        cJSON_Delete(group_req_obj);
+        //cJSON_Delete(group_req_obj);
     }
+    printf("group_req_list done\n");
 
     type = 8;
 
 
 cleanup_and_respond:
-    printf("%d %s", task->req_client_fd, msg);
+    printf("Mng_req_list_servce cleanup_and_respond\n");
     cJSON_AddNumberToObject(result_json, "type", type);
     if (msg != NULL)
     {
@@ -977,8 +984,11 @@ cleanup_and_respond:
         cJSON_AddItemToObject(result_json, "signup_req_list", signup_req_list);
         cJSON_AddItemToObject(result_json, "group_req_list", group_req_list);
     }
+    printf("Mng_req_list_servce json done\n");
     char *response_str = cJSON_Print(result_json);
+    printf("Mng_req_list_servce cJSON_Print done\n");
     reserve_send(&now_session->send_bufs, response_str, strlen(response_str));
+    printf("Mng_req_list_servce send done\n");
     //free(response_str);
     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
         perror("epoll_ctl: add");
@@ -1151,6 +1161,13 @@ int run_server(epoll_net_core* server_ptr) {
         printf("epoll_ctl Error : %d\n", errno);
     }
 
+    temp_epoll_event.events = EPOLLIN;
+    temp_epoll_event.data.fd = STDIN_FILENO;
+    rt_val = epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_ADD, temp_epoll_event.data.fd, &temp_epoll_event);
+    if (rt_val < 0) {
+        printf("epoll_ctl Error : %d\n", errno);
+    }
+
     // 메인 스레드(main함수에서 run_server()까지 호출한 메인 흐름)가 epoll_wait로 io완료 대기
     while (server_ptr->is_run == true) {
         int occured_event_cnt = epoll_wait(
@@ -1162,6 +1179,9 @@ int run_server(epoll_net_core* server_ptr) {
         
         for (int i = 0; i < occured_event_cnt; i++) {
             // accept 이벤트시
+            if (server_ptr->epoll_events[i].data.fd == STDIN_FILENO) {
+                return 0;
+            }
             if (server_ptr->epoll_events[i].data.fd == server_ptr->listen_fd) {
                 accept_client(server_ptr);
             }
@@ -1236,16 +1256,24 @@ int run_server(epoll_net_core* server_ptr) {
 }
 
 void down_server(epoll_net_core* server_ptr) {
-    printf("down server\n");
     server_ptr->is_run = false;
+    epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_DEL, server_ptr->listen_fd, NULL);
+    close_all_sessions(server_ptr->epoll_fd, &server_ptr->session_pool);
     close(server_ptr->listen_fd);
     close(server_ptr->epoll_fd);
     free(server_ptr->epoll_events);
     for (int i = 0; i < WOKER_THREAD_NUM; i++) {
-       pthread_join(server_ptr->thread_pool.worker_threads[i], NULL);
+        pthread_cond_signal(&server_ptr->thread_pool.task_cond);
     }
-    close_all_sessions(&server_ptr->session_pool);
+    for (int i = 0; i < WOKER_THREAD_NUM; i++) {
+        pthread_join(server_ptr->thread_pool.worker_threads[i], NULL);
+    }
+    for (int i = 0; i < WOKER_THREAD_NUM; i++) {
+        pthread_mutex_destroy(&server_ptr->thread_pool.task_mutex);
+        pthread_cond_destroy(&server_ptr->thread_pool.task_cond);
+    }
     clear_hash_map(&server_ptr->fd_to_uid_hash);
     clear_hash_map(&server_ptr->uid_to_fd_hash);
     close_mariadb(&server_ptr->db);
+    printf("server down\n");
 }
