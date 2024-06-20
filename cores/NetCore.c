@@ -201,6 +201,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     }
 
     insert(&server_ptr->fd_to_uid_hash, task->req_client_fd, uid);
+    insert(&server_ptr->uid_to_fd_hash, uid, task->req_client_fd);
     printf("%d user login\n", find(&server_ptr->fd_to_uid_hash, task->req_client_fd));
     type = 2;
     msg = "LOGIN SUCCESS";
@@ -461,7 +462,7 @@ cleanup_and_respond:
     cJSON_AddStringToObject(result_json, "msg", msg);
     char *response_str = cJSON_Print(result_json);
     reserve_send(&now_session->send_bufs, response_str, strlen(response_str));
-    free(response_str);
+    //free(response_str);
     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
         perror("epoll_ctl: add");
     }
@@ -559,7 +560,7 @@ cleanup_and_respond:
     cJSON_AddItemToObject(result_json, "users", users_array);
     char *response_str = cJSON_Print(result_json);
     reserve_send(&now_session->send_bufs, response_str, strlen(response_str));
-    free(response_str);
+    //free(response_str);
     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
         perror("epoll_ctl: add");
     }
@@ -604,8 +605,14 @@ void group_list_service(epoll_net_core* server_ptr, task_t* task) {
     temp_send_event.events = EPOLLOUT | EPOLLET;
     temp_send_event.data.fd = now_session->fd;
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT cg.groupname FROM chat_group AS cg");
+    int uid = find(&server_ptr->fd_to_uid_hash, task->req_client_fd);
+    if (uid < 0)
+    {
+        msg = "login error";
+        goto cleanup_and_respond;
+    }
 
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT cg.groupname FROM group_member AS gm LEFT JOIN chat_group AS cg ON (gm.gid = cg.gid) WHERE gm.uid = %d", uid);
     conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
     if (mysql_query(conn->conn, SQL_buf)) {
         fprintf(stderr, "query fail: %s\n", mysql_error(conn->conn));
@@ -640,7 +647,6 @@ cleanup_and_respond:
     }
     char *response_str = cJSON_Print(result_json);
     reserve_send(&now_session->send_bufs, response_str, strlen(response_str));
-    free(response_str);
     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
         perror("epoll_ctl: add");
     }
@@ -651,6 +657,157 @@ cleanup_and_respond:
     if (query_result != NULL)
     {
         mysql_free_result(query_result);
+    }
+    cJSON_Delete(json_ptr);
+    cJSON_Delete(result_json);
+    return ;
+}
+
+void Mng_req_list_servce(epoll_net_core* server_ptr, task_t* task) {
+    printf("Mng_req_list_servce\n");
+    int type = 100;
+    const char* msg = NULL;
+    cJSON* result_json = cJSON_CreateObject();
+    client_session_t* now_session = NULL;
+    conn_t* user_setting_conn = NULL;
+    conn_t* user_req_conn = NULL;
+    MYSQL_RES *is_mng_query_result = NULL;
+    MYSQL_RES *signup_req_query_result = NULL;
+    MYSQL_RES *group_req_query_result = NULL;
+    MYSQL_ROW row;
+    char SQL_buf[512];
+
+    cJSON* json_ptr = get_parsed_json(task->buf);
+    if (json_ptr == NULL)
+    {
+        msg = "user send invalid json";
+        goto cleanup_and_respond;
+    }
+
+    struct epoll_event temp_send_event;
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL)
+    {
+        msg = "session error";
+        goto cleanup_and_respond;
+    }
+    temp_send_event.events = EPOLLOUT | EPOLLET;
+    temp_send_event.data.fd = now_session->fd;
+
+    int uid = find(&server_ptr->fd_to_uid_hash, task->req_client_fd);
+    if (uid < 0)
+    {
+        msg = "login error";
+        goto cleanup_and_respond;
+    }
+
+    // 유저 권한 확인 
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT user.uid FROM user WHERE user.uid = %d AND user.role = 1", uid);
+    user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
+    if (mysql_query(user_setting_conn->conn, SQL_buf)) {
+        fprintf(stderr, "query fail: %s\n", mysql_error(user_setting_conn->conn));
+        msg = "DB error";
+        goto cleanup_and_respond;
+    }
+
+    is_mng_query_result = mysql_store_result(user_setting_conn->conn);
+    if (is_mng_query_result == NULL) {
+        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(user_setting_conn->conn));
+        msg = "DB error";
+        goto cleanup_and_respond;
+    }
+    if ((row = mysql_fetch_row(is_mng_query_result)) == NULL) {
+        msg = "invalid user role";
+        goto cleanup_and_respond;
+    }
+
+    // 유저 요청 리스트
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id, name, phone, email FROM signup_req");
+    user_req_conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
+    if (mysql_query(user_req_conn->conn, SQL_buf)) {
+        fprintf(stderr, "query fail: %s\n", mysql_error(user_req_conn->conn));
+        msg = "DB error";
+        goto cleanup_and_respond;
+    }
+    signup_req_query_result = mysql_store_result(user_req_conn->conn);
+    if (signup_req_query_result == NULL) {
+        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(user_req_conn->conn));
+        msg = "DB error";
+        goto cleanup_and_respond;
+    }
+    cJSON* signup_req_list = cJSON_CreateArray();
+    while ((row = mysql_fetch_row(signup_req_query_result))) {
+        cJSON* signup_req_obj = cJSON_CreateArray();
+        cJSON_AddStringToObject(signup_req_obj, "login_id", row[0]);
+        cJSON_AddStringToObject(signup_req_obj, "name", row[1]);
+        cJSON_AddStringToObject(signup_req_obj, "phone", row[2]);
+        cJSON_AddStringToObject(signup_req_obj, "email", row[3]);
+        cJSON_AddItemToArray(signup_req_list, signup_req_obj);
+        cJSON_Delete(signup_req_obj);
+    }
+
+    // 그룹 요청 리스트
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT groupname, memo FROM group_req");
+    if (mysql_query(user_req_conn->conn, SQL_buf)) {
+        fprintf(stderr, "query fail: %s\n", mysql_error(user_req_conn->conn));
+        msg = "DB error";
+        goto cleanup_and_respond;
+    }
+    group_req_query_result = mysql_store_result(user_req_conn->conn);
+    if (group_req_query_result == NULL) {
+        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(user_req_conn->conn));
+        msg = "DB error";
+        goto cleanup_and_respond;
+    }
+    cJSON* group_req_list = cJSON_CreateArray();
+    while ((row = mysql_fetch_row(signup_req_query_result))) {
+        cJSON* group_req_obj = cJSON_CreateArray();
+        cJSON_AddStringToObject(group_req_obj, "group_name", row[0]);
+        cJSON_AddStringToObject(group_req_obj, "memo", row[1]);
+        cJSON_AddItemToArray(group_req_list, group_req_obj);
+        cJSON_Delete(group_req_obj);
+    }
+
+    type = 8;
+
+
+cleanup_and_respond:
+    printf("%d %s", task->req_client_fd, msg);
+    cJSON_AddNumberToObject(result_json, "type", type);
+    if (msg != NULL)
+    {
+        cJSON_AddStringToObject(result_json, "msg", msg);
+    }
+    else
+    {
+        cJSON_AddItemToObject(result_json, "signup_req_list", signup_req_list);
+        cJSON_AddItemToObject(result_json, "group_req_list", group_req_list);
+    }
+    char *response_str = cJSON_Print(result_json);
+    reserve_send(&now_session->send_bufs, response_str, strlen(response_str));
+    //free(response_str);
+    if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
+        perror("epoll_ctl: add");
+    }
+    if (user_setting_conn != NULL)
+    {
+        release_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX], user_setting_conn);
+    }
+    if (user_req_conn != NULL)
+    {
+        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], user_req_conn);
+    }
+    if (is_mng_query_result != NULL)
+    {
+        mysql_free_result(is_mng_query_result);
+    }
+    if (signup_req_query_result != NULL)
+    {
+        mysql_free_result(signup_req_query_result);
+    }
+    if (group_req_query_result != NULL)
+    {
+        mysql_free_result(group_req_query_result);
     }
     cJSON_Delete(json_ptr);
     cJSON_Delete(result_json);
@@ -691,6 +848,9 @@ bool init_server(epoll_net_core* server_ptr) {
     server_ptr->function_array[MAKE_GROUP_SERV_FUNC] = make_group_service;
     server_ptr->function_array[USER_LIST_SERV_FUNC] = user_list_service;
     server_ptr->function_array[GROUP_LIST_SERV_FUNC] = group_list_service;
+    server_ptr->function_array[MNG_REQ_LIST_SERV_FUNC] = Mng_req_list_servce;
+// #define MNG_SIGNON_APPROVE_SERV_FUNC 9
+// #define MNG_GROUP_APPROVE_SERV_FUNC 10
 
     // 리슨소켓 생성
     server_ptr->listen_fd = socket(PF_INET, SOCK_STREAM, 0);
@@ -733,6 +893,9 @@ int accept_client(epoll_net_core* server_ptr) {
 void disconnect_client(epoll_net_core* server_ptr, int client_fd)
 {
     epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_DEL, client_fd, NULL);
+    int uid = find(&server_ptr->fd_to_uid_hash, client_fd);
+    erase(&server_ptr->fd_to_uid_hash, client_fd);
+    erase(&server_ptr->uid_to_fd_hash, uid);
     client_session_t* session_ptr = find_session_by_fd(&server_ptr->session_pool, client_fd);
     if (session_ptr == NULL)
     {
