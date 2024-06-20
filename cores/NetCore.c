@@ -1114,8 +1114,8 @@ void group_member_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    type = 5;
-    msg = "User List Send Success";
+    type = 11;
+    msg = "Group Member List Send Success";
 
 cleanup_and_respond:
     printf("%d %s", task->req_client_fd, msg);
@@ -1131,7 +1131,7 @@ cleanup_and_respond:
     if ((conn_user_set_db != NULL) || (conn_chat_group_db != NULL))
     {
         release_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX], conn_user_set_db);
-        release_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX], conn_user_set_db);
+        release_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX], conn_chat_group_db);
     }
     if (query_result != NULL)
     {
