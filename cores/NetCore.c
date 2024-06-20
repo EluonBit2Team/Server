@@ -729,7 +729,7 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss id";
         goto cleanup_and_respond;
     }
-
+    printf("1\n");
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT is_host FROM group_member WHERE uid = '%d'",
         host_uid);
@@ -739,7 +739,7 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "DB error";
         goto cleanup_and_respond;
     }
-
+    printf("2\n");
     query_result = mysql_store_result(chat_group_conn->conn);
     if (query_result == NULL) {
         fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(chat_group_conn->conn));
@@ -753,7 +753,7 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "No data fetched";
         goto cleanup_and_respond;
     }
-
+    printf("3\n");
     int is_host_value = atoi(row[0]);
     if (!is_host_value) {
         msg = "You are not host!!!!";
@@ -762,7 +762,7 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
 
     mysql_free_result(query_result);
     query_result = NULL;
-
+    printf("4\n");
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT gid FROM group WHERE groupname = '%s'",
         cJSON_GetStringValue(groupname_ptr));
@@ -772,7 +772,7 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "DB error";
         goto cleanup_and_respond;
     }
-
+    printf("5\n");
     query_result = mysql_store_result(chat_group_conn->conn);
     if (query_result == NULL) {
         fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(chat_group_conn->conn));
@@ -786,11 +786,11 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "No data fetched";
         goto cleanup_and_respond;
     }
-
+    printf("6\n");
     int gid_value = atoi(row[0]);
     mysql_free_result(query_result);
     query_result = NULL;
-
+    printf("7\n");
     int array_size = cJSON_GetArraySize(id_ptr);
     for (int i = 0; i < array_size; i++) {
         cJSON* user_item = cJSON_GetArrayItem(id_ptr, i);
