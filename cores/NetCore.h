@@ -34,6 +34,7 @@
 #define MAKE_GROUP_SERV_FUNC 4
 #define USER_LIST_SERV_FUNC 5
 #define GROUP_LIST_SERV_FUNC 6
+#define ADD_MEMBER_SERV_FUNC 7
 
 #define MNG_REQ_LIST_SERV_FUNC 8
 #define MNG_SIGNON_APPROVE_SERV_FUNC 9
@@ -110,6 +111,7 @@ void signup_service(epoll_net_core* server_ptr, task_t* task);
 void make_group_service(epoll_net_core* server_ptr, task_t* task);
 void user_list_service(epoll_net_core* server_ptr, task_t* task);
 void group_list_service(epoll_net_core* server_ptr, task_t* task);
+void add_member_service(epoll_net_core* server_ptr, task_t* task);
 
 void Mng_req_list_servce(epoll_net_core* server_ptr, task_t* task);
 
