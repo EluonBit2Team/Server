@@ -748,7 +748,6 @@ void Mng_req_list_servce(epoll_net_core* server_ptr, task_t* task) {
 
     // 그룹 요청 리스트
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT groupname, memo FROM group_req");
-    user_req_conn = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
     if (mysql_query(user_req_conn->conn, SQL_buf)) {
         fprintf(stderr, "query fail: %s\n", mysql_error(user_req_conn->conn));
         msg = "DB error";
