@@ -1130,9 +1130,10 @@ cleanup_and_respond:
     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
         perror("epoll_ctl: add");
     }
-    if (conn_user_set_db != NULL)
+    if ((conn_user_set_db != NULL) || (conn_chat_group_db != NULL))
     {
         release_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX], conn_user_set_db);
+        release_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX], conn_user_set_db);
     }
     if (query_result != NULL)
     {
