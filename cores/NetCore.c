@@ -136,7 +136,8 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     const char* msg = NULL;
     cJSON* result_json = cJSON_CreateObject();
     client_session_t* now_session = NULL;
-    conn_t* conn = NULL;
+    conn_t* conn1 = NULL;
+    conn_t* conn2 = NULL;
     MYSQL_RES *query_result = NULL;
     char SQL_buf[512];
 
@@ -175,16 +176,16 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         "SELECT uid FROM user WHERE '%s' = user.login_id AND UNHEX(SHA2('%s', %d)) = user.password",
         cJSON_GetStringValue(name_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH);
 
-    conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
-    if (mysql_query(conn->conn, SQL_buf)) {
-        fprintf(stderr, "login query fail: %s\n", mysql_error(conn->conn));
+    conn1 = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
+    if (mysql_query(conn1->conn, SQL_buf)) {
+        fprintf(stderr, "login query fail: %s\n", mysql_error(conn1->conn));
         msg = "login query fail";
         goto cleanup_and_respond;
     }
 
-    query_result = mysql_store_result(conn->conn);
+    query_result = mysql_store_result(conn1->conn);
     if (query_result == NULL) {
-        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn->conn));
+        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn1->conn));
         msg = "mysql_store_result failed";
         goto cleanup_and_respond;
     }
@@ -205,7 +206,17 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     printf("%d user login\n", find(&server_ptr->fd_to_uid_hash, task->req_client_fd));
     type = 2;
     msg = "LOGIN SUCCESS";
-    goto cleanup_and_respond;
+
+    // 로그인 성공시 DB에 로그 저장
+    snprintf(SQL_buf, sizeof(SQL_buf), 
+        "INSERT INTO client_log (uid, login_time) VALUES (%d, NOW())", find(&server_ptr->fd_to_uid_hash, task->req_client_fd));
+
+    conn2 = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
+    if (mysql_query(conn2->conn, SQL_buf)) {
+        fprintf(stderr, "login_time_log query fail: %s\n", mysql_error(conn2->conn));
+        msg = "login query fail";
+        goto cleanup_and_respond;
+    }
 
 cleanup_and_respond:
     printf("%d %s\n", task->req_client_fd, msg);
@@ -216,9 +227,10 @@ cleanup_and_respond:
     if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
         perror("epoll_ctl: add");
     }
-    if (conn != NULL)
+    if ((conn1 != NULL) || (conn2 != NULL))
     {
-        release_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX], conn);
+        release_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX], conn1);
+        release_conn(&server_ptr->db.pools[LOG_DB_IDX], conn2);
     }
     if (query_result != NULL)
     {
@@ -914,6 +926,11 @@ int accept_client(epoll_net_core* server_ptr) {
 
 void disconnect_client(epoll_net_core* server_ptr, int client_fd)
 {
+    conn_t* conn = NULL;
+    char SQL_buf[512];
+    conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
+
+    snprintf(SQL_buf, sizeof(SQL_buf),"UPDATE user SET logout_time = NOW() WHERE uid = %d",find(&server_ptr->fd_to_uid_hash, client_fd));
     epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_DEL, client_fd, NULL);
     client_session_t* session_ptr = find_session_by_fd(&server_ptr->session_pool, client_fd);
     if (session_ptr == NULL)
@@ -924,7 +941,11 @@ void disconnect_client(epoll_net_core* server_ptr, int client_fd)
     {
         close_session(&server_ptr->session_pool, session_ptr);
     }
-    
+    if (conn != NULL)
+    {
+        release_conn(&server_ptr->db.pools[LOG_DB_IDX], conn);
+    }
+
     close(client_fd);
     printf("disconnect:%d\n", client_fd);
 }
