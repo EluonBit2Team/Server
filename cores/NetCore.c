@@ -732,7 +732,7 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT is_host FROM group_member WHERE uid = '%d'",
-        host_uid);
+        cJSON_GetStringValue(groupname_ptr));
 
     if (mysql_query(chat_group_conn->conn, SQL_buf)) {
         fprintf(stderr, "SELECT failed: %s\n", mysql_error(chat_group_conn->conn));
@@ -828,7 +828,7 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
         snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO group_member (uid, gid) VALUES ('%d', '%d')", useruid_value, gid_value);
         if (mysql_query(chat_group_conn->conn, SQL_buf)) {
             fprintf(stderr, "INSERT failed: %s\n", mysql_error(chat_group_conn->conn));
-            msg = "INSERT failed";
+            msg = "INSERT failed"; 
             goto cleanup_and_respond;
         }
     }
