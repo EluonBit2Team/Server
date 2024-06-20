@@ -1127,12 +1127,12 @@ void set_serverlog(epoll_net_core* server_ptr) {
         fprintf(stderr, "UPDATE client_log failed: %s\n", mysql_error(conn->conn));
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE server_log SET server_status = 0 WHERE server_status IS NULL");
+    snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE server_log SET downtime = NOW() WHERE downtime IS NULL");
     if (mysql_query(conn->conn, SQL_buf)) {
         fprintf(stderr, "UPDATE server_log server_status failed: %s\n", mysql_error(conn->conn));
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO server_log (timestamp, server_status) VALUES (NOW(), 1)");
+    snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO server_log (uptime, server_status) VALUES (NOW(), 1)");
     if (mysql_query(conn->conn, SQL_buf)) {
         fprintf(stderr, "UPDATE server_log timestamp failed: %s\n", mysql_error(conn->conn));
     }
@@ -1269,7 +1269,7 @@ void down_server(epoll_net_core* server_ptr) {
     char SQL_buf[512];
     conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO server_log (timestamp, server_status) VALUES (NOW(), 0)");
+    snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO server_log (downtime) VALUES (NOW())");
     if (mysql_query(conn->conn, SQL_buf)) {
         fprintf(stderr, "UPDATE server_log timestamp failed: %s\n", mysql_error(conn->conn));
     }
