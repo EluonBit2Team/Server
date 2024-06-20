@@ -535,7 +535,7 @@ void user_list_service(epoll_net_core* server_ptr, task_t* task) {
     temp_send_event.data.fd = now_session->fd;
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT u.login_id u.name, jp.position_name, d.dept_name FROM user u LEFT JOIN dept d ON u.did = d.did LEFT JOIN job_position jp ON jp.pid = u.position LIMIT %d OFFSET %d", limit, offset);
+        "SELECT u.login_id, u.name, jp.position_name, d.dept_name FROM user u LEFT JOIN dept d ON u.did = d.did LEFT JOIN job_position jp ON jp.pid = u.position LIMIT %d OFFSET %d", limit, offset);
 
     conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     if (mysql_query(conn->conn, SQL_buf)) {
