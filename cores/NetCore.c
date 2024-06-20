@@ -1132,7 +1132,7 @@ void set_serverlog(epoll_net_core* server_ptr) {
         fprintf(stderr, "UPDATE server_log server_status failed: %s\n", mysql_error(conn->conn));
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE server_log SET timestamp = NOW(), server_status = 0");
+    snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE server_log SET timestamp = NOW(), server_status = 1");
     if (mysql_query(conn->conn, SQL_buf)) {
         fprintf(stderr, "UPDATE server_log timestamp failed: %s\n", mysql_error(conn->conn));
     }
