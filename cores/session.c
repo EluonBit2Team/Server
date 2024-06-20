@@ -83,10 +83,11 @@ int close_session(session_pool_t* pool_ptr, client_session_t* session)
     reset_session(session);
 }
 
-void close_all_sessions(session_pool_t* pool_ptr)
+void close_all_sessions(int epoll_fd, session_pool_t* pool_ptr)
 {
     for (int i = 0; i < MAX_CLIENT_NUM; i++) {
         if (pool_ptr->session_pool[i].fd != -1) {
+            epoll_ctl(epoll_fd, EPOLL_CTL_DEL, pool_ptr->session_pool[i].fd, NULL);
             close(pool_ptr->session_pool[i].fd);
         }
     }
