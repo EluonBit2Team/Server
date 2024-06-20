@@ -764,7 +764,7 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
     query_result = NULL;
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT gid FROM chat_group WHERE groupname = '%s'",
+        "SELECT gid FROM group WHERE groupname = '%s'",
         cJSON_GetStringValue(groupname_ptr));
 
     if (mysql_query(chat_group_conn->conn, SQL_buf)) {
@@ -821,11 +821,11 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
             goto cleanup_and_respond;
         }
 
-        int uid_value = atoi(row[0]);
+        int useruid_value = atoi(row[0]);
         mysql_free_result(query_result);
         query_result = NULL;
 
-        snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO group_member (uid, gid) VALUES ('%d', '%d')", uid_value, gid_value);
+        snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO group_member (uid, gid) VALUES ('%d', '%d')", useruid_value, gid_value);
         if (mysql_query(chat_group_conn->conn, SQL_buf)) {
             fprintf(stderr, "INSERT failed: %s\n", mysql_error(chat_group_conn->conn));
             msg = "INSERT failed"; 
@@ -837,7 +837,7 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
     goto cleanup_and_respond;
 
 cleanup_and_respond:
-    printf("%d %s\n", task->req_client_fd, msg);
+    printf("%d %s", task->req_client_fd, msg);
     cJSON_AddNumberToObject(result_json, "type", type);
     cJSON_AddStringToObject(result_json, "msg", msg);
     char *response_str = cJSON_Print(result_json);
@@ -848,10 +848,10 @@ cleanup_and_respond:
     }
     if (chat_group_conn != NULL)
     {
-        release_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX], chat_group_conn);
+        release_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX], chat_group_conn);
     }
     if (user_setting_conn != NULL) {
-        release_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX], user_setting_conn);
+        release_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX], user_setting_conn);
     }
     if (query_result != NULL)
     {
@@ -859,7 +859,7 @@ cleanup_and_respond:
     }
     cJSON_Delete(json_ptr);
     cJSON_Delete(result_json);
-    return;
+    return ;
 }
 
 void Mng_req_list_servce(epoll_net_core* server_ptr, task_t* task) {
