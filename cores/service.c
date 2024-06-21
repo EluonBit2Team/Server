@@ -147,16 +147,6 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss email";
         goto cleanup_and_respond;
     }
-    cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
-    if (dept_ptr == NULL) {
-        msg = "user send invalid json. Miss dept";
-        goto cleanup_and_respond;
-    }
-    cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
-    if (pos_ptr == NULL) {
-        msg = "user send invalid json. Miss pos";
-        goto cleanup_and_respond;
-    }
 
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT COUNT(login_id) FROM user WHERE login_id = '%s'", cJSON_GetStringValue(id_ptr));
     if (query_result_to_int(user_setting_conn, &msg, SQL_buf) > 0) {
@@ -165,9 +155,9 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
     }
     
     snprintf(SQL_buf, sizeof(SQL_buf), 
-             "INSERT INTO signup_req (login_id, password, name, phone, email, did, position) VALUES ('%s', UNHEX(SHA2('%s',%d)), '%s', '%s', '%s', '%d', '%d')",
+             "INSERT INTO signup_req (login_id, password, name, phone, email) VALUES ('%s', UNHEX(SHA2('%s',%d)), '%s', '%s', '%s')",
              cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH, cJSON_GetStringValue(name_ptr),
-             cJSON_GetStringValue(phone_ptr), cJSON_GetStringValue(email_ptr), cJSON_GetNumberValue(dept_ptr),cJSON_GetNumberValue(pos_ptr));
+             cJSON_GetStringValue(phone_ptr), cJSON_GetStringValue(email_ptr));
     query_result_to_bool(user_setting_conn, &msg, SQL_buf);
     type = 1;
 
