@@ -49,24 +49,25 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss pw";
         goto cleanup_and_respond;
     }
-
+    printf("1\n");
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT uid FROM user WHERE '%s' = user.login_id AND UNHEX(SHA2('%s', %d)) = user.password",
         cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH);
 
+    printf("2\n");
     uid = query_result_to_int(user_setting_conn->conn,msg,SQL_buf);
 
     if (uid) {
         msg = "Invalid ID or PW";
         goto cleanup_and_respond;
     }
-
+    printf("3\n");
     insert(&server_ptr->fd_to_uid_hash, task->req_client_fd, uid);
     insert(&server_ptr->uid_to_fd_hash, uid, task->req_client_fd);
 
     printf("%d user login\n", find(&server_ptr->fd_to_uid_hash, task->req_client_fd));
     type = 2;
-
+    printf("4\n");
     // 로그인 성공시 DB에 로그 저장
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "INSERT INTO client_log (uid, login_time) VALUES (%d, NOW())", find(&server_ptr->fd_to_uid_hash, task->req_client_fd));
@@ -76,12 +77,13 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     }
 
 cleanup_and_respond:
+    printf("5\n");
     cJSON_AddNumberToObject(result_json, "type", type);
     if (msg != NULL)
     {
         cJSON_AddStringToObject(result_json, "msg", msg);
     }
-
+    printf("6\n");
     char *response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 2, user_setting_conn, log_conn);
