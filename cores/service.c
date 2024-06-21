@@ -578,6 +578,7 @@ void group_member_service(epoll_net_core* server_ptr, task_t* task) {
     }
 
     cJSON* groupname_ptr = cJSON_GetObjectItem(json_ptr, "groupname");
+    printf("%s",cJSON_Print(groupname_ptr));
     if (groupname_ptr == NULL || cJSON_GetStringValue(groupname_ptr)[0] == '\0')
     {
         msg = "user send invalid json. Miss page";
