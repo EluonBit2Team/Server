@@ -78,8 +78,9 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     // 로그인 성공시 DB에 로그 저장
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "INSERT INTO client_log (uid, login_time) VALUES (%d, NOW())", uid);
-    query_result_to_bool(log_conn,&msg,SQL_buf);
-    if (msg != NULL) {
+    if (mysql_query(log_conn->conn, SQL_buf)) {
+        fprintf(stderr, "SELECT failed: %s\n", mysql_error(user_setting_conn->conn));
+        msg = "DB error";
         goto cleanup_and_respond;
     }
 
@@ -88,6 +89,7 @@ cleanup_and_respond:
     cJSON_AddNumberToObject(result_json, "type", type);
     if (msg != NULL)
     {
+        cJSON_AddStringToObject(result_json, "id", cJSON_GetStringValue(id_ptr));
         cJSON_AddStringToObject(result_json, "msg", msg);
     }
     printf("6\n");
