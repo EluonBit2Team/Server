@@ -56,14 +56,12 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss pw";
         goto cleanup_and_respond;
     }
-    printf("1\n");
+
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT uid FROM user WHERE '%s' = user.login_id AND UNHEX(SHA2('%s', %d)) = user.password",
         cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH);
 
-    
     uid = query_result_to_int(user_setting_conn,&msg,SQL_buf);
-    printf("%d\n",uid);
     if (uid == false) {
         msg = "Invalid ID or PW";
         goto cleanup_and_respond;
@@ -153,19 +151,26 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "login_id already exists.";
         goto cleanup_and_respond;
     }
-    
+    printf("1\n");
     snprintf(SQL_buf, sizeof(SQL_buf), 
              "INSERT INTO signup_req (login_id, password, name, phone, email) VALUES ('%s', UNHEX(SHA2('%s',%d)), '%s', '%s', '%s')",
              cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH, cJSON_GetStringValue(name_ptr),
              cJSON_GetStringValue(phone_ptr), cJSON_GetStringValue(email_ptr));
+    printf("2\n");
     query_result_to_bool(user_setting_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+
     type = 1;
 
 cleanup_and_respond:
+    printf("3\n");
     cJSON_AddNumberToObject(result_json, "type", type);
     if (msg != NULL) {
         cJSON_AddStringToObject(result_json, "msg", msg);
     }
+    printf("4\n");
     char *response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 1, user_setting_conn);
