@@ -255,94 +255,53 @@ void user_list_service(epoll_net_core* server_ptr, task_t* task) {
     const char* msg = NULL;
     cJSON* result_json = cJSON_CreateObject();
     client_session_t* now_session = NULL;
-    conn_t* conn = NULL;
-    MYSQL_RES *query_result = NULL;
-    MYSQL_ROW row;
+    conn_t* user_setting_conn = NULL;
     char SQL_buf[1024];
 
+    user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
+
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL) {
+        msg = "session error";
+        goto cleanup_and_respond;
+    }
+
     cJSON* json_ptr = get_parsed_json(task->buf);
-    if (json_ptr == NULL)
-    {
+    if (json_ptr == NULL) {
         msg = "user send invalid json";
         goto cleanup_and_respond;
     }
 
     cJSON* page_ptr = cJSON_GetObjectItem(json_ptr, "page");
-    if (page_ptr == NULL || !cJSON_IsNumber(page_ptr))
-    {
+    if (page_ptr == NULL || !cJSON_IsNumber(page_ptr)) {
         msg = "user send invalid json. Miss page";
         goto cleanup_and_respond;
     }
 
     int page = cJSON_GetNumberValue(page_ptr);
-
     int limit = 10;
     int offset = (page - 1) * limit;
-
-    struct epoll_event temp_send_event;
-    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
-    if (now_session == NULL)
-    {
-        msg = "session error";
-        goto cleanup_and_respond;
-    }
-    temp_send_event.events = EPOLLOUT | EPOLLET;
-    temp_send_event.data.fd = now_session->fd;
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT u.login_id, u.name, jp.position_name, d.dept_name FROM user u LEFT JOIN dept d ON u.did = d.did LEFT JOIN job_position jp ON jp.pid = u.position LIMIT %d OFFSET %d", limit, offset);
 
-    conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
-    if (mysql_query(conn->conn, SQL_buf)) {
-        fprintf(stderr, "query fail: %s\n", mysql_error(conn->conn));
-        msg = "DB error";
+    cJSON* user_list = query_result_to_json(user_setting_conn,&msg,SQL_buf,4,"login_id","name","position_name","dept_name");
+    if (msg != NULL) {
         goto cleanup_and_respond;
     }
-
-    query_result = mysql_store_result(conn->conn);
-    if (query_result == NULL) {
-        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn->conn));
-        msg = "DB error";
-        goto cleanup_and_respond;
-    }
-    
-    cJSON* users_array = cJSON_CreateArray();
-    while ((row = mysql_fetch_row(query_result))) {
-        cJSON* user_obj = cJSON_CreateObject();
-        cJSON_AddStringToObject(user_obj, "id", row[0]);
-        cJSON_AddStringToObject(user_obj, "name", row[1]);
-        cJSON_AddStringToObject(user_obj, "position", row[2]);
-        cJSON_AddStringToObject(user_obj, "dept_name", row[3]);
-        cJSON_AddItemToArray(users_array, user_obj);
-    }
-
-    if (cJSON_GetArraySize(users_array) == 0) {
-        msg = "No data fetched";
-        goto cleanup_and_respond;
-    }
-
     type = 5;
-    msg = "User List Send Success";
 
 cleanup_and_respond:
-    printf("%d %s", task->req_client_fd, msg);
     cJSON_AddNumberToObject(result_json, "type", type);
-    cJSON_AddStringToObject(result_json, "msg", msg);
-    cJSON_AddItemToObject(result_json, "users", users_array);
+    if (msg != NULL) {
+        cJSON_AddStringToObject(result_json, "msg", msg);
+    }
+    else {
+        cJSON_AddItemToObject(result_json, "signup_req_list", user_list);
+    }
     char *response_str = cJSON_Print(result_json);
-    reserve_send(&now_session->send_bufs, response_str, strlen(response_str));
-    //free(response_str);
-    if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
-        perror("epoll_ctl: add");
-    }
-    if (conn != NULL)
-    {
-        release_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX], conn);
-    }
-    if (query_result != NULL)
-    {
-        mysql_free_result(query_result);
-    }
+    reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
+    release_conns(&server_ptr->db, 1, user_setting_conn);
     cJSON_Delete(json_ptr);
     cJSON_Delete(result_json);
     return ;
