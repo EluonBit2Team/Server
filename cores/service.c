@@ -252,7 +252,7 @@ cleanup_and_respond:
 void user_list_service(epoll_net_core* server_ptr, task_t* task) {
     printf("user_list_service\n");
     int type = 100;
-    const char* msg = NULL;
+    char* msg = NULL;
     cJSON* result_json = cJSON_CreateObject();
     client_session_t* now_session = NULL;
     conn_t* user_setting_conn = NULL;
