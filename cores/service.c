@@ -460,7 +460,7 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
         snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE login_id = '%s'", cJSON_GetStringValue(user_item));
         int uid = query_result_to_int(user_setting_conn,&msg,SQL_buf);
 
-        snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO group_member (uid, gid) VALUES ('%d', '%d')", uid, gid);
+        snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO group_member (uid, gid,is_host) VALUES ('%d', '%d',0)", uid, gid);
         query_result_to_execuete(chat_group_conn,&msg,SQL_buf);
     }
     type = 7;
