@@ -393,7 +393,7 @@ cleanup_and_respond:
     return ;
 }
 
-// void add_member_service(epoll_net_core* server_ptr, task_t* task) {
+void add_member_service(epoll_net_core* server_ptr, task_t* task) {
 //     printf("make_group_service\n");
 //     int type = 100;
 //     const char* msg = NULL;
@@ -446,20 +446,6 @@ cleanup_and_respond:
 //     if (mysql_query(chat_group_conn->conn, SQL_buf)) {
 //         fprintf(stderr, "SELECT failed: %s\n", mysql_error(chat_group_conn->conn));
 //         msg = "DB error";
-//         goto cleanup_and_respond;
-//     }
-
-//     query_result = mysql_store_result(chat_group_conn->conn);
-//     if (query_result == NULL) {
-//         fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(chat_group_conn->conn));
-//         msg = "DB error";
-//         goto cleanup_and_respond;
-//     }
-    
-//     row = mysql_fetch_row(query_result);
-//     if (row == NULL) {
-//         fprintf(stderr, "No data fetched\n");
-//         msg = "No data fetched";
 //         goto cleanup_and_respond;
 //     }
 
@@ -567,7 +553,7 @@ cleanup_and_respond:
 //     cJSON_Delete(json_ptr);
 //     cJSON_Delete(result_json);
 //     return ;
-// }
+}
 
 void Mng_req_list_servce(epoll_net_core* server_ptr, task_t* task) {
     printf("Mng_req_list_servce\n");
