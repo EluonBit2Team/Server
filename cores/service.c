@@ -211,14 +211,14 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
     }
 
     cJSON* id_ptr = cJSON_GetObjectItem(json_ptr, "id");
-    if (id_ptr == NULL || cJSON_GetStringValue(groupname_ptr)[0] == '\0')
+    if (id_ptr == NULL || cJSON_GetStringValue(id_ptr)[0] == '\0')
     {
         msg = "user send invalid json. Miss uid";
         goto cleanup_and_respond;
     }
 
     cJSON* message_ptr = cJSON_GetObjectItem(json_ptr, "message");
-    if (message_ptr == NULL || cJSON_GetStringValue(groupname_ptr)[0] == '\0')
+    if (message_ptr == NULL || cJSON_GetStringValue(message_ptr)[0] == '\0')
     {
         msg = "user send invalid json. Miss message";
         goto cleanup_and_respond;
@@ -226,8 +226,8 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
 
     int uid = find(&server_ptr->fd_to_uid_hash, task->req_client_fd);
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "INSERT INTO group_req (groupname, uid) VALUES ('%s', '%d')",
-        cJSON_GetStringValue(groupname_ptr), uid);
+        "INSERT INTO group_req (groupname, uid, memo) VALUES ('%s', '%d','%s')",
+        cJSON_GetStringValue(groupname_ptr), uid, cJSON_GetStringValue(message_ptr));
     
     query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
@@ -241,7 +241,6 @@ cleanup_and_respond:
     {
         cJSON_AddStringToObject(result_json, "msg", msg);
     }
-
     char *response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 1, chat_group_conn);
