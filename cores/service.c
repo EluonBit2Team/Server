@@ -570,6 +570,7 @@ void group_member_service(epoll_net_core* server_ptr, task_t* task) {
     user_setting_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
     chat_group_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
 
+    printf("1\n");
     cJSON* json_ptr = get_parsed_json(task->buf);
     if (json_ptr == NULL)
     {
