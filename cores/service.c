@@ -23,7 +23,7 @@ void echo_service(epoll_net_core* server_ptr, task_t* task) {
 void login_service(epoll_net_core* server_ptr, task_t* task) {
     printf("login_service\n");
     int type = 100;
-    const char* msg = NULL;
+    char* msg = NULL;
     cJSON* result_json = cJSON_CreateObject();
     client_session_t* now_session = NULL;
     conn_t* user_setting_conn = NULL;
@@ -55,7 +55,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH);
 
     printf("2\n");
-    uid = query_result_to_int(user_setting_conn->conn,msg,SQL_buf);
+    uid = query_result_to_int(user_setting_conn,&msg,SQL_buf);
 
     if (uid) {
         msg = "Invalid ID or PW";
@@ -71,7 +71,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     // 로그인 성공시 DB에 로그 저장
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "INSERT INTO client_log (uid, login_time) VALUES (%d, NOW())", find(&server_ptr->fd_to_uid_hash, task->req_client_fd));
-    query_result_to_bool(log_conn->conn,msg,SQL_buf);
+    query_result_to_bool(log_conn,&msg,SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
     }

@@ -32,9 +32,9 @@ int query_result_to_int(conn_t* conn, char** msg, const char* query) {
         *msg = "invalid user role";
         return false;
     }
-
+    int result = atoi(row[0]);
     mysql_free_result(res);
-    return atoi(row[0]);
+    return result;
 }
 
 bool query_result_to_bool(conn_t* conn, char** msg, const char* query) {
