@@ -602,7 +602,7 @@ void group_member_service(epoll_net_core* server_ptr, task_t* task) {
             "LEFT JOIN job_position jp ON jp.pid = u.position "
             "WHERE u.uid = %d", 
             uid);
-    cJSON* group_user_list = query_result_to_json(user_setting_conn,&msg,SQL_buf,4,"login_id","name","position_name","dept_name");
+    cJSON* group_user_list = query_result_to_json(chat_group_conn,&msg,SQL_buf,4,"login_id","name","position_name","dept_name");
     type = 11;
 
 cleanup_and_respond:
