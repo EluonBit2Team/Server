@@ -184,24 +184,17 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
     const char* msg = NULL;
     cJSON* result_json = cJSON_CreateObject();
     client_session_t* now_session = NULL;
-    conn_t* user_setting_conn = NULL;
-    //conn_t* conn2 = NULL;
-    MYSQL_RES *query_result = NULL;
-    MYSQL_ROW row;
+    conn_t* chat_group_conn = NULL;
     char SQL_buf[512];
 
-    user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
-    //conn2 = get_conn(&server_ptr->db.pools[USER_REQUEST_DB_IDX]);
+    chat_group_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
 
-    struct epoll_event temp_send_event;
     now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
     if (now_session == NULL)
     {
         msg = "session error";
         goto cleanup_and_respond;
     }
-    temp_send_event.events = EPOLLOUT | EPOLLET;
-    temp_send_event.data.fd = now_session->fd;
 
     cJSON* json_ptr = get_parsed_json(task->buf);
     if (json_ptr == NULL)
@@ -231,69 +224,26 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
         goto cleanup_and_respond;
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT uid FROM user AS u WHERE '%s' = login_id ",
-        cJSON_GetStringValue(id_ptr));
-
-    if (mysql_query(user_setting_conn->conn, SQL_buf)) {
-        fprintf(stderr, "SELECT failed: %s\n", mysql_error(user_setting_conn->conn));
-        msg = "DB error";
-        goto cleanup_and_respond;
-    }
-
-    query_result = mysql_store_result(user_setting_conn->conn);
-    if (query_result == NULL) {
-        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(user_setting_conn->conn));
-        msg = "DB error";
-        goto cleanup_and_respond;
-    }
-    
-    row = mysql_fetch_row(query_result);
-    if (row == NULL) {
-        fprintf(stderr, "No data fetched\n");
-        msg = "No data fetched";
-        goto cleanup_and_respond;
-    }
-
-    int uid_value = atoi(row[0]);
-    mysql_free_result(query_result);
-    query_result = NULL;
-
+    int uid = find(&server_ptr->fd_to_uid_hash, task->req_client_fd);
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "INSERT INTO group_req (groupname, uid) VALUES ('%s', '%d')",
-        cJSON_GetStringValue(groupname_ptr), uid_value);
-
-    if (mysql_query(user_setting_conn->conn, SQL_buf)) {
-        fprintf(stderr, "INSERT failed: %s\n", mysql_error(user_setting_conn->conn));
-        msg = "INSERT failed";
+        cJSON_GetStringValue(groupname_ptr), uid);
+    query_result_to_bool(chat_group_conn,&msg,SQL_buf);
+    if (msg != NULL) {
         goto cleanup_and_respond;
     }
-    
     type = 4;
-    msg = "Make Group Success";
-    goto cleanup_and_respond;
 
 cleanup_and_respond:
-    printf("%d %s", task->req_client_fd, msg);
-
     cJSON_AddNumberToObject(result_json, "type", type);
-    cJSON_AddStringToObject(result_json, "msg", msg);
+    if (msg != NULL)
+    {
+        cJSON_AddStringToObject(result_json, "msg", msg);
+    }
+
     char *response_str = cJSON_Print(result_json);
-    reserve_send(&now_session->send_bufs, response_str, strlen(response_str));
-    //free(response_str);
-
-    if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
-        perror("epoll_ctl: add");
-    }
-    if (user_setting_conn != NULL)
-    {
-        release_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX], user_setting_conn);
-    }
-
-    if (query_result != NULL)
-    {
-        mysql_free_result(query_result);
-    }
+    reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
+    release_conns(&server_ptr->db, 1, chat_group_conn);
     cJSON_Delete(json_ptr);
     cJSON_Delete(result_json);
     return ;
