@@ -763,15 +763,12 @@ void Mng_req_list_servce(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    struct epoll_event temp_send_event;
     now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
     if (now_session == NULL)
     {
         msg = "session error";
         goto cleanup_and_respond;
     }
-    temp_send_event.events = EPOLLOUT | EPOLLET;
-    temp_send_event.data.fd = now_session->fd;
 
     int uid = find(&server_ptr->fd_to_uid_hash, task->req_client_fd);
     if (uid < 0)
@@ -781,23 +778,24 @@ void Mng_req_list_servce(epoll_net_core* server_ptr, task_t* task) {
     }
     user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     chat_group_conn = get_conn((&server_ptr->db.pools[CHAT_GROUP_DB_IDX]));
+
     // 유저 권한 확인 
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT user.uid FROM user WHERE user.uid = %d AND user.role = 1", uid);
-    has_query_results(user_setting_conn, &msg, SQL_buf);
+    query_result_to_bool(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
 
     // 유저 요청 리스트
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id, name, phone, email FROM signup_req");
-    cJSON* signup_req_list = execute_query(user_setting_conn, &msg, SQL_buf, 4, "login_id", "name", "phone", "email");
+    cJSON* signup_req_list = query_result_to_json(user_setting_conn, &msg, SQL_buf, 4, "login_id", "name", "phone", "email");
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
 
     // 그룹 요청 리스트 group_req_query_result
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT groupname, memo FROM group_req");
-    cJSON* group_req_list = execute_query(chat_group_conn, &msg, SQL_buf, 2, "group_name", "memo");
+    cJSON* group_req_list = query_result_to_json(chat_group_conn, &msg, SQL_buf, 2, "group_name", "memo");
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
@@ -818,15 +816,8 @@ cleanup_and_respond:
         // signup_req_list, group_req_list 자동 삭제 됨??
     }
     char *response_str = cJSON_Print(result_json);
-    reserve_send(&now_session->send_bufs, response_str, strlen(response_str));
-    if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_send_event) == -1) {
-        perror("epoll_ctl: add");
-    }
+    reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 2, user_setting_conn, chat_group_conn);
-    // if (user_setting_conn != NULL)
-    // {
-    //     release_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX], user_setting_conn);
-    // }
     cJSON_Delete(json_ptr);
     cJSON_Delete(result_json);
     return ;

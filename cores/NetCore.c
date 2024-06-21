@@ -92,6 +92,17 @@ size_t get_rear_send_buf_size(void_queue_t* vq)
     return ((send_buf_t*)get_rear_data(vq))->send_data_size;
 }
 
+void reserve_epoll_send(int epoll_fd, client_session_t* send_session, char* send_org, int send_size) {
+    struct epoll_event temp_send_event;
+    temp_send_event.events = EPOLLOUT | EPOLLET;
+    temp_send_event.data.fd = send_session->fd;
+    reserve_send(&send_session->send_bufs, send_org, send_size);
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, send_session->fd, &temp_send_event) == -1) {
+        perror("epoll_ctl: add");
+    }
+}
+
+// 세션, epoll, 보낼 데이터 원본 및 크기 
 // todo : 좀 더 일반적인 형태로. queueu를 받지 않고, serv랑 세션을 받게.
 void reserve_send(void_queue_t* vq, char* send_org, int send_size)
 {

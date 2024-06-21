@@ -25,8 +25,8 @@ typedef struct chatdb {
     int db_sizes[TOTAL_DB_NUM];
 } chatdb_t;
 
-bool has_query_results(conn_t* conn, char** msg, const char* query);
-cJSON* execute_query(conn_t* conn, char** msg, const char* query, int key_num, ...);
+bool query_result_to_bool(conn_t* conn, char** msg, const char* query);
+cJSON* query_result_to_json(conn_t* conn, char** msg, const char* query, int key_num, ...);
 void release_conns(chatdb_t* db, int release_conn_num, ...);
 bool init_mariadb(chatdb_t* db);
 void close_mariadb(chatdb_t* db);
