@@ -57,7 +57,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     printf("2\n");
     uid = query_result_to_int(user_setting_conn,&msg,SQL_buf);
     printf("%d\n",uid);
-    if (uid) {
+    if (uid == false) {
         msg = "Invalid ID or PW";
         goto cleanup_and_respond;
     }
