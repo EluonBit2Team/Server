@@ -172,9 +172,13 @@ cleanup_and_respond:
     }
     printf("4\n");
     char *response_str = cJSON_Print(result_json);
+    printf("5\n");
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
+    printf("6\n");
     release_conns(&server_ptr->db, 1, user_setting_conn);
+    printf("7\n");
     cJSON_Delete(json_ptr);
+    printf("8\n");
     cJSON_Delete(result_json);
     return ;
 }
