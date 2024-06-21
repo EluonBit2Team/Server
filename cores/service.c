@@ -181,7 +181,7 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
 {
     printf("make_group_service\n");
     int type = 100;
-    const char* msg = NULL;
+    char* msg = NULL;
     cJSON* result_json = cJSON_CreateObject();
     client_session_t* now_session = NULL;
     conn_t* chat_group_conn = NULL;
@@ -228,7 +228,8 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "INSERT INTO group_req (groupname, uid) VALUES ('%s', '%d')",
         cJSON_GetStringValue(groupname_ptr), uid);
-    query_result_to_execuete(chat_group_conn,&msg,SQL_buf);
+    
+    query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
