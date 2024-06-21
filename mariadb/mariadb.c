@@ -37,6 +37,15 @@ int query_result_to_int(conn_t* conn, char** msg, const char* query) {
     return result;
 }
 
+bool query_result_to_execuete(conn_t* conn, char** msg, const char* query) {
+    if (mysql_query(conn->conn, query)) {
+        fprintf(stderr, "query fail: %s\n", mysql_error(conn->conn));
+        *msg = "DB error";
+        return false;
+    }
+    return true;
+}
+
 bool query_result_to_bool(conn_t* conn, char** msg, const char* query) {
     MYSQL_ROW row;
     MYSQL_RES *res = NULL;
