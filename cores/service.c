@@ -445,7 +445,7 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
     }
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT gid FROM group WHERE groupname = '%s'", cJSON_GetStringValue(groupname_ptr));
+        "SELECT gid FROM chat_group WHERE groupname = '%s'", cJSON_GetStringValue(groupname_ptr));
 
     int gid = query_result_to_int(chat_group_conn,&msg,SQL_buf);
 
