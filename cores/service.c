@@ -228,7 +228,7 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "INSERT INTO group_req (groupname, uid) VALUES ('%s', '%d')",
         cJSON_GetStringValue(groupname_ptr), uid);
-    query_result_to_bool(chat_group_conn,&msg,SQL_buf);
+    query_result_to_execuete(chat_group_conn,&msg,SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
