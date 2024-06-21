@@ -34,6 +34,13 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
 
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL)
+    {
+        msg = "session error";
+        goto cleanup_and_respond;
+    }
+
     cJSON* json_ptr = get_parsed_json(task->buf);
     if (json_ptr == NULL) {
         msg = "user send invalid json";
@@ -70,7 +77,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     printf("4\n");
     // 로그인 성공시 DB에 로그 저장
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "INSERT INTO client_log (uid, login_time) VALUES (%d, NOW())", find(&server_ptr->fd_to_uid_hash, task->req_client_fd));
+        "INSERT INTO client_log (uid, login_time) VALUES (%d, NOW())", uid);
     query_result_to_bool(log_conn,&msg,SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
