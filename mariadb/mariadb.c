@@ -13,6 +13,30 @@ void release_conns(chatdb_t* db, int release_conn_num, ...) {
     }
 }
 
+int query_result_to_int(conn_t* conn, char** msg, const char* query) {
+    MYSQL_ROW row;
+    MYSQL_RES *res = NULL;
+
+    if (mysql_query(conn->conn, query)) {
+        fprintf(stderr, "query fail: %s\n", mysql_error(conn->conn));
+        *msg = "DB error";
+        return false;
+    }
+    res = mysql_store_result(conn->conn);
+    if (res == NULL) {
+        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn->conn));
+        *msg = "DB error";
+        return false;
+    }
+    if ((row = mysql_fetch_row(res)) == NULL) {
+        *msg = "invalid user role";
+        return false;
+    }
+
+    mysql_free_result(res);
+    return atoi(row[0]);
+}
+
 bool query_result_to_bool(conn_t* conn, char** msg, const char* query) {
     MYSQL_ROW row;
     MYSQL_RES *res = NULL;

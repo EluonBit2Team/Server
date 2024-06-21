@@ -10,7 +10,7 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <string.h>
-
+#include <stdarg.h>
 #include "cJSON/cJSON.h"
 
 #endif
