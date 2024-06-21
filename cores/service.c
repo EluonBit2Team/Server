@@ -429,8 +429,8 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    cJSON* username_ptr = cJSON_GetObjectItem(json_ptr, "username");
-    if (username_ptr == NULL || !cJSON_IsArray(username_ptr))
+    cJSON* id_ptr = cJSON_GetObjectItem(json_ptr, "id");
+    if (id_ptr == NULL || !cJSON_IsArray(id_ptr))
     {
         msg = "user send invalid json. Miss uid";
         goto cleanup_and_respond;
@@ -449,15 +449,15 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
 
     int gid = query_result_to_int(chat_group_conn,&msg,SQL_buf);
 
-    int array_size = cJSON_GetArraySize(username_ptr);
+    int array_size = cJSON_GetArraySize(id_ptr);
     for (int i = 0; i < array_size; i++) {
-        cJSON* user_item = cJSON_GetArrayItem(username_ptr, i);
+        cJSON* user_item = cJSON_GetArrayItem(id_ptr, i);
         if (user_item == NULL || cJSON_GetStringValue(user_item)[0] == '\0') {
             msg = "Invalid JSON: Empty username in users list";
             goto cleanup_and_respond;
         }
 
-        snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE username = '%s'", cJSON_GetStringValue(user_item));
+        snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE login_id = '%s'", cJSON_GetStringValue(user_item));
         int uid = query_result_to_int(user_setting_conn,&msg,SQL_buf);
 
         snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO group_member (uid, gid) VALUES ('%d', '%d')", uid, gid);
@@ -570,7 +570,6 @@ void group_member_service(epoll_net_core* server_ptr, task_t* task) {
     user_setting_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
     chat_group_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
 
-    printf("1\n");
     cJSON* json_ptr = get_parsed_json(task->buf);
     if (json_ptr == NULL)
     {
