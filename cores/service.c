@@ -560,13 +560,13 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     
-    start_transaction(user_setting_conn, &msg);
+    //start_transaction(user_setting_conn, &msg);
     if (cJSON_GetNumberValue(approve_ptr) == 0) {
         msg = "permission denied";
         snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM signup_req WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
-            rollback(user_setting_conn, &msg);
+            //rollback(user_setting_conn, &msg);
             goto cleanup_and_respond;
         }
         goto cleanup_and_respond;
@@ -592,11 +592,6 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss max_tcp";
         goto cleanup_and_respond;
     }
-
-    if (cJSON_GetNumberValue(approve_ptr) == 0) {
-        msg = "permission denied";
-        goto cleanup_and_respond;
-    }
     
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE uid = %d AND role = 1", uid);
     query_result_to_bool(user_setting_conn, &msg, SQL_buf);
@@ -604,8 +599,8 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id, password, name, phone, email FROM signup_req WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
-    cJSON* user_data = query_result_to_json(user_setting_conn, &msg, SQL_buf, 5, "login_id","password", "name", "phone", "email");
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id, password, name, phone, email FROM signup_req WHERE signup_req.login_id = '%s';", cJSON_GetStringValue(id_ptr));
+    cJSON* user_data = query_result_to_json(user_setting_conn, &msg, SQL_buf, 5, "login_id", "password", "name", "phone", "email");
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
@@ -627,17 +622,17 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
              cJSON_GetNumberValue(max_tps_ptr));
     query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
-        rollback(user_setting_conn, &msg);
+        //rollback(user_setting_conn, &msg);
         goto cleanup_and_respond;
     }
 
     snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROME signup_req WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
     query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
-        rollback(user_setting_conn, &msg);
+        //rollback(user_setting_conn, &msg);
         goto cleanup_and_respond;
     }
-    commit(user_setting_conn, &msg);
+    //commit(user_setting_conn, &msg);
     type = 9;
 
 
