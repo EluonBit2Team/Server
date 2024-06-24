@@ -89,20 +89,20 @@ cJSON* query_result_to_json(conn_t* conn, char** msg, const char* query, int key
         *msg = "JSON key count and row column count do not match.";
         return NULL;
     }
-    cJSON* signup_req_list = cJSON_CreateArray();
+    cJSON* query_result_list = cJSON_CreateArray();
     while ((row = mysql_fetch_row(res))) {
-        cJSON* signup_req_obj = cJSON_CreateObject();
+        cJSON* query_result_obj = cJSON_CreateObject();
         va_start(VA_LIST, key_num);
         for (int i = 0; i < key_num; i++)
         {
             const char* key = va_arg(VA_LIST, const char*);
-            cJSON_AddStringToObject(signup_req_obj, key, row[i]);
+            cJSON_AddStringToObject(query_result_obj, key, row[i]);
         }
         va_end(VA_LIST);
-        cJSON_AddItemToArray(signup_req_list, signup_req_obj);
+        cJSON_AddItemToArray(query_result_list, query_result_obj);
     }
     mysql_free_result(res);
-    return signup_req_list;
+    return query_result_list;
 }
 
 bool init_mariadb(chatdb_t* db)

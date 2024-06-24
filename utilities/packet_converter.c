@@ -46,15 +46,15 @@ int type_finder(char *buf) {
     return type_int;
 }
 
-// 문자열 비교 함수
+// todo~~~
 bool is_exception(const char *input) {
-    const char *exceptions[] = {"error", "exception", "invalid", "forbidden", "unauthorized"};
+    const char *exceptions[] = {"NULL", "null", "invalid", "forbidden", "unauthorized"};
     const int num_exceptions = sizeof(exceptions) / sizeof(exceptions[0]);
 
     for (int i = 0; i < num_exceptions; i++) {
         if (strcmp(input, exceptions[i]) == 0) {
-            return false;
+            return true;
         }
     }
-    return true;
+    return false;
 }
