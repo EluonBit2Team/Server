@@ -561,6 +561,9 @@ void group_member_service(epoll_net_core* server_ptr, task_t* task) {
         "SELECT uid FROM group_member gm JOIN chat_group cg ON cg.gid = gm.gid WHERE cg.groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
 
     cJSON* uid_list = query_result_to_json(user_setting_conn, &msg, SQL_buf, 1, "uid");
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
 
     int uid_count = cJSON_GetArraySize(uid_list);
     for (int i = 0; i < uid_count; i++) {
