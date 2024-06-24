@@ -599,7 +599,7 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     //SELECT login_id, password, name, phone, email FROM signup_req WHERE signup_req.login_id
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id FROM signup_req WHERE signup_req.login_id = '%s'", cJSON_GetStringValue(id_ptr));
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id FROM signup_req WHERE signup_req.login_id = 'idid2'");
     printf("%s\n",SQL_buf);
     cJSON* user_data = query_result_to_json(user_setting_conn, &msg, SQL_buf, 1, "login_id");
     //"login_id", "password", "name", "phone", "email"
