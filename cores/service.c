@@ -614,6 +614,7 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
     char* msg = NULL;
     cJSON* result_json = cJSON_CreateObject();
     client_session_t* now_session = NULL;
+    conn_t* user_setting_conn = NULL;
     conn_t* chat_group_conn = NULL;
     conn_t* log_conn = NULL;
     int* recieve_fd_array = NULL;
@@ -653,6 +654,13 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL) {
+        msg = "Session Error";
+        goto cleanup_and_respond;
+    }
+
+    user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     chat_group_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
     log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
     // 해당 유저가 해당 그룹인지 확인 -> gid를 가져옴
@@ -661,6 +669,32 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
         WHERE cg.groupname = '%s' AND gm.uid = %d", cJSON_GetStringValue(groupname_ptr), uid);
     int gid = query_result_to_int(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf), 
+        "SELECT user.max_tps FROM user WHERE user.uid = %d", uid);
+    int max_tps = query_result_to_int(user_setting_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf), 
+        "CALL insert_message(%d, %d, '%s', %d, @result)", 
+        uid, gid, cJSON_GetStringValue(test_ptr), max_tps);
+    query_result_to_execuete(log_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT @result");
+    int tps_query_result = query_result_to_int(log_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+    if (tps_query_result == 0) {
+        type = 101;
+        msg = "Too Much Message in Minute";
         goto cleanup_and_respond;
     }
     
@@ -680,13 +714,6 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
             }
             recieve_fd_array[i] = find(&server_ptr->uid_to_fd_hash, uid);
         }
-    }
-    
-    snprintf(SQL_buf, sizeof(SQL_buf), 
-        "INSERT INTO message_log (uid, gid, text, timestamp) VALUES \
-            (%d, %d, '%s', NOW())", uid, gid, cJSON_GetStringValue(test_ptr));
-    if (query_result_to_execuete(log_conn, &msg, SQL_buf) == false) {
-        goto cleanup_and_respond;
     }
 
     for (int i = 0; i < uid_count; i++) {
@@ -711,7 +738,7 @@ cleanup_and_respond:
         char *response_str = cJSON_Print(result_json);
         reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     }
-    release_conns(&server_ptr->db, 2, log_conn, chat_group_conn);
+    release_conns(&server_ptr->db, 3, log_conn, chat_group_conn, user_setting_conn);
     cJSON_Delete(json_ptr);
     cJSON_Delete(result_json);
     free(recieve_fd_array);

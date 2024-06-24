@@ -93,6 +93,10 @@ size_t get_rear_send_buf_size(void_queue_t* vq)
 }
 
 void reserve_epoll_send(int epoll_fd, client_session_t* send_session, char* send_org, int send_size) {
+    if (send_session == NULL) {
+        printf("reserve_epoll_send get NULL send_session\n");
+        return ;
+    }
     struct epoll_event temp_send_event;
     temp_send_event.events = EPOLLOUT | EPOLLET;
     temp_send_event.data.fd = send_session->fd;
