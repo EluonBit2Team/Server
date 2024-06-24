@@ -628,7 +628,7 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROME signup_req WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
+    snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM signup_req WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
     query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
         //rollback(user_setting_conn, &msg);
