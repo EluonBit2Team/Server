@@ -575,7 +575,7 @@ void group_member_service(epoll_net_core* server_ptr, task_t* task) {
             "SELECT u.login_id, u.name, jp.position_name, d.dept_name FROM user u \
              LEFT JOIN dept d ON u.did = d.did \
              LEFT JOIN job_position jp ON jp.pid = u.position \
-             WHERE u.uid IN (%d)", 
+             WHERE u.uid IN (%s)", 
             uid_list_str);
 
     cJSON* group_user_list = query_result_to_json(chat_group_conn,&msg,SQL_buf,4,"login_id","name","position_name","dept_name");
