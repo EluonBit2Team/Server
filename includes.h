@@ -11,7 +11,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
-
+#include <stdarg.h>
 #include "cJSON/cJSON.h"
 
 #endif

@@ -16,6 +16,7 @@
         "pthread.h": "c",
         "uthash.h": "c",
         "user_id_hash_map.h": "c",
-        "uid_hash_map.h": "c"
+        "uid_hash_map.h": "c",
+        "time.h": "c"
     }
 }

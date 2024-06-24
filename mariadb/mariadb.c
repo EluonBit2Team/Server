@@ -13,6 +13,39 @@ void release_conns(chatdb_t* db, int release_conn_num, ...) {
     }
 }
 
+int query_result_to_int(conn_t* conn, char** msg, const char* query) {
+    MYSQL_ROW row;
+    MYSQL_RES *res = NULL;
+
+    if (mysql_query(conn->conn, query)) {
+        fprintf(stderr, "query fail: %s\n", mysql_error(conn->conn));
+        *msg = "DB error";
+        return false;
+    }
+    res = mysql_store_result(conn->conn);
+    if (res == NULL) {
+        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn->conn));
+        *msg = "DB error";
+        return false;
+    }
+    if ((row = mysql_fetch_row(res)) == NULL) {
+        *msg = "invalid user role";
+        return false;
+    }
+    int result = atoi(row[0]);
+    mysql_free_result(res);
+    return result;
+}
+
+bool query_result_to_execuete(conn_t* conn, char** msg, const char* query) {
+    if (mysql_query(conn->conn, query)) {
+        fprintf(stderr, "query fail: %s\n", mysql_error(conn->conn));
+        *msg = "DB error";
+        return false;
+    }
+    return true;
+}
+
 bool query_result_to_bool(conn_t* conn, char** msg, const char* query) {
     MYSQL_ROW row;
     MYSQL_RES *res = NULL;
@@ -56,20 +89,20 @@ cJSON* query_result_to_json(conn_t* conn, char** msg, const char* query, int key
         *msg = "JSON key count and row column count do not match.";
         return NULL;
     }
-    cJSON* signup_req_list = cJSON_CreateArray();
+    cJSON* query_result_list = cJSON_CreateArray();
     while ((row = mysql_fetch_row(res))) {
-        cJSON* signup_req_obj = cJSON_CreateObject();
+        cJSON* query_result_obj = cJSON_CreateObject();
         va_start(VA_LIST, key_num);
         for (int i = 0; i < key_num; i++)
         {
             const char* key = va_arg(VA_LIST, const char*);
-            cJSON_AddStringToObject(signup_req_obj, key, row[i]);
+            cJSON_AddStringToObject(query_result_obj, key, row[i]);
         }
         va_end(VA_LIST);
-        cJSON_AddItemToArray(signup_req_list, signup_req_obj);
+        cJSON_AddItemToArray(query_result_list, query_result_obj);
     }
     mysql_free_result(res);
-    return signup_req_list;
+    return query_result_list;
 }
 
 bool init_mariadb(chatdb_t* db)
