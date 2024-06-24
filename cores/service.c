@@ -564,11 +564,10 @@ void group_member_service(epoll_net_core* server_ptr, task_t* task) {
         cJSON* item = cJSON_GetArrayItem(uid_list, i);
         cJSON* uid_value = cJSON_GetObjectItemCaseSensitive(item, "uid");
         if (cJSON_IsString(uid_value) && (uid_value->valuestring != NULL)) {
-            int uid_int = atoi(uid_value->valuestring);
-            char temp[16];
-            snprintf(temp, sizeof(temp), "%d", uid_int);
-            strcat(uid_list_str, temp);
+            if (strlen(uid_list_str) > 0) {
             strcat(uid_list_str, ",");
+        }
+        strcat(uid_list_str, uid_value->valuestring);
         }
     }
 
