@@ -560,10 +560,10 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     
-    //start_transaction(user_setting_conn, &msg);
+    start_transaction(user_setting_conn, &msg);
     if (cJSON_GetNumberValue(approve_ptr) == 0) {
         msg = "permission denied";
-        snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROME signup_req WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
+        snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM signup_req WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
             rollback(user_setting_conn, &msg);
@@ -598,14 +598,13 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT user.uid FROM user WHERE user.uid = %d AND user.role = 1", uid);
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE uid = %d AND role = 1", uid);
     query_result_to_bool(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id, password, name, phone, email FROM signup_req where login_id = `%s`",cJSON_GetStringValue(id_ptr));
-    printf("%s\n",SQL_buf);
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id, password, name, phone, email FROM signup_req WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
     cJSON* user_data = query_result_to_json(user_setting_conn, &msg, SQL_buf, 5, "login_id","password", "name", "phone", "email");
     if (msg != NULL) {
         goto cleanup_and_respond;
@@ -628,17 +627,17 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
              cJSON_GetNumberValue(max_tps_ptr));
     query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
-        //rollback(user_setting_conn, &msg);
+        rollback(user_setting_conn, &msg);
         goto cleanup_and_respond;
     }
 
     snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROME signup_req WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
     query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
-        //rollback(user_setting_conn, &msg);
+        rollback(user_setting_conn, &msg);
         goto cleanup_and_respond;
     }
-    //commit(user_setting_conn, &msg);
+    commit(user_setting_conn, &msg);
     type = 9;
 
 
@@ -710,7 +709,7 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
 
     if (cJSON_GetNumberValue(approve_ptr) == 0) {
         msg = "permission denied";
-        snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROME group_req WHERE uid = %d",uid_value);
+        snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM group_req WHERE uid = %d",uid_value);
         query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
         if (msg != NULL) {
             rollback(chat_group_conn, &msg);
@@ -722,6 +721,34 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
     cJSON* groupname_ptr = cJSON_GetObjectItem(json_ptr, "groupname");
     if (groupname_ptr == NULL || cJSON_IsNumber(groupname_ptr)) {
         msg = "user send invalid json. Miss groupname";
+        goto cleanup_and_respond;
+    }
+    snprintf(SQL_buf, sizeof(SQL_buf),"INSERT INTO chat_group (groupname) VALUES ('%s')",cJSON_GetStringValue(groupname_ptr));
+    query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        rollback(chat_group_conn, &msg);
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf),"SELECT gid FROM chat_group WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
+    int gid_value = query_result_to_int(chat_group_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        rollback(chat_group_conn, &msg);
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf),"INSERT INTO group_member (uid, gid,is_host) VALUES ('%d','%d',1)",uid,gid_value);
+    query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        rollback(chat_group_conn, &msg);
+        goto cleanup_and_respond;
+    }
+    commit(chat_group_conn, &msg);
+
+    snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM group_req WHERE uid = %d",uid_value);
+    query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        rollback(chat_group_conn, &msg);
         goto cleanup_and_respond;
     }
     type = 10;
