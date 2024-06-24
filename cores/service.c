@@ -690,12 +690,12 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     cJSON* approve_ptr = cJSON_GetObjectItem(json_ptr, "is_ok");
-    if (approve_ptr == NULL || cJSON_IsNumber(approve_ptr)) {
+    if (approve_ptr == NULL || !cJSON_IsNumber(approve_ptr)) {
         msg = "user send invalid json. Miss is_ok";
         goto cleanup_and_respond;
     }
     cJSON* groupname_ptr = cJSON_GetObjectItem(json_ptr, "groupname");
-    if (groupname_ptr == NULL || cJSON_IsNumber(groupname_ptr)) {
+    if (groupname_ptr == NULL || !cJSON_IsNumber(groupname_ptr)) {
         msg = "user send invalid json. Miss groupname";
         goto cleanup_and_respond;
     }
