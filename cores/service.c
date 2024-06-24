@@ -550,7 +550,7 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     cJSON* approve_ptr = cJSON_GetObjectItem(json_ptr, "is_ok");
-    if (approve_ptr == NULL || cJSON_IsNumber(approve_ptr)) {
+    if (approve_ptr == NULL || !cJSON_IsNumber(approve_ptr)) {
         msg = "user send invalid json. Miss is_ok";
         goto cleanup_and_respond;
     }
@@ -573,22 +573,22 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
     }
 
     cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
-    if (dept_ptr == NULL || cJSON_IsNumber(dept_ptr)) {
+    if (dept_ptr == NULL || !cJSON_IsNumber(dept_ptr)) {
         msg = "user send invalid json. Miss dept";
         goto cleanup_and_respond;
     }
     cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
-    if (pos_ptr == NULL || cJSON_IsNumber(pos_ptr)) {
+    if (pos_ptr == NULL || !cJSON_IsNumber(pos_ptr)) {
         msg = "user send invalid json. Miss pos";
         goto cleanup_and_respond;
     }
     cJSON* role_ptr = cJSON_GetObjectItem(json_ptr, "role");
-    if (role_ptr == NULL || cJSON_IsNumber(role_ptr)) {
+    if (role_ptr == NULL || !cJSON_IsNumber(role_ptr)) {
         msg = "user send invalid json. Miss role";
         goto cleanup_and_respond;
     }
     cJSON* max_tps_ptr = cJSON_GetObjectItem(json_ptr, "max_tps");
-    if (max_tps_ptr == NULL || cJSON_IsNumber(max_tps_ptr)) {
+    if (max_tps_ptr == NULL || !cJSON_IsNumber(max_tps_ptr)) {
         msg = "user send invalid json. Miss max_tcp";
         goto cleanup_and_respond;
     }
