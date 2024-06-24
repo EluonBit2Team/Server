@@ -449,7 +449,6 @@ void Mng_req_list_servce(epoll_net_core* server_ptr, task_t* task) {
     client_session_t* now_session = NULL;
     conn_t* user_setting_conn = NULL;
     conn_t* chat_group_conn = NULL;
-    MYSQL_ROW row;
     char SQL_buf[512];
 
     cJSON* json_ptr = get_parsed_json(task->buf);
@@ -528,7 +527,7 @@ void group_member_service(epoll_net_core* server_ptr, task_t* task) {
     conn_t* user_setting_conn = NULL;
     conn_t* chat_group_conn = NULL;
     char SQL_buf[512];
-    int uid_list_int[100];
+    char uid_list_str[1024] = "";
 
     user_setting_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
     chat_group_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
@@ -565,7 +564,11 @@ void group_member_service(epoll_net_core* server_ptr, task_t* task) {
         cJSON* item = cJSON_GetArrayItem(uid_list, i);
         cJSON* uid_value = cJSON_GetObjectItemCaseSensitive(item, "uid");
         if (cJSON_IsString(uid_value) && (uid_value->valuestring != NULL)) {
-            uid_list_int[i] = atoi(uid_value->valuestring); // 문자열을 정수로 변환하여 배열에 저장
+            int uid_int = atoi(uid_value->valuestring);
+            char temp[16];
+            snprintf(temp, sizeof(temp), "%d", uid_int);
+            strcat(uid_list_str, temp);
+            strcat(uid_list_str, ",");
         }
     }
 
@@ -574,7 +577,7 @@ void group_member_service(epoll_net_core* server_ptr, task_t* task) {
              LEFT JOIN dept d ON u.did = d.did \
              LEFT JOIN job_position jp ON jp.pid = u.position \
              WHERE u.uid IN (%d)", 
-            uid_list_int);
+            uid_list_str);
 
     cJSON* group_user_list = query_result_to_json(chat_group_conn,&msg,SQL_buf,4,"login_id","name","position_name","dept_name");
     type = 11;
