@@ -734,7 +734,6 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
         rollback(chat_group_conn, &msg);
         goto cleanup_and_respond;
     }
-    commit(chat_group_conn, &msg);
 
     snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM group_req WHERE uid = %d",uid_value);
     query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
@@ -742,6 +741,8 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
         rollback(chat_group_conn, &msg);
         goto cleanup_and_respond;
     }
+
+    commit(chat_group_conn, &msg);
     type = 10;
 
 
