@@ -603,8 +603,8 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
-    
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id, password, name, phone, email FROM signup_req where login_id = '%s'",cJSON_GetStringValue(id_ptr));
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id, password, name, phone, email FROM signup_req where login_id = `%s`",cJSON_GetStringValue(id_ptr));
     printf("%s\n",SQL_buf);
     cJSON* user_data = query_result_to_json(user_setting_conn, &msg, SQL_buf, 5, "login_id","password", "name", "phone", "email");
     if (msg != NULL) {
