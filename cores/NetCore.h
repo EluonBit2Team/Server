@@ -39,6 +39,7 @@
 #define MNG_SIGNON_APPROVE_SERV_FUNC 9
 #define MNG_GROUP_APPROVE_SERV_FUNC 10
 #define GROUP_MEMEMBER_SERV_FUNC 11
+//#define CHATTING_SERV_FUNC 12
 
 #define WOKER_THREAD_NUM 4
 
@@ -117,5 +118,5 @@ void group_list_service(epoll_net_core* server_ptr, task_t* task);
 void add_member_service(epoll_net_core* server_ptr, task_t* task);
 void Mng_req_list_servce(epoll_net_core* server_ptr, task_t* task);
 void group_member_service(epoll_net_core* server_ptr, task_t* task);
-
+void chat_in_group_service(epoll_net_core* server_ptr, task_t* task);
 #endif
