@@ -13,36 +13,6 @@ void release_conns(chatdb_t* db, int release_conn_num, ...) {
     }
 }
 
-void start_transaction(conn_t* conn, char** msg) {
-    char query[128];
-
-    snprintf(query, sizeof(query), "START TRANSACTION");
-    if (mysql_query(conn->conn, query)) {
-        fprintf(stderr, "query fail: %s\n", mysql_error(conn->conn));
-        *msg = "Transaction Fail";
-    }
-}
-
-void rollback(conn_t* conn, char** msg) {
-    char query[128];
-
-    snprintf(query, sizeof(query), "ROLLBACK");
-    if (mysql_query(conn->conn, query)) {
-        fprintf(stderr, "query fail: %s\n", mysql_error(conn->conn));
-        *msg = "ROLLBACK Fail";
-    }
-}
-
-void commit(conn_t* conn, char** msg) {
-    char query[128];
-
-    snprintf(query, sizeof(query), "COMMIT");
-    if (mysql_query(conn->conn, query)) {
-        fprintf(stderr, "query fail: %s\n", mysql_error(conn->conn));
-        *msg = "COMMIT Fail";
-    }
-}
-
 int query_result_to_int(conn_t* conn, char** msg, const char* query) {
     MYSQL_ROW row;
     MYSQL_RES *res = NULL;

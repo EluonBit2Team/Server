@@ -25,9 +25,6 @@ typedef struct chatdb {
     int db_sizes[TOTAL_DB_NUM];
 } chatdb_t;
 
-void start_transaction(conn_t* conn, char** msg);
-void rollback(conn_t* conn, char** msg);
-void commit(conn_t* conn, char** msg);
 int query_result_to_int(conn_t* conn, char** msg, const char* query);
 bool query_result_to_bool(conn_t* conn, char** msg, const char* query);
 bool query_result_to_execuete(conn_t* conn, char** msg, const char* query);
