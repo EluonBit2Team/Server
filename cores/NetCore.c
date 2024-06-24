@@ -152,13 +152,13 @@ bool init_server(epoll_net_core* server_ptr) {
     server_ptr->function_array[ECHO_SERVICE_FUNC] = echo_service;
     server_ptr->function_array[LOGIN_SERV_FUNC] = login_service;
     server_ptr->function_array[SIGNUP_SERV_FUNC] = signup_service;
+    server_ptr->function_array[MSG_SERV_FUNC] = chat_in_group_service;
     server_ptr->function_array[MAKE_GROUP_SERV_FUNC] = make_group_service;
     server_ptr->function_array[USER_LIST_SERV_FUNC] = user_list_service;
     server_ptr->function_array[GROUP_LIST_SERV_FUNC] = group_list_service;
     server_ptr->function_array[ADD_MEMBER_SERV_FUNC] = add_member_service;
     server_ptr->function_array[MNG_REQ_LIST_SERV_FUNC] = Mng_req_list_servce;
     server_ptr->function_array[GROUP_MEMEMBER_SERV_FUNC] = group_member_service;
-    server_ptr->function_array[CHATTING_SERV_FUNC] = chat_in_group_service;
     
 // #define MNG_SIGNON_APPROVE_SERV_FUNC 9
 // #define MNG_GROUP_APPROVE_SERV_FUNC 10
