@@ -528,6 +528,7 @@ void group_member_service(epoll_net_core* server_ptr, task_t* task) {
     conn_t* user_setting_conn = NULL;
     conn_t* chat_group_conn = NULL;
     char SQL_buf[512];
+    int uid_list_int[100];
 
     user_setting_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
     chat_group_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
@@ -557,26 +558,23 @@ void group_member_service(epoll_net_core* server_ptr, task_t* task) {
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT uid FROM group_member gm JOIN chat_group cg ON cg.gid = gm.gid WHERE cg.groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
 
-    char uid_list_str[1024] = "";
-    cJSON* uid_list = query_result_to_json(user_setting_conn, &msg, SQL_buf,1,"uid");
-    cJSON* item;
-    cJSON_ArrayForEach(item, uid_list) {
+    cJSON* uid_list = query_result_to_json(user_setting_conn, &msg, SQL_buf, 1, "uid");
+
+    int uid_count = cJSON_GetArraySize(uid_list);
+    for (int i = 0; i < uid_count; i++) {
+        cJSON* item = cJSON_GetArrayItem(uid_list, i);
         cJSON* uid_value = cJSON_GetObjectItemCaseSensitive(item, "uid");
         if (cJSON_IsString(uid_value) && (uid_value->valuestring != NULL)) {
-            strcat(uid_list_str, uid_value->valuestring);
-            strcat(uid_list_str, ",");
+            uid_list_int[i] = atoi(uid_value->valuestring); // 문자열을 정수로 변환하여 배열에 저장
         }
     }
 
-    if (strlen(uid_list_str) > 0 && uid_list_str[strlen(uid_list_str) - 1] == ',') {
-        uid_list_str[strlen(uid_list_str) - 1] = '\0';
-    }
     snprintf(SQL_buf, sizeof(SQL_buf), 
             "SELECT u.login_id, u.name, jp.position_name, d.dept_name FROM user u \
              LEFT JOIN dept d ON u.did = d.did \
              LEFT JOIN job_position jp ON jp.pid = u.position \
-             WHERE u.uid IN (%s)", 
-            uid_list_str);
+             WHERE u.uid IN (%d)", 
+            uid_list_int);
 
     cJSON* group_user_list = query_result_to_json(chat_group_conn,&msg,SQL_buf,4,"login_id","name","position_name","dept_name");
     type = 11;
