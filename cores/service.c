@@ -694,18 +694,14 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss is_ok";
         goto cleanup_and_respond;
     }
-    cJSON* id_ptr = cJSON_GetObjectItem(json_ptr, "login_id");
-    if (id_ptr == NULL || cJSON_GetStringValue(id_ptr)[0] == '\0') {
-        msg = "user send invalid json. Miss id";
+    cJSON* groupname_ptr = cJSON_GetObjectItem(json_ptr, "groupname");
+    if (groupname_ptr == NULL || cJSON_IsNumber(groupname_ptr)) {
+        msg = "user send invalid json. Miss groupname";
         goto cleanup_and_respond;
     }
+    snprintf(SQL_buf,sizeof(SQL_buf),"SELECT uid FROM group_req WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
+    int uid_value = query_result_to_int(chat_group_conn, &msg, SQL_buf);
     start_transaction(chat_group_conn, &msg);
-
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE login_id");
-    int uid_value = query_result_to_int(user_setting_conn, &msg, SQL_buf);
-    if (msg != NULL) {
-        goto cleanup_and_respond;
-    }
 
     if (cJSON_GetNumberValue(approve_ptr) == 0) {
         msg = "permission denied";
@@ -718,11 +714,6 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    cJSON* groupname_ptr = cJSON_GetObjectItem(json_ptr, "groupname");
-    if (groupname_ptr == NULL || cJSON_IsNumber(groupname_ptr)) {
-        msg = "user send invalid json. Miss groupname";
-        goto cleanup_and_respond;
-    }
     snprintf(SQL_buf, sizeof(SQL_buf),"INSERT INTO chat_group (groupname) VALUES ('%s')",cJSON_GetStringValue(groupname_ptr));
     query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
@@ -737,7 +728,7 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf),"INSERT INTO group_member (uid, gid,is_host) VALUES ('%d','%d',1)",uid,gid_value);
+    snprintf(SQL_buf, sizeof(SQL_buf),"INSERT INTO group_member (uid, gid,is_host) VALUES ('%d','%d',1)",uid_value,gid_value);
     query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
         rollback(chat_group_conn, &msg);
