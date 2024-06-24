@@ -13,6 +13,7 @@
 
 typedef struct conn {
     size_t idx;
+    int db_idx;
     MYSQL* conn;
 } conn_t;
 
@@ -25,7 +26,7 @@ typedef struct mariadb_conn_pool {
     pthread_mutex_t pool_idx_mutex;
 } mariadb_conn_pool_t;
 
-bool init_mariadb_pool(mariadb_conn_pool_t* pool, size_t poolsize, const char* DB_NAME);
+bool init_mariadb_pool(mariadb_conn_pool_t* pool, size_t poolsize, int db_idx, const char* DB_NAME);
 void close_mariadb_pool(mariadb_conn_pool_t* pool);
 conn_t* get_conn(mariadb_conn_pool_t* pool);
 void release_conn(mariadb_conn_pool_t* pool, conn_t* conn);
