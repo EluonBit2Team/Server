@@ -571,7 +571,7 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
         }
         goto cleanup_and_respond;
     }
-
+    
     cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
     if (dept_ptr == NULL || !cJSON_IsNumber(dept_ptr)) {
         msg = "user send invalid json. Miss dept";
@@ -599,7 +599,7 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     //SELECT login_id, password, name, phone, email FROM signup_req WHERE signup_req.login_id
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id FROM signup_req WHERE signup_req.login_id = 'idid2'");
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE login_id = '%s'", cJSON_GetStringValue(id_ptr));
     printf("%s\n",SQL_buf);
     cJSON* user_data = query_result_to_json(user_setting_conn, &msg, SQL_buf, 1, "login_id");
     //"login_id", "password", "name", "phone", "email"
