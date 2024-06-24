@@ -364,11 +364,7 @@ void add_member_service(epoll_net_core* server_ptr, task_t* task) {
     conn_t* chat_group_conn = NULL;
     conn_t* user_setting_conn = NULL;
     char SQL_buf[512];
-    if (check_func(task->buf) == false)
-    {
-        msg = "invalid json";
-        goto cleanup_and_respond;
-    }
+
     chat_group_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
     user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     
