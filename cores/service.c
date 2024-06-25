@@ -606,7 +606,6 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id, password, name, phone, email FROM signup_req WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
     printf("%s\n",SQL_buf);
     cJSON* user_data = query_result_to_json(user_setting_conn, &msg, SQL_buf, 5, "login_id", "password", "name", "phone", "email");
-
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
@@ -614,7 +613,7 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
     cJSON_AddNumberToObject(user_data, "pos", cJSON_GetNumberValue(pos_ptr));
     cJSON_AddNumberToObject(user_data, "role", cJSON_GetNumberValue(role_ptr));
     cJSON_AddNumberToObject(user_data, "max_tps", cJSON_GetNumberValue(max_tps_ptr));
-
+    printf("%s\n",cJSON_Print(user_data));
     snprintf(SQL_buf, sizeof(SQL_buf), 
              "INSERT INTO user (login_id, password, name, phone, email, did, position, role, create_date, max_tps) VALUES ('%s', '%s', '%s', '%s', '%s', %d, %d, %d, NOW(), %d)",
              cJSON_GetStringValue(cJSON_GetObjectItem(user_data, "login_id")), 
