@@ -782,7 +782,7 @@ cleanup_and_respond:
     {
         cJSON_AddStringToObject(result_json, "msg", msg);
     }
-    mysql_commit(user_setting_conn->conn);
+    mysql_commit(chat_group_conn->conn);
     char *response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 1, chat_group_conn);
