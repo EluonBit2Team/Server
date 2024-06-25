@@ -273,7 +273,7 @@ void user_list_service(epoll_net_core* server_ptr, task_t* task) {
     }
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT u.login_id, u.name, jp.position_name, d.dept_name FROM user u LEFT JOIN dept d ON u.did = d.did LEFT JOIN job_position jp ON jp.pid = u.position");
+        "SELECT u.login_id, u.name, jp.position_name, d.dept_name FROM user u LEFT JOIN dept d ON u.did = d.did LEFT JOIN job_position jp ON jp.pid = u.position LIMIT 5");
 
     cJSON* user_list = query_result_to_json(user_setting_conn,&msg,SQL_buf,4,"login_id","name","position_name","dept_name");
     if (msg != NULL) {
@@ -644,7 +644,7 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
              max_tps);
     
     query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
-    if (msg != NULL) {
+    if (msg = NULL) {
         msg = "rollback";
         mysql_rollback(user_setting_conn->conn);
         goto cleanup_and_respond;
