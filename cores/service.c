@@ -570,6 +570,7 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
         snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM signup_req WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
+            msg = "rollback";
             mysql_rollback(user_setting_conn->conn);
             goto cleanup_and_respond;
         }
@@ -627,6 +628,7 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
              cJSON_GetNumberValue(max_tps_ptr));
     query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
+        msg = "rollback";
         mysql_rollback(user_setting_conn->conn);
         goto cleanup_and_respond;
     }
@@ -634,6 +636,7 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
     snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM signup_req WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
     query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
+        msg = "rollback";
         mysql_rollback(user_setting_conn->conn);
         goto cleanup_and_respond;
     }
