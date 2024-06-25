@@ -6,7 +6,6 @@ void ring_init(ring_buf *ring) {
     ring->rear = 0;
 }
 
-
 bool ring_full(ring_buf *ring) 
 {
     return NEXT(ring->rear) == ring->front;
@@ -48,7 +47,6 @@ bool ring_array(ring_buf *ring, char *data_ptr) {
         return false; 
     }
 
-    //printf("ring_array-header: %d\n", ring->msg_size);
     set_ring_header(ring);
     if (ring->msg_size > get_ring_size(ring))
     {
@@ -80,6 +78,7 @@ int get_ring_size(ring_buf *ring) {
 
     return data_size;
 }
+
 // 파일 디스크립터로부터 데이터를 읽어와 버퍼에 저장하는 함수
 int ring_read(ring_buf *ring, int fd) {
     int flags = fcntl(fd, F_GETFL, 0);
@@ -144,6 +143,16 @@ int ring_read(ring_buf *ring, int fd) {
     }
     
     printf("bytes_read : %d\n",bytes_read);
-    set_ring_header(ring);
+    // set_ring_header(ring);
+    // if (ring->msg_size > MAX_BUFF_SIZE) {
+    //     large_buf l_buf;
+    //     l_buf.buf = (char*)malloc(ring->msg_size);
+    //     if (!l_buf.buf) {
+    //         perror("malloc");
+    //         return -1;
+    //     }
+    //     l_buf.size = ring->msg_size;
+    // }
     return bytes_read;
 }
+
