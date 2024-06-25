@@ -272,8 +272,18 @@ void user_list_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
+    cJSON* page_ptr = cJSON_GetObjectItem(json_ptr, "page");
+    if (page_ptr == NULL || !cJSON_IsNumber(page_ptr)) {
+        msg = "user send invalid json. Miss page";
+        goto cleanup_and_respond;
+    }
+
+    int page = cJSON_GetNumberValue(page_ptr);
+    int limit = 10;
+    int offset = (page - 1) * limit;
+
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT u.login_id, u.name, jp.position_name, d.dept_name FROM user u LEFT JOIN dept d ON u.did = d.did LEFT JOIN job_position jp ON jp.pid = u.position");
+        "SELECT u.login_id, u.name, jp.position_name, d.dept_name FROM user u LEFT JOIN dept d ON u.did = d.did LEFT JOIN job_position jp ON jp.pid = u.position LIMIT %d OFFSET %d", limit, offset);
 
     cJSON* user_list = query_result_to_json(user_setting_conn,&msg,SQL_buf,4,"login_id","name","position_name","dept_name");
     if (msg != NULL) {
