@@ -598,6 +598,7 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
             mysql_rollback(user_setting_conn->conn);
             goto cleanup_and_respond;
         }
+        type = 9;
         goto cleanup_and_respond;
     }
     
@@ -740,6 +741,7 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
             mysql_rollback(chat_group_conn->conn);
             goto cleanup_and_respond;
         }
+        type = 10;
         goto cleanup_and_respond;
     }
 
