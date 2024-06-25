@@ -654,7 +654,7 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
              max_tps);
     
     query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
-    if (msg != NULL) {
+    if (msg = NULL) {
         msg = "rollback";
         mysql_rollback(user_setting_conn->conn);
         goto cleanup_and_respond;
