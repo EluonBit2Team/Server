@@ -91,4 +91,6 @@ void close_all_sessions(int epoll_fd, session_pool_t* pool_ptr)
             close(pool_ptr->session_pool[i].fd);
         }
     }
+    free(pool_ptr->session_pool);
+    free(pool_ptr->session_pool_idx_stack);
 }
