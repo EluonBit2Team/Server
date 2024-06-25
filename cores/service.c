@@ -667,7 +667,6 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
         mysql_rollback(user_setting_conn->conn);
         goto cleanup_and_respond;
     }
-    mysql_commit(user_setting_conn->conn);
     type = 9;
 
 
@@ -677,7 +676,7 @@ cleanup_and_respond:
     {
         cJSON_AddStringToObject(result_json, "msg", msg);
     }
-
+    mysql_commit(user_setting_conn->conn);
     char *response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 1, user_setting_conn);
@@ -783,7 +782,7 @@ cleanup_and_respond:
     {
         cJSON_AddStringToObject(result_json, "msg", msg);
     }
-
+    mysql_commit(user_setting_conn->conn);
     char *response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 1, chat_group_conn);
