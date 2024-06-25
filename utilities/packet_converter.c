@@ -58,3 +58,30 @@ bool is_exception(const char *input) {
     }
     return false;
 }
+
+void cJSON_del_and_free(int cjson_num, ...) {
+    va_list VA_LIST;
+    va_start(VA_LIST, cjson_num);
+    for (int i = 0; i < cjson_num; i ++) {
+        cJSON* cjson_ptr = va_arg(VA_LIST, cJSON*);
+        if (cjson_ptr == NULL) {
+            continue;
+        }
+        cJSON_Delete(cjson_ptr);
+        //cJSON_free(cjson_ptr);
+    }
+    va_end(VA_LIST);
+}
+
+void free_all(int ptr_num, ...) {
+    va_list VA_LIST;
+    va_start(VA_LIST, ptr_num);
+    for (int i = 0; i < ptr_num; i ++) {
+        void* allocated_ptr = va_arg(VA_LIST, void*);
+        if (allocated_ptr == NULL) {
+            continue;
+        }
+        free(allocated_ptr);
+    }
+    va_end(VA_LIST);
+}

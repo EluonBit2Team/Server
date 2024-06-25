@@ -8,4 +8,6 @@
 int get_buffer_size(char* buf);
 cJSON* get_parsed_json(char* buf);
 int type_finder(char *buf);
+void cJSON_del_and_free(int cjson_num, ...);
+void free_all(int ptr_num, ...);
 #endif

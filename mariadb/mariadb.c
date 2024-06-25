@@ -11,6 +11,7 @@ void release_conns(chatdb_t* db, int release_conn_num, ...) {
 
         release_conn(&db->pools[conn->db_idx], conn);
     }
+    va_end(VA_LIST);
 }
 
 int query_result_to_int(conn_t* conn, char** msg, const char* query) {

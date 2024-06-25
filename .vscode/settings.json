@@ -17,6 +17,11 @@
         "uthash.h": "c",
         "user_id_hash_map.h": "c",
         "uid_hash_map.h": "c",
-        "time.h": "c"
+        "time.h": "c",
+        "sig_handle.h": "c",
+        "child_process.h": "c",
+        "types.h": "c",
+        "unistd.h": "c",
+        "includes.h": "c"
     }
 }
