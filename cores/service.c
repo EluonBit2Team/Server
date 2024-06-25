@@ -610,7 +610,7 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
-    cJSON* user_data_json = cJSON_GetArrayItem(user_data_array);
+    cJSON* user_data_json = cJSON_GetArrayItem(user_data_array,0);
 
     printf("%s\n",cJSON_Print(user_data_json));
     snprintf(SQL_buf, sizeof(SQL_buf), 
