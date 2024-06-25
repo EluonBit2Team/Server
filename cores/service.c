@@ -594,16 +594,20 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
     }
     cJSON* max_tps_ptr = cJSON_GetObjectItem(json_ptr, "max_tps");
     if (max_tps_ptr == NULL || !cJSON_IsNumber(max_tps_ptr)) {
-        msg = "user send invalid json. Miss max_tcp";
+        msg = "user send invalid json. Miss max_tps";
         goto cleanup_and_respond;
     }
     
+    int dept = cJSON_GetNumberValue(dept_ptr);
+    int pos = cJSON_GetNumberValue(pos_ptr);
+    int role = cJSON_GetNumberValue(role_ptr);
+    int max_tps = cJSON_GetNumberValue(max_tps_ptr);
+    printf("%d %d %d %d\n",dept,pos,role,max_tps);
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE uid = %d AND role = 1", uid);
     query_result_to_bool(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
-
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id, password, name, phone, email FROM signup_req WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
     printf("%s\n",SQL_buf);
     cJSON* user_data_array = query_result_to_json(user_setting_conn, &msg, SQL_buf, 5, "login_id", "password", "name", "phone", "email");
@@ -612,7 +616,6 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
     }
     cJSON* user_data_json = cJSON_GetArrayItem(user_data_array,0);
 
-    printf("%s\n",cJSON_Print(user_data_json));
     snprintf(SQL_buf, sizeof(SQL_buf), 
              "INSERT INTO user (login_id, password, name, phone, email, did, position, role, create_date, max_tps) VALUES ('%s', '%s', '%s', '%s', '%s', %d, %d, %d, NOW(), %d)",
              cJSON_GetStringValue(cJSON_GetObjectItem(user_data_json, "login_id")), 
@@ -620,11 +623,11 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
              cJSON_GetStringValue(cJSON_GetObjectItem(user_data_json, "name")), 
              cJSON_GetStringValue(cJSON_GetObjectItem(user_data_json, "phone")), 
              cJSON_GetStringValue(cJSON_GetObjectItem(user_data_json, "email")), 
-             cJSON_GetNumberValue(dept_ptr), 
-             cJSON_GetNumberValue(pos_ptr), 
-             cJSON_GetNumberValue(role_ptr), 
-             cJSON_GetNumberValue(max_tps_ptr));
-    printf("%s\n",SQL_buf);
+             dept, 
+             pos, 
+             role, 
+             max_tps);
+    
     query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
         msg = "rollback";
