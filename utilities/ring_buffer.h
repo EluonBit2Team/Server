@@ -22,12 +22,17 @@ typedef struct ring_buf
     int msg_size;
 }ring_buf;
 
+typedef struct large_buf {
+    char* buf;
+    int size;
+    int used;
+} large_buf;
+
 void ring_init(ring_buf *ring);
 bool ring_full(ring_buf *ring);
 bool ring_empty(ring_buf *ring);
 char ring_deque(ring_buf *ring);
 bool ring_array(ring_buf *queue, char *data_ptr);
-void ring_free(ring_buf *ring);
 int ring_read(ring_buf *ring, int fd);
 void set_ring_header(ring_buf *ring);
 int get_ring_size(ring_buf *ring);
