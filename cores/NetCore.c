@@ -93,6 +93,10 @@ size_t get_rear_send_buf_size(void_queue_t* vq)
 }
 
 void reserve_epoll_send(int epoll_fd, client_session_t* send_session, char* send_org, int send_size) {
+    if (send_session == NULL) {
+        printf("reserve_epoll_send get NULL send_session\n");
+        return ;
+    }
     struct epoll_event temp_send_event;
     temp_send_event.events = EPOLLOUT | EPOLLET;
     temp_send_event.data.fd = send_session->fd;
@@ -152,6 +156,7 @@ bool init_server(epoll_net_core* server_ptr) {
     server_ptr->function_array[ECHO_SERVICE_FUNC] = echo_service;
     server_ptr->function_array[LOGIN_SERV_FUNC] = login_service;
     server_ptr->function_array[SIGNUP_SERV_FUNC] = signup_service;
+    server_ptr->function_array[MSG_SERV_FUNC] = chat_in_group_service;
     server_ptr->function_array[MAKE_GROUP_SERV_FUNC] = make_group_service;
     server_ptr->function_array[USER_LIST_SERV_FUNC] = user_list_service;
     server_ptr->function_array[GROUP_LIST_SERV_FUNC] = group_list_service;
@@ -160,6 +165,7 @@ bool init_server(epoll_net_core* server_ptr) {
     server_ptr->function_array[MNG_SIGNUP_APPROVE_SERV_FUNC] = Mng_signup_approve_service;
     server_ptr->function_array[MNG_GROUP_APPROVE_SERV_FUNC] = Mng_group_approve_service;
     server_ptr->function_array[GROUP_MEMEMBER_SERV_FUNC] = group_member_service;
+    
 // #define MNG_SIGNON_APPROVE_SERV_FUNC 9
 // #define MNG_GROUP_APPROVE_SERV_FUNC 10
 
