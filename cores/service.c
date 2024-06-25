@@ -591,7 +591,6 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
     }
 
     if (cJSON_GetNumberValue(approve_ptr) == 0) {
-        msg = "permission denied";
         snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM signup_req WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
@@ -735,7 +734,6 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     if (cJSON_GetNumberValue(approve_ptr) == 0) {
-        msg = "permission denied";
         snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM group_req WHERE uid = %d",uid_value);
         query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
         if (msg != NULL) {
