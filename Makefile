@@ -22,21 +22,31 @@ MARIADB_DIR = mariadb
 MARIADB_FILES = mariadb_pool.c mariadb.c
 MARIADB_OBJECT = $(patsubst %.c,$(MARIADB_DIR)/%.o,$(MARIADB_FILES))
 
-all : $(TARGET)
+SCHEDULER_MANAGE_DIR = scheduler_manage
+SCHEDULER_MANAGE_FILES = child_process.c sig_handle.c
+SCHEDULER_MANAGE_OBJECT = $(patsubst %.c,$(SCHEDULER_MANAGE_DIR)/%.o,$(SCHEDULER_MANAGE_FILES))
 
-$(TARGET) : $(CORE_OBJECT) $(UTILS_OBJECT) $(MAIN_OBJECT) $(MARIADB_OBJECT) $(JSON_AR)
+SCHEDULER_DIR = scheduler
+SCHEDULER_TARGET = $(SCHEDULER_DIR)/server_scheduler
+
+all : $(TARGET) $(SCHEDULER_TARGET)
+
+$(TARGET) : $(CORE_OBJECT) $(UTILS_OBJECT) $(MAIN_OBJECT) $(MARIADB_OBJECT) $(SCHEDULER_MANAGE_OBJECT) $(JSON_AR)
 	$(GCC) -o $@ $? $(LINK_THREAD_FLAG) $(LINK_MARIA_FLAG) 
 
 $(JSON_AR) : 
-	make -C $(JSON_SUBDIR)
+	@make -C $(JSON_SUBDIR)
+
+$(SCHEDULER_TARGET) :
+	@make -C $(SCHEDULER_DIR)
 
 %.o : %.c
 	$(GCC) -o $@ -c $(C_FLAGS) $<
 
 clean :
-	rm -rf $(CORE_OBJECT) $(UTILS_OBJECT) $(MARIADB_OBJECT) $(MAIN_OBJECT)
+	rm -rf $(CORE_OBJECT) $(UTILS_OBJECT) $(MARIADB_OBJECT) $(MAIN_OBJECT) $(MARIADB_OBJECT) $(SCHEDULER_MANAGE_OBJECT)
 fclean : clean
-	rm -rf $(TARGET)
+	rm -rf $(TARGET) $(SCHEDULER_TARGET)
 re : clean fclean all
 
 .PHONY : all clean fclean re
