@@ -735,7 +735,7 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     if (cJSON_GetNumberValue(approve_ptr) == 0) {
-        snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM group_req WHERE uid = %d",uid_value);
+        snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM group_req WHERE groupname = %d",cJSON_GetStringValue(groupname_ptr));
         query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
         if (msg != NULL) {
             mysql_rollback(chat_group_conn->conn);
