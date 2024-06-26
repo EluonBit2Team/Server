@@ -162,7 +162,7 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "login_id already exists.";
         goto cleanup_and_respond;
     }
-
+    
     snprintf(SQL_buf, sizeof(SQL_buf), 
              "INSERT INTO signup_req (login_id, password, name, phone, email) VALUES ('%s', UNHEX(SHA2('%s',%d)), '%s', '%s', '%s')",
              cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH, cJSON_GetStringValue(name_ptr),
@@ -197,6 +197,7 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
     client_session_t* now_session = NULL;
     conn_t* chat_group_conn = NULL;
     char SQL_buf[512];
+    int count_groupname = 0;
 
     chat_group_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
 
@@ -232,6 +233,16 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
     if (message_ptr == NULL || cJSON_GetStringValue(message_ptr)[0] == '\0')
     {
         msg = "user send invalid json. Miss message";
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf,sizeof(SQL_buf),"SELECT COUNT(groupname) FROM chat_group WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
+    count_groupname = query_result_to_int(chat_group_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+    if (count_groupname >= 1) {
+        msg = "groupname is duplicated";
         goto cleanup_and_respond;
     }
 
@@ -552,6 +563,7 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
     client_session_t* now_session = NULL;
     conn_t* user_setting_conn = NULL;
     char SQL_buf[512];
+    int count_login_id = 0;
 
     user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
 
@@ -583,6 +595,16 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
     cJSON* id_ptr = cJSON_GetObjectItem(json_ptr, "login_id");
     if (id_ptr == NULL || cJSON_GetStringValue(id_ptr)[0] == '\0') {
         msg = "user send invalid json. Miss id";
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf,sizeof(SQL_buf),"SELECT COUNT(login_id) FROM user WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
+    count_login_id = query_result_to_int(user_setting_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+    if (count_login_id >= 1) {
+        msg = "login_id is duplicated";
         goto cleanup_and_respond;
     }
 
@@ -734,18 +756,16 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
-
     if (count_groupname >= 1) {
         msg = "groupname is duplicated";
         goto cleanup_and_respond;
     }
-    snprintf(SQL_buf,sizeof(SQL_buf),"SELECT uid FROM group_req WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
-    int uid_value = query_result_to_int(chat_group_conn, &msg, SQL_buf);
-    
+
     if (mysql_autocommit(chat_group_conn->conn, 0)) {
         msg = "transaction fail";
         goto cleanup_and_respond;
     }
+
     if (cJSON_GetNumberValue(approve_ptr) == 0) {
         snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM group_req WHERE groupname = %d",cJSON_GetStringValue(groupname_ptr));
         query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
@@ -756,14 +776,18 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
         type = 10;
         goto cleanup_and_respond;
     }
-
     snprintf(SQL_buf, sizeof(SQL_buf),"INSERT INTO chat_group (groupname) VALUES ('%s')",cJSON_GetStringValue(groupname_ptr));
     query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
         mysql_rollback(chat_group_conn->conn);
         goto cleanup_and_respond;
     }
-
+    snprintf(SQL_buf, sizeof(SQL_buf),"SELECT uid FROM chat_group WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
+    int uid_value = query_result_to_int(chat_group_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        mysql_rollback(chat_group_conn->conn);
+        goto cleanup_and_respond;
+    }
     snprintf(SQL_buf, sizeof(SQL_buf),"SELECT gid FROM chat_group WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
     int gid_value = query_result_to_int(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
