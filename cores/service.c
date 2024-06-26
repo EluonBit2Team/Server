@@ -694,6 +694,7 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
     client_session_t* now_session = NULL;
     conn_t* chat_group_conn = NULL;
     char SQL_buf[512];
+    int count_groupname = 0;
 
     chat_group_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
 
@@ -725,6 +726,17 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
     cJSON* groupname_ptr = cJSON_GetObjectItem(json_ptr, "groupname");
     if (groupname_ptr == NULL || !cJSON_GetStringValue(groupname_ptr)) {
         msg = "user send invalid json. Miss groupname";
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf,sizeof(SQL_buf),"SELECT COUNT(groupname) FROM chat_group WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
+    count_groupname = query_result_to_int(chat_group_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+
+    if (count_groupname >= 1) {
+        msg = "groupname is duplicated";
         goto cleanup_and_respond;
     }
     snprintf(SQL_buf,sizeof(SQL_buf),"SELECT uid FROM group_req WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
