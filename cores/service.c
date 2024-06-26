@@ -1124,6 +1124,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
             // mysql_rollback(user_setting_conn->conn);
             goto cleanup_and_respond;
         }
+    }
 
     cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
     if (dept_ptr == NULL) {
