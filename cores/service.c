@@ -1134,14 +1134,18 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
     }
     printf("6\n");
     cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
+    printf("a\n");
     if (dept_ptr == NULL) {
         msg = "user send invalid json. Miss dept";
         goto cleanup_and_respond;
     }
     else if (cJSON_GetStringValue(dept_ptr)[0] != '\0') {
+        printf("b\n");
         snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET did = %d WHERE login_id = '%s'",cJSON_GetNumberValue(dept_ptr),cJSON_GetStringValue(login_id_ptr));
+        printf("c\n");
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
+            printf("d\n");
             mysql_rollback(user_setting_conn->conn);
             goto cleanup_and_respond;
         }
