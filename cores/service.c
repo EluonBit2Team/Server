@@ -1133,7 +1133,9 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         }
     }
     printf("6\n");
+    printf("%s\n",cJSON_Print(login_id_ptr));
     cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
+    printf("%f\n",cJSON_Print(dept_ptr));
     printf("a\n");
     if (dept_ptr == NULL) {
         msg = "user send invalid json. Miss dept";
@@ -1141,7 +1143,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
     }
     else if (cJSON_GetNumberValue(dept_ptr) != '\0') {
         printf("b\n");
-        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET did = %d WHERE login_id = '%s'",cJSON_GetNumberValue(dept_ptr),cJSON_GetStringValue(login_id_ptr));
+        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET did = %d WHERE login_id = '%s'",cJSON_GetNumberValue(dept_ptr), cJSON_GetStringValue(login_id_ptr));
         printf("c\n");
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
