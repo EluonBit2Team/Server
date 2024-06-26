@@ -1189,7 +1189,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
             // mysql_rollback(user_setting_conn->conn);
             goto cleanup_and_respond;
         }
-    }
+    
     cJSON* max_tps_ptr = cJSON_GetObjectItem(json_ptr, "max_tps");
     if (max_tps_ptr == NULL) {
         msg = "user send invalid json. Miss max_tps";
