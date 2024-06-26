@@ -1131,14 +1131,17 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss dept";
         goto cleanup_and_respond;
     }
-    else if (cJSON_GetStringValue(dept_ptr) != '\0') {
-        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET did = %d WHERE login_id = '%s'",cJSON_GetNumberValue(dept_ptr), cJSON_GetStringValue(login_id_ptr));
-        query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
-        if (msg != NULL) {
-            // mysql_rollback(user_setting_conn->conn);
-            goto cleanup_and_respond;
-        }
-    }
+    printf("%d\n",cJSON_GetNumberValue(dept_ptr));
+    printf("%s\n",cJSON_GetStringValue(dept_ptr));
+    printf("%d\n",sizeof(dept_ptr));
+    // else if (cJSON_GetNumberValue(dept_ptr) != '\0') {
+    //     snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET did = %d WHERE login_id = '%s'",cJSON_GetNumberValue(dept_ptr), cJSON_GetStringValue(login_id_ptr));
+    //     query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
+    //     if (msg != NULL) {
+    //         // mysql_rollback(user_setting_conn->conn);
+    //         goto cleanup_and_respond;
+    //     }
+    // }
     cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
     if (pos_ptr == NULL) {
         msg = "user send invalid json. Miss pos";
