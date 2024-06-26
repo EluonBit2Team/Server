@@ -28,7 +28,6 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     client_session_t* now_session = NULL;
     conn_t* user_setting_conn = NULL;
     conn_t* log_conn = NULL;
-    char *response_str = NULL;
     char SQL_buf[512];
     int uid = -1;
     int role = -1;
@@ -101,11 +100,12 @@ cleanup_and_respond:
     {
         cJSON_AddStringToObject(result_json, "msg", msg);
     }
-    response_str = cJSON_Print(result_json);
+
+    char *response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 2, user_setting_conn, log_conn);
-    cJSON_del_and_free(2, result_json, json_ptr);
-    free_all(1, response_str);
+    cJSON_Delete(json_ptr);
+    cJSON_Delete(result_json);
     return ;
 }
 
@@ -113,11 +113,9 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
     printf("signup_service\n");
     int type = 100;
     char* msg = NULL;
-    cJSON* json_ptr = NULL;
     cJSON* result_json = cJSON_CreateObject();
     client_session_t* now_session = NULL;
     conn_t* user_setting_conn = NULL;
-    char* response_str = NULL;
     char SQL_buf[1024];
 
     user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
@@ -128,7 +126,7 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    json_ptr = get_parsed_json(task->buf);
+    cJSON* json_ptr = get_parsed_json(task->buf);
     if (json_ptr == NULL) {
         msg = "user send invalid json";
         goto cleanup_and_respond;
@@ -182,11 +180,11 @@ cleanup_and_respond:
     if (msg != NULL) {
         cJSON_AddStringToObject(result_json, "msg", msg);
     }
-    response_str = cJSON_Print(result_json);
+    char *response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 1, user_setting_conn);
-    cJSON_del_and_free(2, json_ptr, result_json);
-    free_all(1, response_str);
+    cJSON_Delete(json_ptr);
+    cJSON_Delete(result_json);
     return ;
 }
 
@@ -195,11 +193,9 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
     printf("make_group_service\n");
     int type = 100;
     char* msg = NULL;
-    cJSON* json_ptr = NULL;
     cJSON* result_json = cJSON_CreateObject();
     client_session_t* now_session = NULL;
     conn_t* chat_group_conn = NULL;
-    char *response_str = NULL;
     char SQL_buf[512];
     int count_groupname = 0;
 
@@ -212,7 +208,7 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
         goto cleanup_and_respond;
     }
 
-    json_ptr = get_parsed_json(task->buf);
+    cJSON* json_ptr = get_parsed_json(task->buf);
     if (json_ptr == NULL)
     {
         msg = "user send invalid json";
@@ -274,11 +270,11 @@ cleanup_and_respond:
     {
         cJSON_AddStringToObject(result_json, "msg", msg);
     }
-    response_str = cJSON_Print(result_json);
+    char *response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 1, chat_group_conn);
-    cJSON_del_and_free(2, json_ptr, result_json);
-    free_all(1, response_str);
+    cJSON_Delete(json_ptr);
+    cJSON_Delete(result_json);
     return ;
 }
 
@@ -286,11 +282,9 @@ void user_list_service(epoll_net_core* server_ptr, task_t* task) {
     printf("user_list_service\n");
     int type = 100;
     char* msg = NULL;
-    cJSON* user_list = NULL;
     cJSON* result_json = cJSON_CreateObject();
     client_session_t* now_session = NULL;
     conn_t* user_setting_conn = NULL;
-    char* response_str = NULL;
     char SQL_buf[1024];
 
     user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
@@ -310,7 +304,7 @@ void user_list_service(epoll_net_core* server_ptr, task_t* task) {
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT u.login_id, u.name, jp.position_name, d.dept_name FROM user u LEFT JOIN dept d ON u.did = d.did LEFT JOIN job_position jp ON jp.pid = u.position LIMIT 5");
 
-    user_list = query_result_to_json(user_setting_conn,&msg,SQL_buf,4,"login_id","name","position_name","dept_name");
+    cJSON* user_list = query_result_to_json(user_setting_conn,&msg,SQL_buf,4,"login_id","name","position_name","dept_name");
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
