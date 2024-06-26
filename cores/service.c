@@ -30,7 +30,8 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     conn_t* log_conn = NULL;
     char SQL_buf[512];
     int uid = -1;
-    
+    int role = -1;
+
     user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
 
@@ -67,6 +68,15 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     
+    snprintf(SQL_buf, sizeof(SQL_buf), 
+        "SELECT role FROM user WHERE login_id = '%s'", cJSON_GetStringValue(id_ptr));
+
+    role = query_result_to_int(user_setting_conn,&msg,SQL_buf);
+    if (role == false) {
+        msg = "Invalid ID or PW";
+        goto cleanup_and_respond;
+    }
+
     insert(&server_ptr->fd_to_uid_hash, task->req_client_fd, uid);
     insert(&server_ptr->uid_to_fd_hash, uid, task->req_client_fd);
 
@@ -85,6 +95,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
 cleanup_and_respond:
     cJSON_AddNumberToObject(result_json, "type", type);
     cJSON_AddStringToObject(result_json, "login_id", cJSON_GetStringValue(id_ptr));
+    cJSON_AddStringToObject(result_json, "role", role);
     if (msg != NULL)
     {
         cJSON_AddStringToObject(result_json, "msg", msg);
@@ -1017,19 +1028,21 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "transaction fail";
         goto cleanup_and_respond;
     }
-
+    printf("1\n");
     cJSON* json_ptr = get_parsed_json(task->buf);
     if (json_ptr == NULL)
     {
         msg = "user send invalid json";
         goto cleanup_and_respond;
     }
+    printf("2\n");
     cJSON* login_id_ptr = cJSON_GetObjectItem(json_ptr, "login_id");
     if (login_id_ptr == NULL || cJSON_GetStringValue(login_id_ptr)[0] == '\0')
     {
         msg = "user send invalid json. Miss login_id";
         goto cleanup_and_respond;
     }
+    printf("3\n");
     cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "name");
     if (name_ptr == NULL) {
         msg = "user send invalid json. Miss name";
@@ -1044,6 +1057,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
             goto cleanup_and_respond;
         }
     }
+    printf("4\n");
     cJSON* test_ptr = cJSON_GetObjectItem(json_ptr, "phone");
     if (name_ptr == NULL) {
         msg = "user send invalid json. Miss name";
@@ -1058,6 +1072,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
             goto cleanup_and_respond;
         }
     }
+    printf("5\n");
     cJSON* email_ptr = cJSON_GetObjectItem(json_ptr, "email");
     if (email_ptr == NULL) {
         msg = "user send invalid json. Miss email";
@@ -1072,6 +1087,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
             goto cleanup_and_respond;
         }
     }
+    printf("6\n");
     cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
     if (dept_ptr == NULL) {
         msg = "user send invalid json. Miss dept";
@@ -1086,6 +1102,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
             goto cleanup_and_respond;
         }
     }
+    printf("7\n");
     cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
     if (pos_ptr == NULL) {
         msg = "user send invalid json. Miss pos";
@@ -1100,6 +1117,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
             goto cleanup_and_respond;
         }
     }
+    printf("8\n");
     cJSON* role_ptr = cJSON_GetObjectItem(json_ptr, "role");
     if (role_ptr == NULL) {
         msg = "user send invalid json. Miss role";
@@ -1114,6 +1132,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
             goto cleanup_and_respond;
         }
     }
+    printf("9\n");
     cJSON* max_tps_ptr = cJSON_GetObjectItem(json_ptr, "max_tps");
     if (max_tps_ptr == NULL) {
         msg = "user send invalid json. Miss max_tps";
@@ -1128,7 +1147,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
             goto cleanup_and_respond;
         }
     }
-
+    printf("10\n");
     now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
     if (now_session == NULL) {
         msg = "Session Error";
@@ -1139,6 +1158,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
     type = 13;
 
 cleanup_and_respond:
+    printf("11\n");
     if (msg != NULL) {
         cJSON_AddNumberToObject(result_json, "type", type);
         cJSON_AddStringToObject(result_json, "msg", msg);
