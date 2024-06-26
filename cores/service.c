@@ -241,6 +241,7 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
+    
     if (count_groupname >= 1) {
         msg = "groupname is duplicated";
         goto cleanup_and_respond;
@@ -534,7 +535,6 @@ void Mng_req_list_service(epoll_net_core* server_ptr, task_t* task) {
 
     type = 8;
 
-
 cleanup_and_respond:
     cJSON_AddNumberToObject(result_json, "type", type);
     if (msg != NULL)
@@ -776,6 +776,7 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
         type = 10;
         goto cleanup_and_respond;
     }
+
     snprintf(SQL_buf, sizeof(SQL_buf),"INSERT INTO chat_group (groupname) VALUES ('%s')",cJSON_GetStringValue(groupname_ptr));
     query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
@@ -809,7 +810,6 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    mysql_commit(chat_group_conn->conn);
     type = 10;
 
 
