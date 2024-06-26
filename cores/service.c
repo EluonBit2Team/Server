@@ -761,11 +761,12 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
+    printf("1\n");
     if (mysql_autocommit(chat_group_conn->conn, 0)) {
         msg = "transaction fail";
         goto cleanup_and_respond;
     }
-
+    printf("2\n");
     if (cJSON_GetNumberValue(approve_ptr) == 0) {
         snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM group_req WHERE groupname = %d",cJSON_GetStringValue(groupname_ptr));
         query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
@@ -776,33 +777,35 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
         type = 10;
         goto cleanup_and_respond;
     }
-
+    printf("3\n");
     snprintf(SQL_buf, sizeof(SQL_buf),"INSERT INTO chat_group (groupname) VALUES ('%s')",cJSON_GetStringValue(groupname_ptr));
     query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
         mysql_rollback(chat_group_conn->conn);
         goto cleanup_and_respond;
     }
+    printf("4\n");
     snprintf(SQL_buf, sizeof(SQL_buf),"SELECT uid FROM chat_group WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
     int uid_value = query_result_to_int(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
         mysql_rollback(chat_group_conn->conn);
         goto cleanup_and_respond;
     }
+    printf("5\n");
     snprintf(SQL_buf, sizeof(SQL_buf),"SELECT gid FROM chat_group WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
     int gid_value = query_result_to_int(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
         mysql_rollback(chat_group_conn->conn);
         goto cleanup_and_respond;
     }
-
+    printf("6\n");
     snprintf(SQL_buf, sizeof(SQL_buf),"INSERT INTO group_member (uid, gid,is_host) VALUES ('%d','%d',1)",uid_value,gid_value);
     query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
         mysql_rollback(chat_group_conn->conn);
         goto cleanup_and_respond;
     }
-
+    printf("7\n");
     snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM group_req WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
     query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
@@ -814,6 +817,7 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
 
 
 cleanup_and_respond:
+    printf("8\n");
     cJSON_AddNumberToObject(result_json, "type", type);
     if (msg != NULL)
     {
