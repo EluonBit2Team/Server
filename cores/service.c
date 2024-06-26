@@ -1068,22 +1068,18 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
     conn_t* user_setting_conn = NULL;
     char SQL_buf[1024];
 
-    user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
-    printf("1\n");
+    user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]); 
     cJSON* json_ptr = get_parsed_json(task->buf);
-    if (json_ptr == NULL)
-    {
+    if (json_ptr == NULL) {
         msg = "user send invalid json";
         goto cleanup_and_respond;
     }
-    printf("2\n");
     cJSON* login_id_ptr = cJSON_GetObjectItem(json_ptr, "login_id");
-    if (login_id_ptr == NULL || cJSON_GetStringValue(login_id_ptr)[0] == '\0')
-    {
+    if (login_id_ptr == NULL || cJSON_GetStringValue(login_id_ptr)[0] == '\0') {
         msg = "user send invalid json. Miss login_id";
         goto cleanup_and_respond;
     }
-    printf("3\n");
+
     if (mysql_autocommit(user_setting_conn->conn, 0)) {
         msg = "transaction fail";
         goto cleanup_and_respond;
@@ -1103,16 +1099,15 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         }
     }
     printf("4\n");
-    cJSON* test_ptr = cJSON_GetObjectItem(json_ptr, "phone");
-    if (name_ptr == NULL) {
-        msg = "user send invalid json. Miss name";
+    cJSON* phone_ptr = cJSON_GetObjectItem(json_ptr, "phone");
+    if (phone_ptr == NULL) {
+        msg = "user send invalid json. Miss phone";
         goto cleanup_and_respond;
     }
-    else if (cJSON_GetStringValue(name_ptr)[0] != '\0') {
-        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET name = '%s' WHERE login_id = '%s'",cJSON_GetStringValue(name_ptr),cJSON_GetStringValue(login_id_ptr));
+    else if (cJSON_GetStringValue(phone_ptr)[0] != '\0') {
+        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET phone = '%s' WHERE login_id = '%s'",cJSON_GetStringValue(phone_ptr),cJSON_GetStringValue(login_id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
-            msg = "rollback";
             mysql_rollback(user_setting_conn->conn);
             goto cleanup_and_respond;
         }
@@ -1123,11 +1118,11 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss email";
         goto cleanup_and_respond;
     }
-    else if (cJSON_GetStringValue(name_ptr)[0] != '\0') {
+    else if (cJSON_GetStringValue(email_ptr)[0] != '\0') {
+        printf("%s",SQL_buf);
         snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET email = '%s' WHERE login_id = '%s'",cJSON_GetStringValue(email_ptr),cJSON_GetStringValue(login_id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
-            msg = "rollback";
             mysql_rollback(user_setting_conn->conn);
             goto cleanup_and_respond;
         }
@@ -1144,7 +1139,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
     else if (cJSON_GetNumberValue(dept_ptr) != '\0') {
         printf("b\n");
         snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET did = %d WHERE login_id = '%s'",cJSON_GetNumberValue(dept_ptr), cJSON_GetStringValue(login_id_ptr));
-        printf("c\n");
+        printf("%s\n",cJSON_Print(login_id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
             printf("d\n");
@@ -1206,17 +1201,17 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    mysql_commit(user_setting_conn->conn);
     type = 13;
 
 cleanup_and_respond:
     printf("11\n");
+    cJSON_AddNumberToObject(result_json, "type", type);
     if (msg != NULL) {
-        cJSON_AddNumberToObject(result_json, "type", type);
         cJSON_AddStringToObject(result_json, "msg", msg);
-        char *response_str = cJSON_Print(result_json);
-        reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     }
+    mysql_commit(user_setting_conn->conn);
+    char *response_str = cJSON_Print(result_json);
+    reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 1, user_setting_conn);
     cJSON_Delete(json_ptr);
     cJSON_Delete(result_json);
