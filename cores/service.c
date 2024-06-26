@@ -1139,7 +1139,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     else if (cJSON_GetStringValue(dept_ptr)[0] != '\0') {
-        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET dept = '%s' WHERE login_id = '%s'",cJSON_GetNumberValue(dept_ptr),cJSON_GetStringValue(login_id_ptr));
+        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET dㅑㅇ = '%s' WHERE login_id = '%s'",cJSON_GetNumberValue(dept_ptr),cJSON_GetStringValue(login_id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
             msg = "rollback";
@@ -1154,7 +1154,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     else if (cJSON_GetStringValue(pos_ptr)[0] != '\0') {
-        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET pos = '%s' WHERE login_id = '%s'",cJSON_GetNumberValue(pos_ptr),cJSON_GetStringValue(login_id_ptr));
+        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET position = '%s' WHERE login_id = '%s'",cJSON_GetNumberValue(pos_ptr),cJSON_GetStringValue(login_id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
             msg = "rollback";
