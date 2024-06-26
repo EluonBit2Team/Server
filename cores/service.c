@@ -156,7 +156,7 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss email";
         goto cleanup_and_respond;
     }
-
+    
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT COUNT(login_id) FROM user WHERE login_id = '%s'", cJSON_GetStringValue(id_ptr));
     if (query_result_to_int(user_setting_conn, &msg, SQL_buf) > 0) {
         msg = "login_id already exists.";
@@ -237,11 +237,17 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
     }
 
     snprintf(SQL_buf,sizeof(SQL_buf),"SELECT COUNT(groupname) FROM chat_group WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
-    count_groupname = query_result_to_int(chat_group_conn, &msg, SQL_buf);
+    count_groupname += query_result_to_int(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
-    
+
+    snprintf(SQL_buf,sizeof(SQL_buf),"SELECT COUNT(groupname) FROM chat_group WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
+    count_groupname += query_result_to_int(chat_group_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+
     if (count_groupname >= 1) {
         msg = "groupname is duplicated";
         goto cleanup_and_respond;
@@ -1062,10 +1068,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
     conn_t* user_setting_conn = NULL;
     char SQL_buf[1024];
 
-    if (mysql_autocommit(user_setting_conn->conn, 0)) {
-        msg = "transaction fail";
-        goto cleanup_and_respond;
-    }
+    user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     printf("1\n");
     cJSON* json_ptr = get_parsed_json(task->buf);
     if (json_ptr == NULL)
@@ -1081,6 +1084,11 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     printf("3\n");
+    if (mysql_autocommit(user_setting_conn->conn, 0)) {
+        msg = "transaction fail";
+        goto cleanup_and_respond;
+    }
+
     cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "name");
     if (name_ptr == NULL) {
         msg = "user send invalid json. Miss name";
@@ -1090,7 +1098,6 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET name = '%s' WHERE login_id = '%s'",cJSON_GetStringValue(name_ptr),cJSON_GetStringValue(login_id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
-            msg = "rollback";
             mysql_rollback(user_setting_conn->conn);
             goto cleanup_and_respond;
         }
