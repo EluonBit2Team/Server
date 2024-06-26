@@ -520,7 +520,7 @@ void Mng_req_list_service(epoll_net_core* server_ptr, task_t* task) {
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
-    printf("%s",cJSON_Print(group_req_list));
+
     type = 8;
 
 
