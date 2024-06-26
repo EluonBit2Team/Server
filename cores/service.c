@@ -1139,7 +1139,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     else if (cJSON_GetStringValue(dept_ptr)[0] != '\0') {
-        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET dㅑㅇ = '%s' WHERE login_id = '%s'",cJSON_GetNumberValue(dept_ptr),cJSON_GetStringValue(login_id_ptr));
+        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET did = %d WHERE login_id = '%s'",cJSON_GetNumberValue(dept_ptr),cJSON_GetStringValue(login_id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
             msg = "rollback";
@@ -1154,7 +1154,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     else if (cJSON_GetStringValue(pos_ptr)[0] != '\0') {
-        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET position = '%s' WHERE login_id = '%s'",cJSON_GetNumberValue(pos_ptr),cJSON_GetStringValue(login_id_ptr));
+        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET position = %d WHERE login_id = '%s'",cJSON_GetNumberValue(pos_ptr),cJSON_GetStringValue(login_id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
             msg = "rollback";
@@ -1169,7 +1169,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     else if (cJSON_GetStringValue(dept_ptr)[0] != '\0') {
-        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET role = '%s' WHERE login_id = '%s'",cJSON_GetNumberValue(role_ptr),cJSON_GetStringValue(login_id_ptr));
+        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET role = %d WHERE login_id = '%s'",cJSON_GetNumberValue(role_ptr),cJSON_GetStringValue(login_id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
             msg = "rollback";
@@ -1184,7 +1184,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     else if (cJSON_GetStringValue(max_tps_ptr)[0] != '\0') {
-        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET max_tps = '%s' WHERE login_id = '%s'",cJSON_GetNumberValue(max_tps_ptr),cJSON_GetStringValue(login_id_ptr));
+        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET max_tps = %d WHERE login_id = '%s'",cJSON_GetNumberValue(max_tps_ptr),cJSON_GetStringValue(login_id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
             msg = "rollback";
