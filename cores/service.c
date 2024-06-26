@@ -95,7 +95,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
 cleanup_and_respond:
     cJSON_AddNumberToObject(result_json, "type", type);
     cJSON_AddStringToObject(result_json, "login_id", cJSON_GetStringValue(id_ptr));
-    cJSON_AddStringToObject(result_json, "role", role);
+    cJSON_AddNumberToObject(result_json, "role", role);
     if (msg != NULL)
     {
         cJSON_AddStringToObject(result_json, "msg", msg);
