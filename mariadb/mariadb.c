@@ -40,7 +40,7 @@ int query_result_to_int(conn_t* conn, char** msg, const char* query) {
 bool query_result_to_execuete(conn_t* conn, char** msg, const char* query) {
     if (mysql_query(conn->conn, query)) {
         fprintf(stderr, "query fail: %s\n", mysql_error(conn->conn));
-        *msg = "DB error";
+        *msg = mysql_error(conn->conn);
         return false;
     }
     return true;
