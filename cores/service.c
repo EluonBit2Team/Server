@@ -1042,7 +1042,7 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
             continue;
         }
         // 그대로 echo때려버리면 될듯.
-        reserve_epoll_send(server_ptr->epoll_fd, session, task->buf, task->task_data_len);
+        reserve_epoll_send(server_ptr->epoll_fd, session, task->buf + HEADER_SIZE, task->task_data_len - HEADER_SIZE);
     }
 
 

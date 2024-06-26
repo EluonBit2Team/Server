@@ -82,7 +82,7 @@ char* get_rear_send_buf_ptr(void_queue_t* vq)
     {
         return NULL;
     }
-    return ((send_buf_t*)get_rear_data(vq))->buf;
+    return ((send_buf_t*)get_rear_data(vq))->buf_ptr;
 }
 
 // todo : queue함수로 옮기기.
@@ -108,20 +108,23 @@ void reserve_epoll_send(int epoll_fd, client_session_t* send_session, char* send
 
 // 세션, epoll, 보낼 데이터 원본 및 크기 
 // todo : 좀 더 일반적인 형태로. queueu를 받지 않고, serv랑 세션을 받게.
-void reserve_send(void_queue_t* vq, char* send_org, int send_size)
+void reserve_send(void_queue_t* vq, char* send_org, int body_size)
 {
-    if (send_size > BUFF_SIZE)
+    int total_size = HEADER_SIZE + body_size;
+    if (total_size > BUFF_SIZE)
     {
         return ;
     }
     send_buf_t temp_send_buf;
     // send_size는 int여야함.
-    send_size += sizeof(send_size);
-    temp_send_buf.send_data_size = send_size;
-
-    memcpy(temp_send_buf.buf, (char*)&send_size, sizeof(send_size));
-    memcpy(temp_send_buf.buf + sizeof(send_size), send_org, send_size);
-    //write(STDOUT_FILENO, "enqueue:", 8); write(STDOUT_FILENO, temp_send_buf.buf, send_size); write(STDOUT_FILENO, "\n", 1);
+    // malloc(): corrupted top size -> enqueue내부 malloc에서 발생.
+    // 하지만 실제 문제는 아래 malloc에서 할당한 사이즈를 넘어서 데이터를 조작해서 발생
+    //  -> sizeof(char) * body_size를 할당받았지만 실제로 조작한 데이터 크기는 HEADER_SIZE + sizeof(char) * body_size여서 발생.
+    temp_send_buf.buf_ptr = (char*)malloc(HEADER_SIZE + sizeof(char) * body_size);
+    printf("reserve_send-buf_ptr: %p\n", temp_send_buf.buf_ptr);
+    temp_send_buf.send_data_size = total_size;
+    memcpy(temp_send_buf.buf_ptr, (char*)&total_size, sizeof(total_size));
+    memcpy(temp_send_buf.buf_ptr + sizeof(total_size), send_org, body_size);
     enqueue(vq, (void*)&temp_send_buf);
 }
 
@@ -374,17 +377,21 @@ int run_server(epoll_net_core* server_ptr) {
                     perror("send");
                     close(server_ptr->epoll_events[i].data.fd);
                 }
-                dequeue(&s_ptr->send_bufs, NULL);
-                
+                send_buf_t temp;
+                dequeue(&s_ptr->send_bufs, &temp);
+                printf("send_buf_t temp %p\n", temp.buf_ptr);
+                free_all(1, temp.buf_ptr);
                 // send할 때 이벤트를 변경(EPOLL_CTL_MOD)해서 보내는 이벤트로 바꿨으니
                 // 다시 통신을 받는 이벤트로 변경하여 유저의 입력을 대기.
                 struct epoll_event temp_event;
                 temp_event.events = EPOLLIN | EPOLLET;
-                temp_event.data.fd = server_ptr->epoll_events[i].data.fd;
-                if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, server_ptr->epoll_events[i].data.fd, &temp_event) == -1) {
+                //temp_event.data.fd = server_ptr->epoll_events[i].data.fd;
+                temp_event.data.fd = client_fd;
+                if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, client_fd, &temp_event) == -1) {
                     perror("epoll_ctl: del");
                     close(server_ptr->epoll_events[i].data.fd);
                 }
+                printf("after epoll_ctl\n");
             }
             else {
                 printf("?\n");
