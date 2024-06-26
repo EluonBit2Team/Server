@@ -1130,7 +1130,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss dept";
         goto cleanup_and_respond;
     }
-    else if (cJSON_GetNumberValue(dept_ptr) == 999) {
+    else if (cJSON_GetNumberValue(dept_ptr) != 999) {
         snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET did = %d WHERE login_id = '%s'",cJSON_GetNumberValue(dept_ptr), cJSON_GetStringValue(login_id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
@@ -1143,7 +1143,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss pos";
         goto cleanup_and_respond;
     }
-    else if (cJSON_GetNumberValue(pos_ptr) == 999) {
+    else if (cJSON_GetNumberValue(pos_ptr) != 999) {
         snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET position = %d WHERE login_id = '%s'",cJSON_GetNumberValue(pos_ptr),cJSON_GetStringValue(login_id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
@@ -1156,7 +1156,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss role";
         goto cleanup_and_respond;
     }
-    else if (cJSON_GetNumberValue(role_ptr) == 999) {
+    else if (cJSON_GetNumberValue(role_ptr) != 999) {
         snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET role = %d WHERE login_id = '%s'",cJSON_GetNumberValue(role_ptr) ,cJSON_GetStringValue(login_id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
@@ -1170,7 +1170,7 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss max_tps";
         goto cleanup_and_respond;
     }
-    else if (cJSON_GetNumberValue(max_tps_ptr) == 999) {
+    else if (cJSON_GetNumberValue(max_tps_ptr) != 999) {
         snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET max_tps = %d WHERE login_id = '%s'",cJSON_GetNumberValue(max_tps_ptr),cJSON_GetStringValue(login_id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
