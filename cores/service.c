@@ -1142,22 +1142,23 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET did = %d WHERE login_id = '%s'",cJSON_GetNumberValue(dept_ptr),cJSON_GetStringValue(login_id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
-            msg = "rollback";
             mysql_rollback(user_setting_conn->conn);
             goto cleanup_and_respond;
         }
     }
     printf("7\n");
     cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
+    printf("a\n");
     if (pos_ptr == NULL) {
         msg = "user send invalid json. Miss pos";
         goto cleanup_and_respond;
     }
     else if (cJSON_GetStringValue(pos_ptr)[0] != '\0') {
+        printf("b\n");
         snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET position = %d WHERE login_id = '%s'",cJSON_GetNumberValue(pos_ptr),cJSON_GetStringValue(login_id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
-            msg = "rollback";
+            printf("c\n");
             mysql_rollback(user_setting_conn->conn);
             goto cleanup_and_respond;
         }
