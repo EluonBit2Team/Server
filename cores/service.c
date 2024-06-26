@@ -31,7 +31,8 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     char *response_str = NULL;
     char SQL_buf[512];
     int uid = -1;
-    
+    int role = -1;
+
     user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
 
@@ -68,6 +69,15 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     
+    snprintf(SQL_buf, sizeof(SQL_buf), 
+        "SELECT role FROM user WHERE login_id = '%s'", cJSON_GetStringValue(id_ptr));
+
+    role = query_result_to_int(user_setting_conn,&msg,SQL_buf);
+    if (role == false) {
+        msg = "Invalid ID or PW";
+        goto cleanup_and_respond;
+    }
+
     insert(&server_ptr->fd_to_uid_hash, task->req_client_fd, uid);
     insert(&server_ptr->uid_to_fd_hash, uid, task->req_client_fd);
 
@@ -86,6 +96,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
 cleanup_and_respond:
     cJSON_AddNumberToObject(result_json, "type", type);
     cJSON_AddStringToObject(result_json, "login_id", cJSON_GetStringValue(id_ptr));
+    cJSON_AddNumberToObject(result_json, "role", role);
     if (msg != NULL)
     {
         cJSON_AddStringToObject(result_json, "msg", msg);
@@ -149,13 +160,13 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss email";
         goto cleanup_and_respond;
     }
-
+    
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT COUNT(login_id) FROM user WHERE login_id = '%s'", cJSON_GetStringValue(id_ptr));
     if (query_result_to_int(user_setting_conn, &msg, SQL_buf) > 0) {
         msg = "login_id already exists.";
         goto cleanup_and_respond;
     }
-
+    
     snprintf(SQL_buf, sizeof(SQL_buf), 
              "INSERT INTO signup_req (login_id, password, name, phone, email) VALUES ('%s', UNHEX(SHA2('%s',%d)), '%s', '%s', '%s')",
              cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH, cJSON_GetStringValue(name_ptr),
@@ -192,6 +203,7 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
     conn_t* chat_group_conn = NULL;
     char *response_str = NULL;
     char SQL_buf[512];
+    int count_groupname = 0;
 
     chat_group_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
 
@@ -227,6 +239,23 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
     if (message_ptr == NULL || cJSON_GetStringValue(message_ptr)[0] == '\0')
     {
         msg = "user send invalid json. Miss message";
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf,sizeof(SQL_buf),"SELECT COUNT(groupname) FROM chat_group WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
+    count_groupname += query_result_to_int(chat_group_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf,sizeof(SQL_buf),"SELECT COUNT(groupname) FROM chat_group WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
+    count_groupname += query_result_to_int(chat_group_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+
+    if (count_groupname >= 1) {
+        msg = "groupname is duplicated";
         goto cleanup_and_respond;
     }
 
@@ -531,7 +560,6 @@ void Mng_req_list_service(epoll_net_core* server_ptr, task_t* task) {
 
     type = 8;
 
-
 cleanup_and_respond:
     cJSON_AddNumberToObject(result_json, "type", type);
     if (msg != NULL)
@@ -566,6 +594,7 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
     conn_t* user_setting_conn = NULL;
     char* response_str = NULL;
     char SQL_buf[512];
+    int count_login_id = 0;
 
     user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
 
@@ -597,6 +626,16 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
     cJSON* id_ptr = cJSON_GetObjectItem(json_ptr, "login_id");
     if (id_ptr == NULL || cJSON_GetStringValue(id_ptr)[0] == '\0') {
         msg = "user send invalid json. Miss id";
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf,sizeof(SQL_buf),"SELECT COUNT(login_id) FROM user WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
+    count_login_id = query_result_to_int(user_setting_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+    if (count_login_id >= 1) {
+        msg = "login_id is duplicated";
         goto cleanup_and_respond;
     }
 
@@ -710,6 +749,7 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
     conn_t* chat_group_conn = NULL;
     char* response_str = NULL;
     char SQL_buf[512];
+    int count_groupname = 0;
 
     chat_group_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
 
@@ -743,15 +783,24 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss groupname";
         goto cleanup_and_respond;
     }
-    snprintf(SQL_buf,sizeof(SQL_buf),"SELECT uid FROM group_req WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
-    int uid_value = query_result_to_int(chat_group_conn, &msg, SQL_buf);
-    
+
+    snprintf(SQL_buf,sizeof(SQL_buf),"SELECT COUNT(groupname) FROM chat_group WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
+    count_groupname = query_result_to_int(chat_group_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+    if (count_groupname >= 1) {
+        msg = "groupname is duplicated";
+        goto cleanup_and_respond;
+    }
+
     if (mysql_autocommit(chat_group_conn->conn, 0)) {
         msg = "transaction fail";
         goto cleanup_and_respond;
     }
+  
     if (cJSON_GetNumberValue(approve_ptr) == 0) {
-        snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM group_req WHERE uid = %d",uid_value);
+        snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM group_req WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
         query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
         if (msg != NULL) {
             mysql_rollback(chat_group_conn->conn);
@@ -763,6 +812,13 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
 
     snprintf(SQL_buf, sizeof(SQL_buf),"INSERT INTO chat_group (groupname) VALUES ('%s')",cJSON_GetStringValue(groupname_ptr));
     query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        mysql_rollback(chat_group_conn->conn);
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf),"SELECT uid FROM chat_group WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
+    int uid_value = query_result_to_int(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
         mysql_rollback(chat_group_conn->conn);
         goto cleanup_and_respond;
@@ -789,7 +845,6 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    mysql_commit(chat_group_conn->conn);
     type = 10;
 
 
@@ -1045,23 +1100,23 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
     conn_t* user_setting_conn = NULL;
     char SQL_buf[1024];
 
-    if (mysql_autocommit(user_setting_conn->conn, 0)) {
-        msg = "transaction fail";
-        goto cleanup_and_respond;
-    }
-
+    user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]); 
     cJSON* json_ptr = get_parsed_json(task->buf);
-    if (json_ptr == NULL)
-    {
+    if (json_ptr == NULL) {
         msg = "user send invalid json";
         goto cleanup_and_respond;
     }
     cJSON* login_id_ptr = cJSON_GetObjectItem(json_ptr, "login_id");
-    if (login_id_ptr == NULL || cJSON_GetStringValue(login_id_ptr)[0] == '\0')
-    {
+    if (login_id_ptr == NULL || cJSON_GetStringValue(login_id_ptr)[0] == '\0') {
         msg = "user send invalid json. Miss login_id";
         goto cleanup_and_respond;
     }
+
+    // if (mysql_autocommit(user_setting_conn->conn, 0)) {
+    //     msg = "transaction fail";
+    //     goto cleanup_and_respond;
+    // }
+
     cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "name");
     if (name_ptr == NULL) {
         msg = "user send invalid json. Miss name";
@@ -1071,22 +1126,20 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET name = '%s' WHERE login_id = '%s'",cJSON_GetStringValue(name_ptr),cJSON_GetStringValue(login_id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
-            msg = "rollback";
-            mysql_rollback(user_setting_conn->conn);
+            // mysql_rollback(user_setting_conn->conn);
             goto cleanup_and_respond;
         }
     }
-    cJSON* test_ptr = cJSON_GetObjectItem(json_ptr, "phone");
-    if (name_ptr == NULL) {
-        msg = "user send invalid json. Miss name";
+    cJSON* phone_ptr = cJSON_GetObjectItem(json_ptr, "phone");
+    if (phone_ptr == NULL) {
+        msg = "user send invalid json. Miss phone";
         goto cleanup_and_respond;
     }
-    else if (cJSON_GetStringValue(name_ptr)[0] != '\0') {
-        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET name = '%s' WHERE login_id = '%s'",cJSON_GetStringValue(name_ptr),cJSON_GetStringValue(login_id_ptr));
+    else if (cJSON_GetStringValue(phone_ptr)[0] != '\0') {
+        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET phone = '%s' WHERE login_id = '%s'",cJSON_GetStringValue(phone_ptr),cJSON_GetStringValue(login_id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
-            msg = "rollback";
-            mysql_rollback(user_setting_conn->conn);
+            // mysql_rollback(user_setting_conn->conn);
             goto cleanup_and_respond;
         }
     }
@@ -1095,40 +1148,34 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss email";
         goto cleanup_and_respond;
     }
-    else if (cJSON_GetStringValue(name_ptr)[0] != '\0') {
+    else if (cJSON_GetStringValue(email_ptr)[0] != '\0') {
+        printf("%s",SQL_buf);
         snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET email = '%s' WHERE login_id = '%s'",cJSON_GetStringValue(email_ptr),cJSON_GetStringValue(login_id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
-            msg = "rollback";
-            mysql_rollback(user_setting_conn->conn);
+            // mysql_rollback(user_setting_conn->conn);
             goto cleanup_and_respond;
         }
     }
+
     cJSON* dept_ptr = cJSON_GetObjectItem(json_ptr, "dept");
     if (dept_ptr == NULL) {
         msg = "user send invalid json. Miss dept";
         goto cleanup_and_respond;
     }
-    else if (cJSON_GetStringValue(dept_ptr)[0] != '\0') {
-        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET dept = '%f' WHERE login_id = '%s'",cJSON_GetNumberValue(dept_ptr),cJSON_GetStringValue(login_id_ptr));
-        query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
-        if (msg != NULL) {
-            msg = "rollback";
-            mysql_rollback(user_setting_conn->conn);
-            goto cleanup_and_respond;
-        }
-    }
+
     cJSON* pos_ptr = cJSON_GetObjectItem(json_ptr, "pos");
     if (pos_ptr == NULL) {
         msg = "user send invalid json. Miss pos";
         goto cleanup_and_respond;
     }
+
     else if (cJSON_GetStringValue(pos_ptr)[0] != '\0') {
         snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET pos = '%f' WHERE login_id = '%s'",cJSON_GetNumberValue(pos_ptr),cJSON_GetStringValue(login_id_ptr));
+
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
-            msg = "rollback";
-            mysql_rollback(user_setting_conn->conn);
+            // mysql_rollback(user_setting_conn->conn);
             goto cleanup_and_respond;
         }
     }
@@ -1137,12 +1184,11 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss role";
         goto cleanup_and_respond;
     }
-    else if (cJSON_GetStringValue(dept_ptr)[0] != '\0') {
-        snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET role = '%f' WHERE login_id = '%s'",cJSON_GetNumberValue(role_ptr),cJSON_GetStringValue(login_id_ptr));
+ 
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
             msg = "rollback";
-            mysql_rollback(user_setting_conn->conn);
+            // mysql_rollback(user_setting_conn->conn);
             goto cleanup_and_respond;
         }
     }
@@ -1151,12 +1197,13 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss max_tps";
         goto cleanup_and_respond;
     }
+
     else if (cJSON_GetStringValue(max_tps_ptr)[0] != '\0') {
         snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE user SET max_tps = '%f' WHERE login_id = '%s'",cJSON_GetNumberValue(max_tps_ptr),cJSON_GetStringValue(login_id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
             msg = "rollback";
-            mysql_rollback(user_setting_conn->conn);
+            // mysql_rollback(user_setting_conn->conn);
             goto cleanup_and_respond;
         }
     }
@@ -1167,16 +1214,16 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    mysql_commit(user_setting_conn->conn);
     type = 13;
 
 cleanup_and_respond:
+    cJSON_AddNumberToObject(result_json, "type", type);
     if (msg != NULL) {
-        cJSON_AddNumberToObject(result_json, "type", type);
         cJSON_AddStringToObject(result_json, "msg", msg);
-        char *response_str = cJSON_Print(result_json);
-        reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     }
+    // mysql_commit(user_setting_conn->conn);
+    char *response_str = cJSON_Print(result_json);
+    reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 1, user_setting_conn);
     cJSON_Delete(json_ptr);
     cJSON_Delete(result_json);
