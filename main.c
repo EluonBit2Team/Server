@@ -4,8 +4,8 @@
 
 int main() {
     epoll_net_core net;
-    setup_signal_handlers();
-    fork_exec();
+    // setup_signal_handlers();
+    // fork_exec();
 
     if (init_server(&net) == false)
     {
