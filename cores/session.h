@@ -7,6 +7,13 @@
 #include "../utilities/void_queue.h"
 #include "../defines.h"
 
+
+typedef struct send_buf {
+    int send_data_size;
+    //char buf[BUFF_SIZE];
+    char* buf_ptr;
+} send_buf_t;
+
 typedef struct client_session {
     int fd; // 세션 fd
     size_t session_idx;

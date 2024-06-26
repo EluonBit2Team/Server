@@ -93,8 +93,10 @@ cleanup_and_respond:
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 2, user_setting_conn, log_conn);
+    printf("release conn done\n");
     cJSON_del_and_free(2, result_json, json_ptr);
     free_all(1, response_str);
+    printf("login done\n");
     return ;
 }
 

@@ -18,13 +18,16 @@ void reset_queue(void_queue_t* queue) {
 }
 
 int enqueue(void_queue_t* queue, const void* data_org) {
-    node_t* new_node = (node_t*)malloc(sizeof(void_queue_t));
+    node_t* new_node = NULL;
+    new_node = malloc(sizeof(node_t) * 1);
     new_node->data = malloc(queue->type_default_size);
     if (new_node->data == NULL) {
         // TODO: error 로깅 및 처리
         return -1;
     }
+    printf("malloc done\n");
     memcpy(new_node->data, data_org, queue->type_default_size);
+    printf("memcpy done\n");
     new_node->pre = queue->rear_node;
     
     // rear노드 갱신

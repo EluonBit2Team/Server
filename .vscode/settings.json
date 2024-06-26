@@ -22,6 +22,7 @@
         "child_process.h": "c",
         "types.h": "c",
         "unistd.h": "c",
-        "includes.h": "c"
+        "includes.h": "c",
+        "session.h": "c"
     }
 }

@@ -24,7 +24,7 @@ int init_session_pool(session_pool_t* pool_ptr, size_t session_size)
     for (int i = 0; i < session_size; i++) {
         pool_ptr->session_pool[i].session_idx = i;
         pool_ptr->session_pool[i].fd = -1;
-        init_queue(&pool_ptr->session_pool[i].send_bufs, BUFF_SIZE);
+        init_queue(&pool_ptr->session_pool[i].send_bufs, sizeof(send_buf_t));
         ring_init(&pool_ptr->session_pool[i].recv_bufs);
         pool_ptr->session_pool_idx_stack[i] = i;
     }

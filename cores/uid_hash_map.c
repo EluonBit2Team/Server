@@ -61,6 +61,7 @@ void erase(int_hash_map_t* hash_map_ptr, int key) {
 }
 
 void clear_hash_map(int_hash_map_t* hash_map_ptr) {
+    // HASH_CLEAR??
     pthread_mutex_destroy(&hash_map_ptr->hash_map_mutex);
     free(hash_map_ptr->node_pool);
     free(hash_map_ptr->node_pool_idx_stack);
