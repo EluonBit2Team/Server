@@ -123,8 +123,8 @@ void reserve_send(void_queue_t* vq, char* send_org, int body_size)
     //  -> sizeof(char) * body_size를 할당받았지만 실제로 조작한 데이터 크기는 HEADER_SIZE + sizeof(char) * body_size여서 발생.
     temp_send_buf.buf_ptr = (char*)malloc(HEADER_SIZE + sizeof(char) * body_size);
     temp_send_buf.send_data_size = total_size;
-    memcpy(temp_send_buf.buf_ptr, (char*)&total_size, sizeof(total_size));
-    memcpy(temp_send_buf.buf_ptr + sizeof(total_size), send_org, body_size);
+    memcpy(temp_send_buf.buf_ptr, (char*)&total_size, HEADER_SIZE);
+    memcpy(temp_send_buf.buf_ptr + HEADER_SIZE, send_org, body_size);
     enqueue(vq, (void*)&temp_send_buf);
 }
 
@@ -376,19 +376,20 @@ int run_server(epoll_net_core* server_ptr) {
                     perror("send");
                     close(server_ptr->epoll_events[i].data.fd);
                 }
-                send_buf_t temp_buf;
-                dequeue(&s_ptr->send_bufs, &temp_buf);
-                free(temp_buf.buf_ptr);
-                
+                send_buf_t temp;
+                dequeue(&s_ptr->send_bufs, &temp);
+                free_all(1, temp.buf_ptr);
                 // send할 때 이벤트를 변경(EPOLL_CTL_MOD)해서 보내는 이벤트로 바꿨으니
                 // 다시 통신을 받는 이벤트로 변경하여 유저의 입력을 대기.
                 struct epoll_event temp_event;
                 temp_event.events = EPOLLIN | EPOLLET;
-                temp_event.data.fd = server_ptr->epoll_events[i].data.fd;
-                if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, server_ptr->epoll_events[i].data.fd, &temp_event) == -1) {
+                //temp_event.data.fd = server_ptr->epoll_events[i].data.fd;
+                temp_event.data.fd = client_fd;
+                if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, client_fd, &temp_event) == -1) {
                     perror("epoll_ctl: del");
                     close(server_ptr->epoll_events[i].data.fd);
                 }
+                printf("after epoll_ctl\n");
             }
             else {
                 printf("?\n");

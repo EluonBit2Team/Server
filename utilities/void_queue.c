@@ -18,8 +18,7 @@ void reset_queue(void_queue_t* queue) {
 }
 
 int enqueue(void_queue_t* queue, const void* data_org) {
-    node_t* new_node = NULL;
-    new_node = malloc(sizeof(node_t) * 1);
+    node_t* new_node = (node_t*)malloc(sizeof(node_t));
     new_node->data = malloc(queue->type_default_size);
     if (new_node->data == NULL) {
         // TODO: error 로깅 및 처리
@@ -32,6 +31,7 @@ int enqueue(void_queue_t* queue, const void* data_org) {
     
     // rear노드 갱신
     queue->rear_node = new_node;
+    printf("enqueue-buf_ptr: %p\n", ((send_buf_t*)new_node->data)->buf_ptr);
     return 0;
 }
 
@@ -46,7 +46,7 @@ int dequeue(void_queue_t* queue, void* data_des) {
     }
     node_t* new_r_node = queue->rear_node->pre;
     queue->rear_node = new_r_node;
-
+    printf("dequeue-buf_ptr: %p\n", ((send_buf_t*)data_des)->buf_ptr);
     free(r_node->data);
     free(r_node);
     return 0;

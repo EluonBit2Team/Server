@@ -1,3 +1,5 @@
+*/server_scheduler
+*.log
 # Prerequisites
 *.d
 
