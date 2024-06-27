@@ -1226,7 +1226,6 @@ void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
     conn_t* chat_group_conn = NULL;
     conn_t* log_conn = NULL;
     char SQL_buf[1024];
-    char gid_list_str[1024] = "";
     char uid_list_str[1024] = "";
 
     user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
@@ -1249,7 +1248,7 @@ void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM message_log WHERE gid = %d",gid);
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM message_log WHERE gid = %d LIMIT 10",gid);
     cJSON* uid_list = query_result_to_json(log_conn, &msg, SQL_buf, 1, "uid");
     if (msg != NULL) {
         goto cleanup_and_respond;
@@ -1266,19 +1265,19 @@ void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
         }
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id,name FROM user WHERE uid = %s",uid_list_str);
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id,name FROM user WHERE uid = %s LIMIT 10",uid_list_str);
     result_json = query_result_to_json(user_setting_conn, &msg, SQL_buf, 2, "login_id" ,"name");
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT text FROM message_log WHERE gid = %d",gid);
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT text FROM message_log WHERE gid = %d LIMIT 10",gid);
     cJSON* text = query_result_to_json(log_conn, &msg, SQL_buf, 2, "login_id" ,"name");
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT timestamp FROM message_log WHERE gid = %d",gid);
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT timestamp FROM message_log WHERE gid = %d LIMIT 10",gid);
     cJSON* timestamp = query_result_to_json(log_conn, &msg, SQL_buf, 2, "login_id" ,"name");
     if (msg != NULL) {
         goto cleanup_and_respond;
@@ -1289,7 +1288,7 @@ void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "Session Error";
         goto cleanup_and_respond;
     }
-    type = 13;
+    type = 14;
 
 cleanup_and_respond:
     cJSON_AddNumberToObject(result_json, "type", type);
