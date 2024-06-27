@@ -1068,6 +1068,7 @@ cleanup_and_respond:
 }
 
 void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
+    printf("edit_user_info_service\n");
     int type = 100;
     char* msg = NULL;
     cJSON* result_json = cJSON_CreateObject();
@@ -1215,3 +1216,95 @@ cleanup_and_respond:
     return ;
 }
 
+void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
+    printf("pre_chat_log_service\n");
+    int type = 100;
+    char* msg = NULL;
+    cJSON* result_json = cJSON_CreateObject();
+    client_session_t* now_session = NULL;
+    conn_t* user_setting_conn = NULL;
+    conn_t* chat_group_conn = NULL;
+    conn_t* log_conn = NULL;
+    char SQL_buf[1024];
+    char gid_list_str[1024] = "";
+    char uid_list_str[1024] = "";
+
+    user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
+    user_setting_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
+    log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);  
+    cJSON* json_ptr = get_parsed_json(task->buf);
+    if (json_ptr == NULL) {
+        msg = "user send invalid json";
+        goto cleanup_and_respond;
+    }
+    cJSON* groupname_ptr = cJSON_GetObjectItem(json_ptr, "groupname");
+    if (groupname_ptr == NULL || cJSON_GetStringValue(groupname_ptr)[0] == '\0') {
+        msg = "user send invalid json. Miss groupname";
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT gid FROM chat_group WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
+    int gid = query_result_to_int(chat_group_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM message_log WHERE gid = %d",gid);
+    cJSON* uid_list = query_result_to_json(log_conn, &msg, SQL_buf, 1, "uid");
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+    int uid_count = cJSON_GetArraySize(uid_list);
+    for (int i = 0; i < uid_count; i++) {
+        cJSON* item = cJSON_GetArrayItem(uid_list, i);
+        cJSON* uid_value = cJSON_GetObjectItemCaseSensitive(item, "uid");
+        if (cJSON_IsString(uid_value) && (uid_value->valuestring != NULL)) {
+            if (strlen(uid_list_str) > 0) {
+            strcat(uid_list_str, ",");
+        }
+        strcat(uid_list_str, uid_value->valuestring);
+        }
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id,name FROM user WHERE uid = %s",uid_list_str);
+    result_json = query_result_to_json(user_setting_conn, &msg, SQL_buf, 2, "login_id" ,"name");
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT text FROM message_log WHERE gid = %d",gid);
+    cJSON* text = query_result_to_json(log_conn, &msg, SQL_buf, 2, "login_id" ,"name");
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT timestamp FROM message_log WHERE gid = %d",gid);
+    cJSON* timestamp = query_result_to_json(log_conn, &msg, SQL_buf, 2, "login_id" ,"name");
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL) {
+        msg = "Session Error";
+        goto cleanup_and_respond;
+    }
+    type = 13;
+
+cleanup_and_respond:
+    cJSON_AddNumberToObject(result_json, "type", type);
+    if (msg != NULL) {
+        cJSON_AddStringToObject(result_json, "msg", msg);
+    }
+    else {
+        cJSON_AddItemToObject(result_json, "text", text);
+        cJSON_AddItemToObject(result_json, "timestamp", timestamp);
+    }
+    mysql_commit(user_setting_conn->conn);
+    char *response_str = cJSON_Print(result_json);
+    reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
+    release_conns(&server_ptr->db, 1, user_setting_conn);
+    cJSON_Delete(json_ptr);
+    cJSON_Delete(result_json);
+    return ;
+}
