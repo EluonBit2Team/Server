@@ -766,7 +766,7 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "groupname is duplicated";
         goto cleanup_and_respond;
     }
-
+    
     if (mysql_autocommit(chat_group_conn->conn, 0)) {
         msg = "transaction fail";
         goto cleanup_and_respond;
@@ -777,6 +777,7 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
         query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
         if (msg != NULL) {
             mysql_rollback(chat_group_conn->conn);
+            printf("rollback\n");
             goto cleanup_and_respond;
         }
         type = 10;
@@ -787,13 +788,15 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
     query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
         mysql_rollback(chat_group_conn->conn);
+        printf("rollback\n");
         goto cleanup_and_respond;
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf),"SELECT uid FROM chat_group WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
+    snprintf(SQL_buf, sizeof(SQL_buf),"SELECT uid FROM group_req WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
     int uid_value = query_result_to_int(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
         mysql_rollback(chat_group_conn->conn);
+        printf("rollback\n");
         goto cleanup_and_respond;
     }
 
@@ -801,6 +804,7 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
     int gid_value = query_result_to_int(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
         mysql_rollback(chat_group_conn->conn);
+        printf("rollback\n");
         goto cleanup_and_respond;
     }
 
@@ -808,6 +812,7 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
     query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
         mysql_rollback(chat_group_conn->conn);
+        printf("rollback\n");
         goto cleanup_and_respond;
     }
 
@@ -815,6 +820,7 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
     query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
         mysql_rollback(chat_group_conn->conn);
+        printf("rollback\n");
         goto cleanup_and_respond;
     }
 
@@ -828,6 +834,7 @@ cleanup_and_respond:
         cJSON_AddStringToObject(result_json, "msg", msg);
     }
     mysql_commit(chat_group_conn->conn);
+    printf("commit\n");
     char *response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 1, chat_group_conn);
