@@ -13,5 +13,5 @@ int main() {
     }
     run_server(&net);
     down_server(&net);
-    terminate_child();
+    //terminate_child();
 }

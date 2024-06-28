@@ -170,6 +170,7 @@ bool init_server(epoll_net_core* server_ptr) {
     server_ptr->function_array[GROUP_MEMEMBER_SERV_FUNC] = group_member_service;
     server_ptr->function_array[CHATTING_SERV_FUNC] = chat_in_group_service;
     server_ptr->function_array[EDIT_MEMBER_INFO_SERV_FUNC] = edit_user_info_service;
+    server_ptr->function_array[PRE_CHAT_LOG_SERV_FUNC] = pre_chat_log_service;
 
     // 리슨소켓 생성
     server_ptr->listen_fd = socket(PF_INET, SOCK_STREAM, 0);
@@ -384,11 +385,13 @@ int run_server(epoll_net_core* server_ptr) {
                 // 다시 통신을 받는 이벤트로 변경하여 유저의 입력을 대기.
                 struct epoll_event temp_event;
                 temp_event.events = EPOLLIN | EPOLLET;
-                temp_event.data.fd = server_ptr->epoll_events[i].data.fd;
-                if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, server_ptr->epoll_events[i].data.fd, &temp_event) == -1) {
+                //temp_event.data.fd = server_ptr->epoll_events[i].data.fd;
+                temp_event.data.fd = client_fd;
+                if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, client_fd, &temp_event) == -1) {
                     perror("epoll_ctl: del");
                     close(server_ptr->epoll_events[i].data.fd);
                 }
+                printf("after epoll_ctl\n");
             }
             else {
                 printf("?\n");
