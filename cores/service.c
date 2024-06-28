@@ -1241,14 +1241,25 @@ void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss groupname";
         goto cleanup_and_respond;
     }
-
+    cJSON* start_time_ptr = cJSON_GetObjectItem(json_ptr, "start_time");
+    if (start_time_ptr == NULL || cJSON_GetStringValue(start_time_ptr)[0] == '\0') {
+        msg = "user send invalid json. Miss start_time";
+        goto cleanup_and_respond;
+    }
+    cJSON* end_time_ptr = cJSON_GetObjectItem(json_ptr, "end_time");
+    if (end_time_ptr == NULL || cJSON_GetStringValue(end_time_ptr)[0] == '\0') {
+        msg = "user send invalid json. Miss end_time";
+        goto cleanup_and_respond;
+    }
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT gid FROM chat_group WHERE groupname = %d ",cJSON_GetStringValue(groupname_ptr));
     gid_value = query_result_to_int(log_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id, text, timestamp FROM message_log WHERE gid = %d ORDER BY timestamp ASC LIMIT 30",gid_value);
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id, text, timestamp FROM message_log WHERE gid = %d AND timestamp BETWEEN '%s' AND '%s' ORDER BY timestamp ASC",
+    gid_value,cJSON_GetStringValue(start_time_ptr),cJSON_GetStringValue(end_time_ptr));
+    
     cJSON* chat_log = query_result_to_json(log_conn, &msg, SQL_buf, 2, "login_id" ,"name");
     if (msg != NULL) {
         goto cleanup_and_respond;
