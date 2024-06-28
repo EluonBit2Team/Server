@@ -1295,6 +1295,12 @@ void group_delete_service(epoll_net_core* server_ptr, task_t* task) {
         mysql_rollback(chat_group_conn->conn);
         goto cleanup_and_respond;
     }
+
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL) {
+        msg = "Session Error";
+        goto cleanup_and_respond;
+    }
     
     type = 15;
 
@@ -1317,6 +1323,7 @@ void server_log_service(epoll_net_core* server_ptr, task_t* task) {
     char* msg = NULL;
     cJSON* json_ptr = NULL;
     cJSON* result_json = cJSON_CreateObject();
+    cJSON* server_log = NULL;
     client_session_t* now_session = NULL;
     conn_t* user_setting_conn = NULL;
     conn_t* log_conn = NULL;
@@ -1342,42 +1349,40 @@ void server_log_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    // 채팅 관리자 권한 확인
-    snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT uid FROM user WHERE uid = %d", uid);
-    int gid = query_result_to_int(user_setting_conn, &msg, SQL_buf);
-    if (gid < 0 || msg != NULL) {
+    cJSON* start_time_ptr = cJSON_GetObjectItem(json_ptr, "start_time");
+    if (start_time_ptr == NULL || cJSON_GetStringValue(start_time_ptr)[0] == '\0') {
+        msg = "user send invalid json. Miss start_time";
+        goto cleanup_and_respond;
+    }
+
+    cJSON* end_time_ptr = cJSON_GetObjectItem(json_ptr, "end_time");
+    if (end_time_ptr == NULL || cJSON_GetStringValue(end_time_ptr)[0] == '\0') {
+        msg = "user send invalid json. Miss end_time";
+        goto cleanup_and_respond;
+    }
+
+    // 관리자 권한 확인
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE uid = %d AND role = 1", uid);
+    int uid = query_result_to_int(user_setting_conn, &msg, SQL_buf);
+    if (uid < 0 || msg != NULL) {
         if (strcmp(msg, "No result") == 0) {
             msg = "Not permitted User";
         }
         goto cleanup_and_respond;
     }
 
-    // 트랜젝션 커밋
-    // mysql_rollback(chat_group_conn->conn);
-    if (mysql_autocommit(user_setting_conn->conn, 0)) {
-        msg = "transaction start fail";
-        goto cleanup_and_respond;
-    }
-    // 그룹 맴버 삭제
-    snprintf(SQL_buf, sizeof(SQL_buf), "DELETE FROM group_member WHERE gid = %d", gid);
-    query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
+    // 채팅 로그 가져오기
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uptime, downtime FROM server_log WHERE uptime %s BETWEEN %s", 
+        cJSON_GetStringValue(start_time_ptr), cJSON_GetStringValue(end_time_ptr));
+    server_log = query_result_to_json(user_setting_conn, &msg, SQL_buf, 2, "uptime", "downtime");
     if (msg != NULL) {
-        mysql_rollback(user_setting_conn->conn);
         goto cleanup_and_respond;
     }
     // 그룹 삭제
-    snprintf(SQL_buf, sizeof(SQL_buf), "DELETE FROM chat_group WHERE gid = %d", gid);
-    query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
-    if (msg != NULL) {
-        mysql_rollback(user_setting_conn->conn);
-        goto cleanup_and_respond;
-    }
-    
-    type = 15;
+
+    type = 16;
 
 cleanup_and_respond:
-    mysql_commit(user_setting_conn->conn);
     cJSON_AddNumberToObject(result_json, "type", type);
     if (msg != NULL) {
         cJSON_AddStringToObject(result_json, "msg", msg);
@@ -1385,7 +1390,7 @@ cleanup_and_respond:
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 1, user_setting_conn);
-    cJSON_del_and_free(2, json_ptr, result_json);
+    cJSON_del_and_free(3, json_ptr, result_json, server_log);
     free_all(1, response_str);
     return ;
 }
