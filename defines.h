@@ -14,3 +14,5 @@
 #define GROUP_LIST_TYPE 6
 
 #define GENERAL_ERROR 100
+
+#define LOG_FILE "server_status.log"

@@ -4,8 +4,11 @@
 #include <time.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <signal.h>
+#include <fcntl.h>
+#include <sys/file.h>
 #include <sys/wait.h>
 #include <mysql/mysql.h>
 
@@ -141,6 +144,13 @@ int get_statistic(statistic_t* server_statistic) {
         return 1;
     }
 
+    int fd = fileno(file);
+    if (flock(fd, LOCK_SH) == -1) {
+        perror("Failed to lock file");
+        fclose(file);
+        return 1;
+    }
+
     int login_user_max = 0, tps_max = 0;
     double mem_usage_max = 0.0;
     long login_user_sum = 0, tps_sum = 0;
@@ -148,6 +158,7 @@ int get_statistic(statistic_t* server_statistic) {
     int count = 0;
 
     char line[256];
+    char last_line[256] = {0};
     struct tm log_time;
     while (fgets(line, sizeof(line), file)) {
         int login_user, tps;
@@ -166,8 +177,13 @@ int get_statistic(statistic_t* server_statistic) {
         mem_usage_sum += mem_usage;
 
         count++;
+
+        // Copy current line to last_line
+        strncpy(last_line, line, sizeof(last_line) - 1);
+        last_line[sizeof(last_line) - 1] = '\0'; // Ensure null-terminated string
     }
 
+    flock(fd, LOCK_UN);
     fclose(file);
 
     if (count > 0) {
@@ -180,13 +196,25 @@ int get_statistic(statistic_t* server_statistic) {
     } else {
         printf("No data to process.\n");
     }
-
     // Clear the log file
     file = fopen(LOG_FILE, "w");
     if (!file) {
         perror("Failed to clear log file");
         return 1;
     }
+    
+    fd = fileno(file);
+    if (flock(fd, LOCK_SH) == -1) {
+        perror("Failed to lock file");
+        fclose(file);
+        return 1;
+    }
+
+    if (strlen(last_line) > 0) {
+        fprintf(file, "%s", last_line);
+    }
+
+    flock(fd, LOCK_UN);
     fclose(file);
 
     return 0;

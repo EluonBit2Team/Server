@@ -172,8 +172,8 @@ bool init_server(epoll_net_core* server_ptr) {
     server_ptr->function_array[EDIT_MEMBER_INFO_SERV_FUNC] = edit_user_info_service;
     server_ptr->function_array[PRE_CHAT_LOG_SERV_FUNC] = pre_chat_log_service;
     server_ptr->function_array[GROUP_DELETE_SERV_FUNC] = group_delete_service;
-    // server_ptr->function_array[SERVER_LOG_SERV_FUNC] = server_log_service;
-    // server_ptr->function_array[SERVER_STATUS_SERV_FUNC] = server_status_service;
+    server_ptr->function_array[SERVER_LOG_SERV_FUNC] = server_log_service;
+    server_ptr->function_array[SERVER_STATUS_SERV_FUNC] = server_status_service;
 
     // 리슨소켓 생성
     server_ptr->listen_fd = socket(PF_INET, SOCK_STREAM, 0);
