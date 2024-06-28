@@ -1363,7 +1363,7 @@ void server_log_service(epoll_net_core* server_ptr, task_t* task) {
 
     // 관리자 권한 확인
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE uid = %d AND role = 1", uid);
-    int uid = query_result_to_int(user_setting_conn, &msg, SQL_buf);
+    int rt_uid = query_result_to_int(user_setting_conn, &msg, SQL_buf);
     if (uid < 0 || msg != NULL) {
         if (strcmp(msg, "No result") == 0) {
             msg = "Not permitted User";
