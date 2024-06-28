@@ -60,7 +60,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     }
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT uid FROM user WHERE '%s' = user.login_id AND UNHEX(SHA2('%s', %d)) = user.password",
+        "SELECT uid FROM user WHERE user.login_id = '%s' AND user.passwordv = UNHEX(SHA2('%s', %d)",
         cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH);
 
     uid = query_result_to_int(user_setting_conn,&msg,SQL_buf);
