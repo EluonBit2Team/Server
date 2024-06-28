@@ -12,6 +12,7 @@ bool enqueue_task(thread_pool_t* thread_pool, int req_client_fd, ring_buf *org_b
     new_task.task_data_len = org_buf->msg_size;
 
     pthread_mutex_lock(&thread_pool->task_mutex);
+    printf("enqueue_task : %d\n", thread_pool->task_queue.type_default_size);
     enqueue(&thread_pool->task_queue, (void*)&new_task);
     pthread_cond_signal(&thread_pool->task_cond);
     pthread_mutex_unlock(&thread_pool->task_mutex);
@@ -121,7 +122,6 @@ void reserve_send(void_queue_t* vq, char* send_org, int body_size)
     // 하지만 실제 문제는 아래 malloc에서 할당한 사이즈를 넘어서 데이터를 조작해서 발생
     //  -> sizeof(char) * body_size를 할당받았지만 실제로 조작한 데이터 크기는 HEADER_SIZE + sizeof(char) * body_size여서 발생.
     temp_send_buf.buf_ptr = (char*)malloc(HEADER_SIZE + sizeof(char) * body_size);
-    printf("reserve_send-buf_ptr: %p\n", temp_send_buf.buf_ptr);
     temp_send_buf.send_data_size = total_size;
     memcpy(temp_send_buf.buf_ptr, (char*)&total_size, sizeof(total_size));
     memcpy(temp_send_buf.buf_ptr + sizeof(total_size), send_org, body_size);
@@ -352,7 +352,6 @@ int run_server(epoll_net_core* server_ptr) {
             }
             // 이벤트에 입력된 fd의 send버퍼가 비어서, send가능할시 발생하는 이벤트
             else if (server_ptr->epoll_events[i].events & EPOLLOUT) {
-                send_buf_t temp_send_buf;
                 int client_fd = server_ptr->epoll_events[i].data.fd;
                 // send버퍼가 비어있으므로, send 성공이 보장되므로 send수행
                 client_session_t* s_ptr = find_session_by_fd(&server_ptr->session_pool, client_fd);
@@ -378,10 +377,10 @@ int run_server(epoll_net_core* server_ptr) {
                     perror("send");
                     close(server_ptr->epoll_events[i].data.fd);
                 }
-                send_buf_t temp;
-                dequeue(&s_ptr->send_bufs, &temp);
-                printf("send_buf_t temp %p\n", temp.buf_ptr);
-                free_all(1, temp.buf_ptr);
+                send_buf_t temp_buf;
+                dequeue(&s_ptr->send_bufs, &temp_buf);
+                free(temp_buf.buf_ptr);
+                
                 // send할 때 이벤트를 변경(EPOLL_CTL_MOD)해서 보내는 이벤트로 바꿨으니
                 // 다시 통신을 받는 이벤트로 변경하여 유저의 입력을 대기.
                 struct epoll_event temp_event;

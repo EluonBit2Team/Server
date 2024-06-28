@@ -62,11 +62,6 @@ struct st_thread_pool {
     pthread_t worker_threads[WOKER_THREAD_NUM]; // 워커스레드들
 } typedef thread_pool_t;
 
-// typedef struct send_buf {
-//     int send_data_size;
-//     char buf[BUFF_SIZE];
-// } send_buf_t;
-
 struct st_epoll_net_core;   // 전방선언
 typedef void (*func_ptr)(struct st_epoll_net_core*, task_t*); // 서비스함수포인터 타입 지정.
 typedef struct st_epoll_net_core {

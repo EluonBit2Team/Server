@@ -74,6 +74,7 @@ void close_mariadb_pool(mariadb_conn_pool_t* pool)
     free(pool->pool);
     free(pool->pool_idx_stack);
     sem_destroy(&pool->pool_sem);
+    pthread_mutex_destroy(&pool->pool_idx_mutex);
 }
 
 conn_t* get_conn(mariadb_conn_pool_t* pool)
