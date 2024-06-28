@@ -42,6 +42,10 @@
 #define CHATTING_SERV_FUNC 12
 #define EDIT_MEMBER_INFO_SERV_FUNC 13
 
+#define GROUP_DELETE_SERV_FUNC 15
+#define SERVER_LOG_SERV_FUNC 16
+#define SERVER_STATUS_SERV_FUNC 17
+
 #define WOKER_THREAD_NUM 4
 
 // 워커스레드가 처리할 일감을 포장한 구조체
@@ -118,5 +122,8 @@ void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task);
 void group_member_service(epoll_net_core* server_ptr, task_t* task);
 void chat_in_group_service(epoll_net_core* server_ptr, task_t* task);
 void edit_user_info_service(epoll_net_core* server_ptr, task_t* task);
+void group_delete_service(epoll_net_core* server_ptr, task_t* task);
+// void server_log_service(epoll_net_core* server_ptr, task_t* task);
+// void server_status_service(epoll_net_core* server_ptr, task_t* task);
 
 #endif

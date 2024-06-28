@@ -170,6 +170,9 @@ bool init_server(epoll_net_core* server_ptr) {
     server_ptr->function_array[GROUP_MEMEMBER_SERV_FUNC] = group_member_service;
     server_ptr->function_array[CHATTING_SERV_FUNC] = chat_in_group_service;
     server_ptr->function_array[EDIT_MEMBER_INFO_SERV_FUNC] = edit_user_info_service;
+    server_ptr->function_array[GROUP_DELETE_SERV_FUNC] = group_delete_service;
+    // server_ptr->function_array[SERVER_LOG_SERV_FUNC] = server_log_service;
+    // server_ptr->function_array[SERVER_STATUS_SERV_FUNC] = server_status_service;
 
     // 리슨소켓 생성
     server_ptr->listen_fd = socket(PF_INET, SOCK_STREAM, 0);
@@ -217,7 +220,7 @@ void disconnect_client(epoll_net_core* server_ptr, int client_fd)
 
     snprintf(SQL_buf, sizeof(SQL_buf),"UPDATE client_log SET logout_time = NOW() WHERE logout_time IS NULL AND uid = %d",find(&server_ptr->fd_to_uid_hash, client_fd));
     if (mysql_query(conn->conn, SQL_buf)) {
-        fprintf(stderr, "login query fail: %s\n", mysql_error(conn->conn));
+        fprintf(stderr, "logout query fail: %s\n", mysql_error(conn->conn));
     }
     epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_DEL, client_fd, NULL);
     int uid = find(&server_ptr->fd_to_uid_hash, client_fd);

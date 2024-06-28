@@ -5,6 +5,7 @@
 #include <pthread.h>
 
 #include "mariadb_pool.h"
+#include "../defines.h"
 
 #define USER_SETTING_DB "user_setting_db"
 #define CHAT_GROUP_DB "chat_group_db"
@@ -27,6 +28,7 @@ int query_result_to_int(conn_t* conn, char** out_msg, const char* query);
 bool query_result_to_bool(conn_t* conn, char** out_msg, const char* query);
 bool query_result_to_execuete(conn_t* conn, char** out_msg, const char* query);
 cJSON* query_result_to_json(conn_t* conn, char** out_msg, const char* query, int key_num, ...);
+cJSON* query_result_get_user_json(conn_t* conn, char** out_msg, const char* query, char* pass);
 void release_conns(chatdb_t* db, int release_conn_num, ...);
 bool init_mariadb(chatdb_t* db);
 void close_mariadb(chatdb_t* db);

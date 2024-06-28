@@ -9,7 +9,8 @@
         "type": "cppdbg",
         "request": "launch",
         // 현재 workspace를 기준으로 test.out 프로그램을 실행
-        "program": "${workspaceFolder}/epoll_server.out",
+        //"program": "${workspaceFolder}/epoll_server.out",
+        "program": "${workspaceFolder}/cores/a.out",
         "args": [],
         "stopAtEntry": true,
         "cwd": "${workspaceFolder}",

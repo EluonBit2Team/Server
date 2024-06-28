@@ -21,17 +21,17 @@ int query_result_to_int(conn_t* conn, char** msg, const char* query) {
     if (mysql_query(conn->conn, query)) {
         fprintf(stderr, "query fail: %s\n", mysql_error(conn->conn));
         *msg = "DB error";
-        return false;
+        return -1;
     }
     res = mysql_store_result(conn->conn);
     if (res == NULL) {
         fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn->conn));
         *msg = "DB error";
-        return false;
+        return -1;
     }
     if ((row = mysql_fetch_row(res)) == NULL) {
-        *msg = "invalid user role";
-        return false;
+        *msg = "No result";
+        return -1;
     }
     int result = atoi(row[0]);
     mysql_free_result(res);
