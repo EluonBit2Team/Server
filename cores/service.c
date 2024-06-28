@@ -631,7 +631,6 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
         snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM signup_req WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
-            msg = "rollback";
             mysql_rollback(user_setting_conn->conn);
             goto cleanup_and_respond;
         }
@@ -670,29 +669,12 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id, password, name, phone, email FROM signup_req WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
 
-    cJSON* user_data_array = query_result_to_json(user_setting_conn, &msg, SQL_buf, 5, "login_id", "password", "name", "phone", "email");
-    if (msg != NULL) {
-        goto cleanup_and_respond;
-    }
-    cJSON* user_data_json = cJSON_GetArrayItem(user_data_array,0);
-
-    snprintf(SQL_buf, sizeof(SQL_buf), 
-             "INSERT INTO user (login_id, password, name, phone, email, did, position, role, create_date, max_tps) VALUES ('%s', '%s', '%s', '%s', '%s', %d, %d, %d, NOW(), %d)",
-             cJSON_GetStringValue(cJSON_GetObjectItem(user_data_json, "login_id")), 
-             cJSON_GetStringValue(cJSON_GetObjectItem(user_data_json, "password")), 
-             cJSON_GetStringValue(cJSON_GetObjectItem(user_data_json, "name")), 
-             cJSON_GetStringValue(cJSON_GetObjectItem(user_data_json, "phone")), 
-             cJSON_GetStringValue(cJSON_GetObjectItem(user_data_json, "email")), 
-             dept, 
-             pos, 
-             role, 
-             max_tps);
-    
+    snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO user (login_id, password, name, phone, email, did, position, role, max_tps, create_date)\
+                                        SELECT login_id, password, name, phone, email, %d, %d, %d, %d, NOW() FROM \
+                                        signup_req WHERE login_id = '%s'", dept, pos, role, max_tps, cJSON_GetStringValue(id_ptr));
     query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
-    if (msg = NULL) {
-        msg = "rollback";
+    if (msg != NULL) {
         mysql_rollback(user_setting_conn->conn);
         goto cleanup_and_respond;
     }
@@ -700,7 +682,6 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
     snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM signup_req WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
     query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
-        msg = "rollback";
         mysql_rollback(user_setting_conn->conn);
         goto cleanup_and_respond;
     }
@@ -979,8 +960,8 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    cJSON* test_ptr = cJSON_GetObjectItem(json_ptr, "text");
-    if (test_ptr == NULL || cJSON_GetStringValue(test_ptr)[0] == '\0')
+    cJSON* text_ptr = cJSON_GetObjectItem(json_ptr, "text");
+    if (text_ptr == NULL || cJSON_GetStringValue(text_ptr)[0] == '\0')
     {
         msg = "user send invalid json. Miss text";
         goto cleanup_and_respond;
@@ -1012,8 +993,8 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
     }
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "CALL insert_message(%d, %d, '%s', %d, @result)", 
-        uid, gid, cJSON_GetStringValue(test_ptr), max_tps);
+        "CALL insert_message(%d, %d, '%s', %d, '%s','%s',@result)", 
+        uid, gid, cJSON_GetStringValue(text_ptr), max_tps,cJSON_GetStringValue(login_id_ptr),cJSON_GetStringValue(groupname_ptr));
     query_result_to_execuete(log_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
@@ -1489,6 +1470,12 @@ void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
     char uid_list_str[1024] = "";
     int gid_value = 0;
 
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL) {
+        msg = "Session Error";
+        goto cleanup_and_respond;
+    }
+
     chat_group_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);  
     log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);  
 
@@ -1504,32 +1491,39 @@ void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT gid FROM chat_group WHERE groupname = %s",cJSON_GetStringValue(groupname_ptr));
-    gid_value = query_result_to_int(log_conn, &msg, SQL_buf);
+    cJSON* start_time_ptr = cJSON_GetObjectItem(json_ptr, "start_time");
+    if (start_time_ptr == NULL || cJSON_GetStringValue(start_time_ptr)[0] == '\0') {
+        msg = "user send invalid json. Miss start_time";
+        goto cleanup_and_respond;
+    }
+    cJSON* end_time_ptr = cJSON_GetObjectItem(json_ptr, "end_time");
+    if (end_time_ptr == NULL || cJSON_GetStringValue(end_time_ptr)[0] == '\0') {
+        msg = "user send invalid json. Miss end_time";
+        goto cleanup_and_respond;
+    }
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT gid FROM chat_group WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
+    gid_value = query_result_to_int(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id, text, timestamp FROM message_log WHERE gid = %d ORDER BY timestamp ASC LIMIT 30",gid_value);
-    cJSON* chat_log = query_result_to_json(log_conn, &msg, SQL_buf, 2, "login_id" ,"name");
-    if (msg != NULL) {
-        goto cleanup_and_respond;
-    }
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id, text, timestamp FROM message_log WHERE gid = %d AND timestamp BETWEEN '%s' AND '%s' ORDER BY timestamp ASC",
+    gid_value,cJSON_GetStringValue(start_time_ptr),cJSON_GetStringValue(end_time_ptr));
 
-    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
-    if (now_session == NULL) {
-        msg = "Session Error";
+    cJSON* chat_log = query_result_to_json(log_conn, &msg, SQL_buf, 3, "login_id" ,"text", "timestamp");
+    if (msg != NULL) {
         goto cleanup_and_respond;
     }
     type = 14;
 
 cleanup_and_respond:
     cJSON_AddNumberToObject(result_json, "type", type);
+    cJSON_AddStringToObject(result_json, "groupname", cJSON_GetStringValue(groupname_ptr));
     if (msg != NULL) {
         cJSON_AddStringToObject(result_json, "msg", msg);
     }
     else {
-        cJSON_AddItemToObject(result_json, "users", chat_log);
+        cJSON_AddItemToObject(result_json, "chatlog", chat_log);
     }
 
     response_str = cJSON_Print(result_json);
