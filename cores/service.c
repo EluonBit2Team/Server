@@ -634,7 +634,6 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
         snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM signup_req WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
         query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
         if (msg != NULL) {
-            msg = "rollback";
             mysql_rollback(user_setting_conn->conn);
             goto cleanup_and_respond;
         }
@@ -676,10 +675,10 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
 
     snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO user (login_id, password, name, phone, email, did, position, role, max_tps, create_date)\
                                         SELECT login_id, password, name, phone, email, %d, %d, %d, %d, NOW() FROM \
-                                        signup_req WHERE login_id = '%s';",cJSON_GetStringValue(id_ptr));
+                                        signup_req WHERE login_id = '%s';",cJSON_GetStringValue(id_ptr),cJSON_GetNumberValue(dept_ptr),
+                                        cJSON_GetNumberValue(pos_ptr),cJSON_GetNumberValue(role_ptr),cJSON_GetNumberValue(max_tps_ptr));
     query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
-    if (msg = NULL) {
-        msg = "rollback";
+    if (msg != NULL) {
         mysql_rollback(user_setting_conn->conn);
         goto cleanup_and_respond;
     }
@@ -687,7 +686,6 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
     snprintf(SQL_buf, sizeof(SQL_buf),"DELETE FROM signup_req WHERE login_id = '%s'",cJSON_GetStringValue(id_ptr));
     query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
-        msg = "rollback";
         mysql_rollback(user_setting_conn->conn);
         goto cleanup_and_respond;
     }
@@ -1252,14 +1250,14 @@ void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT gid FROM chat_group WHERE groupname = %d ",cJSON_GetStringValue(groupname_ptr));
-    gid_value = query_result_to_int(log_conn, &msg, SQL_buf);
+    gid_value = query_result_to_int(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
 
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id, text, timestamp FROM message_log WHERE gid = %d AND timestamp BETWEEN '%s' AND '%s' ORDER BY timestamp ASC",
     gid_value,cJSON_GetStringValue(start_time_ptr),cJSON_GetStringValue(end_time_ptr));
-    
+
     cJSON* chat_log = query_result_to_json(log_conn, &msg, SQL_buf, 2, "login_id" ,"name");
     if (msg != NULL) {
         goto cleanup_and_respond;
