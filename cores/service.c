@@ -1372,9 +1372,11 @@ cleanup_and_respond:
         cJSON_AddItemToObject(result_json, "server_log_list", server_log_list);
     }
     response_str = cJSON_Print(result_json);
+    printf("send server log\n");
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 2, user_setting_conn, log_conn);
-    cJSON_del_and_free(3, json_ptr, result_json, server_log_list);
+    //cJSON_del_and_free(3, json_ptr, result_json, server_log_list);
+    cJSON_del_and_free(2, json_ptr, result_json);
     free_all(1, response_str);
     return ;
 }
