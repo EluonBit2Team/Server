@@ -1242,7 +1242,7 @@ void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT gid FROM groupname WHERE gid = %d ",cJSON_GetStringValue(groupname_ptr));
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT gid FROM chat_group WHERE groupname = %d ",cJSON_GetStringValue(groupname_ptr));
     gid_value = query_result_to_int(log_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
