@@ -11,13 +11,13 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <string.h>
 #include <pthread.h>
 #include <stdbool.h>
-#include <string.h>
 #include <time.h>
 #include <stdarg.h>
+#include <sys/file.h>
+#include <sys/wait.h>
 #include "cJSON/cJSON.h"
 
 #endif

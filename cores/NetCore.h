@@ -8,10 +8,12 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
+
+#include <sys/file.h>
+#include <sys/wait.h>
 
 #include "../utilities/ring_buffer.h"
 #include "../utilities/void_queue.h"
@@ -124,8 +126,8 @@ void group_member_service(epoll_net_core* server_ptr, task_t* task);
 void chat_in_group_service(epoll_net_core* server_ptr, task_t* task);
 void edit_user_info_service(epoll_net_core* server_ptr, task_t* task);
 void group_delete_service(epoll_net_core* server_ptr, task_t* task);
-// void server_log_service(epoll_net_core* server_ptr, task_t* task);
-// void server_status_service(epoll_net_core* server_ptr, task_t* task);
+void server_log_service(epoll_net_core* server_ptr, task_t* task);
+void server_status_service(epoll_net_core* server_ptr, task_t* task);
 void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task);
 
 #endif

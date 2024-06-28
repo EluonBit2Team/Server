@@ -306,7 +306,7 @@ void user_list_service(epoll_net_core* server_ptr, task_t* task) {
     }
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT u.login_id, u.name, jp.position_name, d.dept_name FROM user u LEFT JOIN dept d ON u.did = d.did LEFT JOIN job_position jp ON jp.pid = u.position LIMIT 5");
+        "SELECT u.login_id, u.name, jp.position_name, d.dept_name FROM user u LEFT JOIN dept d ON u.did = d.did LEFT JOIN job_position jp ON jp.pid = u.position");
 
     cJSON* user_list = query_result_to_json(user_setting_conn,&msg,SQL_buf,4,"login_id","name","position_name","dept_name");
     if (msg != NULL) {
@@ -1211,6 +1211,7 @@ cleanup_and_respond:
 }
 
 void group_delete_service(epoll_net_core* server_ptr, task_t* task) {
+    printf("group_delete_service\n");
     int type = 100;
     char* msg = NULL;
     cJSON* json_ptr = NULL;
@@ -1219,6 +1220,12 @@ void group_delete_service(epoll_net_core* server_ptr, task_t* task) {
     conn_t* chat_group_conn = NULL;
     char* response_str = NULL;
     char SQL_buf[1024];
+
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL) {
+        msg = "Session Error";
+        goto cleanup_and_respond;
+    }
 
     chat_group_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]); 
     json_ptr = get_parsed_json(task->buf);
@@ -1294,15 +1301,23 @@ cleanup_and_respond:
 }
 
 void server_log_service(epoll_net_core* server_ptr, task_t* task) {
+    printf("server_log_service\n");
     int type = 100;
     char* msg = NULL;
     cJSON* json_ptr = NULL;
     cJSON* result_json = cJSON_CreateObject();
+    cJSON* server_log_list = NULL;
     client_session_t* now_session = NULL;
     conn_t* user_setting_conn = NULL;
     conn_t* log_conn = NULL;
     char* response_str = NULL;
     char SQL_buf[1024];
+
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL) {
+        msg = "Session Error";
+        goto cleanup_and_respond;
+    }
 
     log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
     user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
@@ -1311,11 +1326,6 @@ void server_log_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json";
         goto cleanup_and_respond;
     }
-    /*
-    {
-        "type": 16
-    }
-    */
 
     int uid = find(&server_ptr->fd_to_uid_hash, task->req_client_fd);
     if (uid < 0) {
@@ -1323,56 +1333,128 @@ void server_log_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    // 채팅 관리자 권한 확인
-    snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT uid FROM user WHERE uid = %d", uid);
-    int gid = query_result_to_int(user_setting_conn, &msg, SQL_buf);
-    if (gid < 0 || msg != NULL) {
+    cJSON* start_time_ptr = cJSON_GetObjectItem(json_ptr, "start_time");
+    if (start_time_ptr == NULL || cJSON_GetStringValue(start_time_ptr)[0] == '\0') {
+        msg = "user send invalid json. Miss start_time";
+        goto cleanup_and_respond;
+    }
+
+    cJSON* end_time_ptr = cJSON_GetObjectItem(json_ptr, "end_time");
+    if (end_time_ptr == NULL || cJSON_GetStringValue(end_time_ptr)[0] == '\0') {
+        msg = "user send invalid json. Miss end_time";
+        goto cleanup_and_respond;
+    }
+
+    // 관리자 권한 확인
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE uid = %d AND role = 1", uid);
+    int rt_uid = query_result_to_int(user_setting_conn, &msg, SQL_buf);
+    if (uid < 0 || msg != NULL) {
         if (strcmp(msg, "No result") == 0) {
             msg = "Not permitted User";
         }
         goto cleanup_and_respond;
     }
 
-    // 트랜젝션 커밋
-    // mysql_rollback(chat_group_conn->conn);
-    if (mysql_autocommit(user_setting_conn->conn, 0)) {
-        msg = "transaction start fail";
-        goto cleanup_and_respond;
-    }
-    // 그룹 맴버 삭제
-    snprintf(SQL_buf, sizeof(SQL_buf), "DELETE FROM group_member WHERE gid = %d", gid);
-    query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
+    // 채팅 로그 가져오기
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uptime, downtime FROM server_log WHERE uptime BETWEEN '%s' AND '%s'", 
+        cJSON_GetStringValue(start_time_ptr), cJSON_GetStringValue(end_time_ptr));
+    server_log_list = query_result_to_json(log_conn, &msg, SQL_buf, 2, "uptime", "downtime");
     if (msg != NULL) {
-        mysql_rollback(user_setting_conn->conn);
         goto cleanup_and_respond;
     }
-    // 그룹 삭제
-    snprintf(SQL_buf, sizeof(SQL_buf), "DELETE FROM chat_group WHERE gid = %d", gid);
-    query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
-    if (msg != NULL) {
-        mysql_rollback(user_setting_conn->conn);
-        goto cleanup_and_respond;
-    }
-    
-    type = 15;
+
+    type = 16;
 
 cleanup_and_respond:
-    mysql_commit(user_setting_conn->conn);
     cJSON_AddNumberToObject(result_json, "type", type);
     if (msg != NULL) {
         cJSON_AddStringToObject(result_json, "msg", msg);
     }
+    else {
+        cJSON_AddItemToObject(result_json, "server_log_list", server_log_list);
+    }
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
-    release_conns(&server_ptr->db, 1, user_setting_conn);
+    release_conns(&server_ptr->db, 2, user_setting_conn, log_conn);
     cJSON_del_and_free(2, json_ptr, result_json);
     free_all(1, response_str);
     return ;
 }
 
-// void server_status_service(epoll_net_core* server_ptr, task_t* task) {
-// }
+void server_status_service(epoll_net_core* server_ptr, task_t* task) {
+    printf("server_status_service\n");
+    int type = 100;
+    FILE* log_file = NULL;
+    int log_file_fd = -1;
+    char* msg = NULL;
+    char *response_str = NULL;
+    cJSON* result_json = cJSON_CreateObject();
+    client_session_t* now_session = NULL;
+
+    int login_user_cnt;
+    int tps;
+    double mem_usage;
+    char line[40] = {0};
+    char last_line[40] = {0};
+
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL) {
+        msg = "Session Error";
+        goto cleanup_and_respond;
+    }
+
+    log_file = fopen(LOG_FILE, "r");
+    if (!log_file) {
+        perror("Failed to open log file");
+        msg = "server log error1";
+        goto cleanup_and_respond;
+    }
+    log_file_fd = fileno(log_file);
+    if (flock(log_file_fd, LOCK_EX) == -1) {
+        perror("Failed to lock file");
+        msg = "server log error2";
+        goto cleanup_and_respond;
+    }
+
+    while (fgets(line, sizeof(line), log_file)) {
+        strncpy(last_line, line, sizeof(last_line) - 1);
+        last_line[sizeof(last_line) - 1] = '\0'; // Ensure null-terminated string
+    }
+
+    type = 17;
+
+cleanup_and_respond:
+    if (log_file_fd >= 0) {
+        flock(log_file_fd, LOCK_UN);
+    }
+    if (log_file != NULL) {
+        fclose(log_file);
+    }
+
+    cJSON_AddNumberToObject(result_json, "type", type);
+    if (msg != NULL) {
+        cJSON_AddStringToObject(result_json, "msg", msg);
+    }
+    else {
+        if (last_line[0] != '\0') {
+            struct tm log_time;
+            sscanf(last_line, "[%d-%d-%d %d:%d:%d] %d %d %lf%%", 
+                &log_time.tm_year, &log_time.tm_mon, &log_time.tm_mday,
+                &log_time.tm_hour, &log_time.tm_min, &log_time.tm_sec,
+                &login_user_cnt, &tps, &mem_usage);
+            cJSON_AddNumberToObject(result_json, "mem", login_user_cnt);
+            cJSON_AddNumberToObject(result_json, "login_user_cnt", login_user_cnt);
+            cJSON_AddNumberToObject(result_json, "tps", tps);
+        }
+    }
+
+    response_str = cJSON_Print(result_json);
+    reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
+    cJSON_del_and_free(1, result_json);
+    free_all(1, response_str);
+
+    return ;
+}
 
 void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
     printf("pre_chat_log_service\n");

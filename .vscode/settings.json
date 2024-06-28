@@ -23,6 +23,8 @@
         "types.h": "c",
         "unistd.h": "c",
         "includes.h": "c",
-        "session.h": "c"
+        "session.h": "c",
+        "cjson.h": "c",
+        "wait.h": "c"
     }
 }
