@@ -41,6 +41,7 @@
 #define GROUP_MEMEMBER_SERV_FUNC 11
 #define CHATTING_SERV_FUNC 12
 #define EDIT_MEMBER_INFO_SERV_FUNC 13
+#define PRE_CHAT_LOG_SERV_FUNC 14
 
 #define GROUP_DELETE_SERV_FUNC 15
 #define SERVER_LOG_SERV_FUNC 16
@@ -125,5 +126,6 @@ void edit_user_info_service(epoll_net_core* server_ptr, task_t* task);
 void group_delete_service(epoll_net_core* server_ptr, task_t* task);
 // void server_log_service(epoll_net_core* server_ptr, task_t* task);
 // void server_status_service(epoll_net_core* server_ptr, task_t* task);
+void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task);
 
 #endif
