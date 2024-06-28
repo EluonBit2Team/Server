@@ -85,8 +85,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     type = 2;
     
     // 로그인 성공시 DB에 로그 저장
-    snprintf(SQL_buf, sizeof(SQL_buf), 
-        "INSERT INTO client_log (uid, login_time) VALUES (%d, NOW())", uid);
+    snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO client_log (uid, login_time) VALUES (%d, NOW())", uid);
     if (mysql_query(log_conn->conn, SQL_buf)) {
         fprintf(stderr, "SELECT failed: %s\n", mysql_error(user_setting_conn->conn));
         msg = "DB error";
@@ -105,10 +104,8 @@ cleanup_and_respond:
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 2, user_setting_conn, log_conn);
-    printf("release conn done\n");
     cJSON_del_and_free(2, result_json, json_ptr);
     free_all(1, response_str);
-    printf("login done\n");
     return ;
 }
 
@@ -478,7 +475,6 @@ void edit_member_service(epoll_net_core* server_ptr, task_t* task) {
         }
     }
 
-    mysql_commit(user_setting_conn->conn);
     type = 7;
 
 cleanup_and_respond:
@@ -486,6 +482,7 @@ cleanup_and_respond:
     if (msg != NULL) {
         cJSON_AddStringToObject(result_json, "msg", msg);
     }
+    mysql_commit(user_setting_conn->conn);
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 2, user_setting_conn, chat_group_conn);
@@ -927,12 +924,12 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
     printf("chat_in_group_service\n");
     int type = 100;
     char* msg = NULL;
-    char *response_str = NULL;
     cJSON* result_json = cJSON_CreateObject();
     client_session_t* now_session = NULL;
     conn_t* user_setting_conn = NULL;
     conn_t* chat_group_conn = NULL;
     conn_t* log_conn = NULL;
+    char* response_str = NULL;
     int* recieve_fd_array = NULL;
     char SQL_buf[1024];
 
@@ -1043,6 +1040,7 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
             continue;
         }
         // 그대로 echo때려버리면 될듯.
+        write(STDOUT_FILENO, "true:", 5); write(STDOUT_FILENO, task->buf + HEADER_SIZE, task->task_data_len - HEADER_SIZE); write(STDOUT_FILENO, "\n", 1);
         reserve_epoll_send(server_ptr->epoll_fd, session, task->buf + HEADER_SIZE, task->task_data_len - HEADER_SIZE);
     }
 
@@ -1055,7 +1053,8 @@ cleanup_and_respond:
         reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     }
     release_conns(&server_ptr->db, 3, log_conn, chat_group_conn, user_setting_conn);
-    cJSON_del_and_free(2, result_json, json_ptr);
+    cJSON_Delete(json_ptr);
+    cJSON_Delete(result_json);
     free(recieve_fd_array);
     return ;
 }
@@ -1211,6 +1210,170 @@ cleanup_and_respond:
     return ;
 }
 
+void group_delete_service(epoll_net_core* server_ptr, task_t* task) {
+    int type = 100;
+    char* msg = NULL;
+    cJSON* json_ptr = NULL;
+    cJSON* result_json = cJSON_CreateObject();
+    client_session_t* now_session = NULL;
+    conn_t* chat_group_conn = NULL;
+    char* response_str = NULL;
+    char SQL_buf[1024];
+
+    chat_group_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]); 
+    json_ptr = get_parsed_json(task->buf);
+    if (json_ptr == NULL) {
+        msg = "user send invalid json";
+        goto cleanup_and_respond;
+    }
+    /*
+    {
+        "type": 15,
+        "groupname": "그룹이름" 
+    }
+    */
+    cJSON* groupname_ptr = cJSON_GetObjectItem(json_ptr, "groupname");
+    if (groupname_ptr == NULL || cJSON_GetStringValue(groupname_ptr)[0] == '\0') {
+        msg = "user send invalid json. Miss group_name";
+        goto cleanup_and_respond;
+    }
+
+    // 채팅 그룹 마스터 권한 확인
+    int uid = find(&server_ptr->fd_to_uid_hash, task->req_client_fd);
+    if (uid < 0) {
+        msg = "Invalid user";
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf), 
+        "SELECT gm.gid FROM group_member AS gm LEFT JOIN chat_group AS cg ON cg.gid = gm.gid \
+        WHERE cg.groupname = '%s' AND gm.uid = %d AND gm.is_host = 1", cJSON_GetStringValue(groupname_ptr), uid);
+    int gid = query_result_to_int(chat_group_conn, &msg, SQL_buf);
+    if (gid < 0 || msg != NULL) {
+        if (strcmp(msg, "No result") == 0) {
+            msg = "Not permitted User";
+        }
+        goto cleanup_and_respond;
+    }
+
+    // 트랜젝션 커밋
+    // mysql_rollback(chat_group_conn->conn);
+    if (mysql_autocommit(chat_group_conn->conn, 0)) {
+        msg = "transaction start fail";
+        goto cleanup_and_respond;
+    }
+    // 그룹 맴버 삭제
+    snprintf(SQL_buf, sizeof(SQL_buf), "DELETE FROM group_member WHERE gid = %d", gid);
+    query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        mysql_rollback(chat_group_conn->conn);
+        goto cleanup_and_respond;
+    }
+    // 그룹 삭제
+    snprintf(SQL_buf, sizeof(SQL_buf), "DELETE FROM chat_group WHERE gid = %d", gid);
+    query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        mysql_rollback(chat_group_conn->conn);
+        goto cleanup_and_respond;
+    }
+    
+    type = 15;
+
+cleanup_and_respond:
+    mysql_commit(chat_group_conn->conn);
+    cJSON_AddNumberToObject(result_json, "type", type);
+    if (msg != NULL) {
+        cJSON_AddStringToObject(result_json, "msg", msg);
+    }
+    response_str = cJSON_Print(result_json);
+    reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
+    release_conns(&server_ptr->db, 1, chat_group_conn);
+    cJSON_del_and_free(2, json_ptr, result_json);
+    free_all(1, response_str);
+    return ;
+}
+
+void server_log_service(epoll_net_core* server_ptr, task_t* task) {
+    int type = 100;
+    char* msg = NULL;
+    cJSON* json_ptr = NULL;
+    cJSON* result_json = cJSON_CreateObject();
+    client_session_t* now_session = NULL;
+    conn_t* user_setting_conn = NULL;
+    conn_t* log_conn = NULL;
+    char* response_str = NULL;
+    char SQL_buf[1024];
+
+    log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
+    user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
+    json_ptr = get_parsed_json(task->buf);
+    if (json_ptr == NULL) {
+        msg = "user send invalid json";
+        goto cleanup_and_respond;
+    }
+    /*
+    {
+        "type": 16
+    }
+    */
+
+    int uid = find(&server_ptr->fd_to_uid_hash, task->req_client_fd);
+    if (uid < 0) {
+        msg = "Invalid user";
+        goto cleanup_and_respond;
+    }
+
+    // 채팅 관리자 권한 확인
+    snprintf(SQL_buf, sizeof(SQL_buf), 
+        "SELECT uid FROM user WHERE uid = %d", uid);
+    int gid = query_result_to_int(user_setting_conn, &msg, SQL_buf);
+    if (gid < 0 || msg != NULL) {
+        if (strcmp(msg, "No result") == 0) {
+            msg = "Not permitted User";
+        }
+        goto cleanup_and_respond;
+    }
+
+    // 트랜젝션 커밋
+    // mysql_rollback(chat_group_conn->conn);
+    if (mysql_autocommit(user_setting_conn->conn, 0)) {
+        msg = "transaction start fail";
+        goto cleanup_and_respond;
+    }
+    // 그룹 맴버 삭제
+    snprintf(SQL_buf, sizeof(SQL_buf), "DELETE FROM group_member WHERE gid = %d", gid);
+    query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        mysql_rollback(user_setting_conn->conn);
+        goto cleanup_and_respond;
+    }
+    // 그룹 삭제
+    snprintf(SQL_buf, sizeof(SQL_buf), "DELETE FROM chat_group WHERE gid = %d", gid);
+    query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
+    if (msg != NULL) {
+        mysql_rollback(user_setting_conn->conn);
+        goto cleanup_and_respond;
+    }
+    
+    type = 15;
+
+cleanup_and_respond:
+    mysql_commit(user_setting_conn->conn);
+    cJSON_AddNumberToObject(result_json, "type", type);
+    if (msg != NULL) {
+        cJSON_AddStringToObject(result_json, "msg", msg);
+    }
+    response_str = cJSON_Print(result_json);
+    reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
+    release_conns(&server_ptr->db, 1, user_setting_conn);
+    cJSON_del_and_free(2, json_ptr, result_json);
+    free_all(1, response_str);
+    return ;
+}
+
+// void server_status_service(epoll_net_core* server_ptr, task_t* task) {
+// }
+
 void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
     printf("pre_chat_log_service\n");
     int type = 100;
@@ -1244,6 +1407,7 @@ void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss groupname";
         goto cleanup_and_respond;
     }
+
     cJSON* start_time_ptr = cJSON_GetObjectItem(json_ptr, "start_time");
     if (start_time_ptr == NULL || cJSON_GetStringValue(start_time_ptr)[0] == '\0') {
         msg = "user send invalid json. Miss start_time";

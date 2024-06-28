@@ -18,8 +18,7 @@ void reset_queue(void_queue_t* queue) {
 }
 
 int enqueue(void_queue_t* queue, const void* data_org) {
-    node_t* new_node = NULL;
-    new_node = malloc(sizeof(node_t) * 1);
+    node_t* new_node = (node_t*)malloc(sizeof(node_t));
     new_node->data = malloc(queue->type_default_size);
     if (new_node->data == NULL) {
         // TODO: error 로깅 및 처리

@@ -123,8 +123,8 @@ void reserve_send(void_queue_t* vq, char* send_org, int body_size)
     //  -> sizeof(char) * body_size를 할당받았지만 실제로 조작한 데이터 크기는 HEADER_SIZE + sizeof(char) * body_size여서 발생.
     temp_send_buf.buf_ptr = (char*)malloc(HEADER_SIZE + sizeof(char) * body_size);
     temp_send_buf.send_data_size = total_size;
-    memcpy(temp_send_buf.buf_ptr, (char*)&total_size, sizeof(total_size));
-    memcpy(temp_send_buf.buf_ptr + sizeof(total_size), send_org, body_size);
+    memcpy(temp_send_buf.buf_ptr, (char*)&total_size, HEADER_SIZE);
+    memcpy(temp_send_buf.buf_ptr + HEADER_SIZE, send_org, body_size);
     enqueue(vq, (void*)&temp_send_buf);
 }
 
@@ -171,6 +171,9 @@ bool init_server(epoll_net_core* server_ptr) {
     server_ptr->function_array[CHATTING_SERV_FUNC] = chat_in_group_service;
     server_ptr->function_array[EDIT_MEMBER_INFO_SERV_FUNC] = edit_user_info_service;
     server_ptr->function_array[PRE_CHAT_LOG_SERV_FUNC] = pre_chat_log_service;
+    server_ptr->function_array[GROUP_DELETE_SERV_FUNC] = group_delete_service;
+    // server_ptr->function_array[SERVER_LOG_SERV_FUNC] = server_log_service;
+    // server_ptr->function_array[SERVER_STATUS_SERV_FUNC] = server_status_service;
 
     // 리슨소켓 생성
     server_ptr->listen_fd = socket(PF_INET, SOCK_STREAM, 0);
@@ -218,7 +221,7 @@ void disconnect_client(epoll_net_core* server_ptr, int client_fd)
 
     snprintf(SQL_buf, sizeof(SQL_buf),"UPDATE client_log SET logout_time = NOW() WHERE logout_time IS NULL AND uid = %d",find(&server_ptr->fd_to_uid_hash, client_fd));
     if (mysql_query(conn->conn, SQL_buf)) {
-        fprintf(stderr, "login query fail: %s\n", mysql_error(conn->conn));
+        fprintf(stderr, "logout query fail: %s\n", mysql_error(conn->conn));
     }
     epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_DEL, client_fd, NULL);
     int uid = find(&server_ptr->fd_to_uid_hash, client_fd);
@@ -377,10 +380,9 @@ int run_server(epoll_net_core* server_ptr) {
                     perror("send");
                     close(server_ptr->epoll_events[i].data.fd);
                 }
-                send_buf_t temp_buf;
-                dequeue(&s_ptr->send_bufs, &temp_buf);
-                free(temp_buf.buf_ptr);
-                
+                send_buf_t temp;
+                dequeue(&s_ptr->send_bufs, &temp);
+                free_all(1, temp.buf_ptr);
                 // send할 때 이벤트를 변경(EPOLL_CTL_MOD)해서 보내는 이벤트로 바꿨으니
                 // 다시 통신을 받는 이벤트로 변경하여 유저의 입력을 대기.
                 struct epoll_event temp_event;
