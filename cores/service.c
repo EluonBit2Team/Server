@@ -675,7 +675,7 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
 
     snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO user (login_id, password, name, phone, email, did, position, role, max_tps, create_date)\
                                         SELECT login_id, password, name, phone, email, %d, %d, %d, %d, NOW() FROM \
-                                        signup_req WHERE login_id = '%s';",cJSON_GetStringValue(id_ptr),dept,pos,role,max_tps);
+                                        signup_req WHERE login_id = '%s';",dept,pos,role,max_tps,cJSON_GetStringValue(id_ptr));
     query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
         mysql_rollback(user_setting_conn->conn);
