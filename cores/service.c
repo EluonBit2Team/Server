@@ -1324,11 +1324,6 @@ void server_log_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json";
         goto cleanup_and_respond;
     }
-    /*
-    {
-        "type": 16
-    }
-    */
 
     int uid = find(&server_ptr->fd_to_uid_hash, task->req_client_fd);
     if (uid < 0) {
@@ -1423,6 +1418,8 @@ void server_status_service(epoll_net_core* server_ptr, task_t* task) {
         strncpy(last_line, line, sizeof(last_line) - 1);
         last_line[sizeof(last_line) - 1] = '\0'; // Ensure null-terminated string
     }
+
+    type = 17;
 
 cleanup_and_respond:
     if (log_file_fd >= 0) {
