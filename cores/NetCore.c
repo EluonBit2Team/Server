@@ -112,10 +112,6 @@ void reserve_epoll_send(int epoll_fd, client_session_t* send_session, char* send
 void reserve_send(void_queue_t* vq, char* send_org, int body_size)
 {
     int total_size = HEADER_SIZE + body_size;
-    if (total_size > BUFF_SIZE)
-    {
-        return ;
-    }
     send_buf_t temp_send_buf;
     // send_size는 int여야함.
     // malloc(): corrupted top size -> enqueue내부 malloc에서 발생.
