@@ -925,139 +925,140 @@ cleanup_and_respond:
 
 void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
     printf("chat_in_group_service\n");
-    int type = 100;
-    char* msg = NULL;
-    char *response_str = NULL;
-    cJSON* result_json = cJSON_CreateObject();
-    client_session_t* now_session = NULL;
-    conn_t* user_setting_conn = NULL;
-    conn_t* chat_group_conn = NULL;
-    conn_t* log_conn = NULL;
-    int* recieve_fd_array = NULL;
-    char SQL_buf[1024];
+//     int type = 100;
+//     char* msg = NULL;
+//     char *response_str = NULL;
+//     cJSON* result_json = cJSON_CreateObject();
+//     client_session_t* now_session = NULL;
+//     conn_t* user_setting_conn = NULL;
+//     conn_t* chat_group_conn = NULL;
+//     conn_t* log_conn = NULL;
+//     int* recieve_fd_array = NULL;
+//     char SQL_buf[1024];
 
-    cJSON* json_ptr = get_parsed_json(task->buf);
-    if (json_ptr == NULL)
-    {
-        msg = "user send invalid json";
-        goto cleanup_and_respond;
-    }
-    // 유저 로그인 확인
-    int uid = find(&server_ptr->fd_to_uid_hash, task->req_client_fd);
-    if (uid < 0) {
-        msg = "Invalid user";
-        goto cleanup_and_respond;
-    }
+//     cJSON* json_ptr = get_parsed_json(task->buf);
+//     if (json_ptr == NULL)
+//     {
+//         msg = "user send invalid json";
+//         goto cleanup_and_respond;
+//     }
+//     // 유저 로그인 확인
+//     int uid = find(&server_ptr->fd_to_uid_hash, task->req_client_fd);
+//     if (uid < 0) {
+//         msg = "Invalid user";
+//         goto cleanup_and_respond;
+//     }
 
-    cJSON* groupname_ptr = cJSON_GetObjectItem(json_ptr, "groupname");
-    if (groupname_ptr == NULL || cJSON_GetStringValue(groupname_ptr)[0] == '\0')
-    {
-        msg = "user send invalid json. Miss groupname";
-        goto cleanup_and_respond;
-    }
+//     cJSON* groupname_ptr = cJSON_GetObjectItem(json_ptr, "groupname");
+//     if (groupname_ptr == NULL || cJSON_GetStringValue(groupname_ptr)[0] == '\0')
+//     {
+//         msg = "user send invalid json. Miss groupname";
+//         goto cleanup_and_respond;
+//     }
 
-    cJSON* login_id_ptr = cJSON_GetObjectItem(json_ptr, "login_id");
-    if (login_id_ptr == NULL || cJSON_GetStringValue(login_id_ptr)[0] == '\0')
-    {
-        msg = "user send invalid json. Miss login_id";
-        goto cleanup_and_respond;
-    }
+//     cJSON* login_id_ptr = cJSON_GetObjectItem(json_ptr, "login_id");
+//     if (login_id_ptr == NULL || cJSON_GetStringValue(login_id_ptr)[0] == '\0')
+//     {
+//         msg = "user send invalid json. Miss login_id";
+//         goto cleanup_and_respond;
+//     }
 
-    cJSON* text_ptr = cJSON_GetObjectItem(json_ptr, "text");
-    if (text_ptr == NULL || cJSON_GetStringValue(text_ptr)[0] == '\0')
-    {
-        msg = "user send invalid json. Miss text";
-        goto cleanup_and_respond;
-    }
+//     cJSON* text_ptr = cJSON_GetObjectItem(json_ptr, "text");
+//     if (text_ptr == NULL || cJSON_GetStringValue(text_ptr)[0] == '\0')
+//     {
+//         msg = "user send invalid json. Miss text";
+//         goto cleanup_and_respond;
+//     }
 
-    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
-    if (now_session == NULL) {
-        msg = "Session Error";
-        goto cleanup_and_respond;
-    }
+//     now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+//     if (now_session == NULL) {
+//         msg = "Session Error";
+//         goto cleanup_and_respond;
+//     }
 
-    user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
-    chat_group_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
-    log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
-    // 해당 유저가 해당 그룹인지 확인 -> gid를 가져옴
-    snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT gm.gid FROM group_member AS gm LEFT JOIN chat_group AS cg ON cg.gid = gm.gid \
-        WHERE cg.groupname = '%s' AND gm.uid = %d", cJSON_GetStringValue(groupname_ptr), uid);
-    int gid = query_result_to_int(chat_group_conn, &msg, SQL_buf);
-    if (msg != NULL) {
-        goto cleanup_and_respond;
-    }
+//     user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
+//     chat_group_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
+//     log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
+//     // 해당 유저가 해당 그룹인지 확인 -> gid를 가져옴
+//     snprintf(SQL_buf, sizeof(SQL_buf), 
+//         "SELECT gm.gid FROM group_member AS gm LEFT JOIN chat_group AS cg ON cg.gid = gm.gid \
+//         WHERE cg.groupname = '%s' AND gm.uid = %d", cJSON_GetStringValue(groupname_ptr), uid);
+//     int gid = query_result_to_int(chat_group_conn, &msg, SQL_buf);
+//     if (msg != NULL) {
+//         goto cleanup_and_respond;
+//     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT user.max_tps FROM user WHERE user.uid = %d", uid);
-    int max_tps = query_result_to_int(user_setting_conn, &msg, SQL_buf);
-    if (msg != NULL) {
-        goto cleanup_and_respond;
-    }
+//     snprintf(SQL_buf, sizeof(SQL_buf), 
+//         "SELECT user.max_tps FROM user WHERE user.uid = %d", uid);
+//     int max_tps = query_result_to_int(user_setting_conn, &msg, SQL_buf);
+//     if (msg != NULL) {
+//         goto cleanup_and_respond;
+//     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), 
-        "CALL insert_message(%d, %d, '%s', %d, '%s','%s',@result)", 
-        uid, gid, cJSON_GetStringValue(text_ptr), max_tps,cJSON_GetStringValue(login_id_ptr),cJSON_GetStringValue(groupname_ptr));
-    query_result_to_execuete(log_conn, &msg, SQL_buf);
-    if (msg != NULL) {
-        goto cleanup_and_respond;
-    }
+//     snprintf(SQL_buf, sizeof(SQL_buf), 
+//         "CALL insert_message(%d, %d, '%s', %d, '%s','%s',@result)", 
+//         uid, gid, cJSON_GetStringValue(text_ptr), max_tps,cJSON_GetStringValue(login_id_ptr),cJSON_GetStringValue(groupname_ptr));
+//     query_result_to_execuete(log_conn, &msg, SQL_buf);
+//     if (msg != NULL) {
+//         goto cleanup_and_respond;
+//     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT @result");
-    int tps_query_result = query_result_to_int(log_conn, &msg, SQL_buf);
-    if (msg != NULL) {
-        goto cleanup_and_respond;
-    }
-    if (tps_query_result == 0) {
-        type = 101;
-        msg = "Too Much Message in Minute";
-        goto cleanup_and_respond;
-    }
+//     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT @result");
+//     int tps_query_result = query_result_to_int(log_conn, &msg, SQL_buf);
+//     if (msg != NULL) {
+//         goto cleanup_and_respond;
+//     }
+//     if (tps_query_result == 0) {
+//         type = 101;
+//         msg = "Too Much Message in Minute";
+//         goto cleanup_and_respond;
+//     }
     
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM group_member AS gm WHERE gm.gid = %d", gid);
-    cJSON* uid_list = query_result_to_json(chat_group_conn, &msg, SQL_buf, 1, "uid");
-    int uid_count = cJSON_GetArraySize(uid_list);
-    recieve_fd_array = (int*)malloc(sizeof(int) * uid_count);
-    // TODO: uid_list_str 동적 할당. 및 버퍼 크기 오버 예외 처리.
-    for (int i = 0; i < uid_count; i++) {
-        cJSON* item = cJSON_GetArrayItem(uid_list, i);
-        cJSON* uid_value = cJSON_GetObjectItemCaseSensitive(item, "uid");
-        if (cJSON_IsString(uid_value) && (uid_value->valuestring != NULL)) {
-            int uid = atoi(uid_value->valuestring);
-            if (uid == 0 && uid_value->valuestring[0] != '0') {
-                msg = "invalid uid";
-                goto cleanup_and_respond;
-            }
-            recieve_fd_array[i] = find(&server_ptr->uid_to_fd_hash, uid);
-        }
-    }
+//     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM group_member AS gm WHERE gm.gid = %d", gid);
+//     cJSON* uid_list = query_result_to_json(chat_group_conn, &msg, SQL_buf, 1, "uid");
+//     int uid_count = cJSON_GetArraySize(uid_list);
+//     recieve_fd_array = (int*)malloc(sizeof(int) * uid_count);
+//     // TODO: uid_list_str 동적 할당. 및 버퍼 크기 오버 예외 처리.
+//     for (int i = 0; i < uid_count; i++) {
+//         cJSON* item = cJSON_GetArrayItem(uid_list, i);
+//         cJSON* uid_value = cJSON_GetObjectItemCaseSensitive(item, "uid");
+//         if (cJSON_IsString(uid_value) && (uid_value->valuestring != NULL)) {
+//             int uid = atoi(uid_value->valuestring);
+//             if (uid == 0 && uid_value->valuestring[0] != '0') {
+//                 msg = "invalid uid";
+//                 goto cleanup_and_respond;
+//             }
+//             recieve_fd_array[i] = find(&server_ptr->uid_to_fd_hash, uid);
+//         }
+//     }
 
-    for (int i = 0; i < uid_count; i++) {
-        printf("%d \n", recieve_fd_array[i]); write(STDOUT_FILENO, task->buf, task->task_data_len); write(STDOUT_FILENO, "\n", 1);
-        if (recieve_fd_array[i] < 0) {
-            continue;
-        }
-        client_session_t* session = find_session_by_fd(&server_ptr->session_pool, recieve_fd_array[i]);
-        if (session == NULL) {
-            printf("%d fd Not have session!!\n", recieve_fd_array[i]);
-            continue;
-        }
-        // 그대로 echo때려버리면 될듯.
-        reserve_epoll_send(server_ptr->epoll_fd, session, task->buf + HEADER_SIZE, task->task_data_len - HEADER_SIZE);
-    }
+//     for (int i = 0; i < uid_count; i++) {
+//         printf("%d \n", recieve_fd_array[i]); write(STDOUT_FILENO, task->buf, task->task_data_len); write(STDOUT_FILENO, "\n", 1);
+//         if (recieve_fd_array[i] < 0) {
+//             continue;
+//         }
+//         client_session_t* session = find_session_by_fd(&server_ptr->session_pool, recieve_fd_array[i]);
+//         if (session == NULL) {
+//             printf("%d fd Not have session!!\n", recieve_fd_array[i]);
+//             continue;
+//         }
+//         // 그대로 echo때려버리면 될듯.
+//         reserve_epoll_send(server_ptr->epoll_fd, session, task->buf + HEADER_SIZE, task->task_data_len - HEADER_SIZE);
+//     }
 
 
-cleanup_and_respond:
-    if (msg != NULL) {
-        cJSON_AddNumberToObject(result_json, "type", type);
-        cJSON_AddStringToObject(result_json, "msg", msg);
-        response_str = cJSON_Print(result_json);
-        reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
-    }
-    release_conns(&server_ptr->db, 3, log_conn, chat_group_conn, user_setting_conn);
-    cJSON_del_and_free(2, result_json, json_ptr);
-    free(recieve_fd_array);
-    return ;
+// cleanup_and_respond:
+//     if (msg != NULL) {
+//         cJSON_AddNumberToObject(result_json, "type", type);
+//         cJSON_AddStringToObject(result_json, "msg", msg);
+//         response_str = cJSON_Print(result_json);
+//         reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
+//     }
+//     release_conns(&server_ptr->db, 3, log_conn, chat_group_conn, user_setting_conn);
+//     cJSON_del_and_free(2, result_json, json_ptr);
+//     cJSON_del_and_free(2, result_json, json_ptr);
+//     free(recieve_fd_array);
+//     return ;
 }
 
 void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
@@ -1598,13 +1599,6 @@ void chat_in_user_service(epoll_net_core* server_ptr, task_t* task) {
     }
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT login_id FROM user WHERE uid = %d", uid);
-    int sender_login_id = query_result_to_str(user_setting_conn, &msg, SQL_buf);
-    if (msg != NULL) {
-        goto cleanup_and_respond;
-    }
-
-    snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT max_tps FROM user WHERE uid = %d", uid);
     int max_tps = query_result_to_int(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
@@ -1613,7 +1607,7 @@ void chat_in_user_service(epoll_net_core* server_ptr, task_t* task) {
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "CALL dm_message(%d, %d, '%s', '%s', '%s',@result)", 
-        uid, recver_uid, cJSON_GetStringValue(text_ptr), max_tps,sender_login_id,cJSON_GetStringValue(recver_login_id_ptr));
+        uid, recver_uid, cJSON_GetStringValue(text_ptr), max_tps,cJSON_GetStringValue(sender_login_id_ptr),cJSON_GetStringValue(recver_login_id_ptr));
     query_result_to_execuete(log_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
