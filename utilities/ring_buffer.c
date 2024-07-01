@@ -62,6 +62,7 @@ bool ring_array(ring_buf *ring, char *data_ptr) {
         printf("%c",data_ptr[i]);
     }
     //printf("\nmsg_size %d\n",ring->msg_size);
+    printf("\n");
     return true;
 }
 
