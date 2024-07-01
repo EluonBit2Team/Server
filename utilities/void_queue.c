@@ -33,16 +33,16 @@ int enqueue(void_queue_t* queue, const void* data_org) {
     // queue->rear_node = new_node;
 
     // [queue] pre(new__node)rear <- pre()
-    new_node->pre = NULL;
-    new_node->next = queue->rear_node;
-    if (new_node->next == NULL) {
+    new_node->pre = queue->rear_node;
+    new_node->next = NULL;
+    if (queue->rear_node == NULL) {
         if (queue->pront_node != NULL) {
             fprintf(stderr, "%s", "Invalid queue node\n");
         }
         queue->pront_node = new_node;
     }
     else {
-        queue->rear_node->pre = new_node;
+        queue->rear_node->next = new_node;
     }
     queue->rear_node = new_node;
     return 0;
@@ -85,11 +85,11 @@ int dequeue(void_queue_t* queue, void* data_des) {
 }
 
 void* get_front_node(void_queue_t* queue) {
-    return queue->rear_node;
+    return queue->pront_node;
 }
 
 bool is_empty(void_queue_t* queue) {
-    if (queue->rear_node == NULL) {
+    if (queue->pront_node == NULL) {
         return true;
     }
     return false;
