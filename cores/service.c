@@ -1590,7 +1590,7 @@ void user_status_change_notice(epoll_net_core* server_ptr, conn_t* user_setting_
 
         client_session_t* connected_manager_session = find_session_by_fd(&server_ptr->session_pool, connected_manager_fd);
         if (connected_manager_session != NULL) {
-            printf("%d manager_fd : %d\n", i, connected_manager_fd);
+            printf("%d manager_fd : %d\n", i, connected_manager_session->fd);
             reserve_epoll_send(server_ptr->epoll_fd, connected_manager_session, response_str, strlen(response_str));
         }
     }

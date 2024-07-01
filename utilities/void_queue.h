@@ -7,10 +7,12 @@
 
 typedef struct node {
     struct node* pre;
+    struct node* next;
     void* data;
 } node_t;
 
 typedef struct void_queue {
+    node_t* pront_node;
     node_t* rear_node;
     int type_default_size;
 } void_queue_t;
