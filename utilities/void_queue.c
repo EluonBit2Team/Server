@@ -78,9 +78,11 @@ int dequeue(void_queue_t* queue, void* data_des) {
     queue->pront_node = f_node->next;
     if (queue->pront_node == NULL) {
         queue->rear_node = NULL;
+        printf("queue->pront_node:NULL");
     }
     else {
         queue->pront_node->pre = NULL;
+        printf("queue->pront_node:%p\n", queue->pront_node);
     }
 
     free(f_node->data);
