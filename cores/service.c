@@ -1589,7 +1589,7 @@ void chat_in_user_service(epoll_net_core* server_ptr, task_t* task) {
     log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
     
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT uid FROM user WHERE login_id = '%s'", cJSON_GetStringValue(user_setting_conn));
+        "SELECT uid FROM user WHERE login_id = '%s'", cJSON_GetStringValue(recver_login_id_ptr));
     int recver_uid = query_result_to_int(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
