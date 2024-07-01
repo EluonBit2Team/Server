@@ -376,26 +376,22 @@ int run_server(epoll_net_core* server_ptr) {
                 }
                 //printf("send session id:%ld, fd:%d\n", s_ptr->session_idx, s_ptr->fd);
                 while (1) {
-                    printf("1\n");
                     char* send_buf_ptr = get_front_send_buf_ptr(&s_ptr->send_bufs);
-                    printf("send_buf_ptr : %p\n", send_buf_ptr);
+                    printf("send_buf_ptr : %p, get_front_send_buf_size: %ld\n", send_buf_ptr, get_front_send_buf_size(&s_ptr->send_bufs));
                     if (send_buf_ptr == NULL)
                     {
                         break ;
                     }
-                    printf("2\n");
                     size_t sent = send(client_fd, send_buf_ptr, get_front_send_buf_size(&s_ptr->send_bufs), 0);
                     // 필요할때 주석 풀기.
-                    //write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, send_buf_ptr, get_rear_send_buf_size(&s_ptr->send_bufs)); write(STDOUT_FILENO, "\n", 1);
+                    write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, send_buf_ptr, get_front_send_buf_size(&s_ptr->send_bufs)); write(STDOUT_FILENO, "\n", 1);
                     if (sent < 0) {
                         perror("send");
                         close(server_ptr->epoll_events[i].data.fd);
                     }
                     send_buf_t temp;
-                    printf("3\n");
                     dequeue(&s_ptr->send_bufs, &temp);
                     free_all(1, temp.buf_ptr);
-                    printf("4\n");
                     // send할 때 이벤트를 변경(EPOLL_CTL_MOD)해서 보내는 이벤트로 바꿨으니
                     // 다시 통신을 받는 이벤트로 변경하여 유저의 입력을 대기.
                 }
