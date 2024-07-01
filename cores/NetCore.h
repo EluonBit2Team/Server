@@ -44,10 +44,11 @@
 #define CHATTING_SERV_FUNC 12
 #define EDIT_MEMBER_INFO_SERV_FUNC 13
 #define PRE_CHAT_LOG_SERV_FUNC 14
-
 #define GROUP_DELETE_SERV_FUNC 15
 #define SERVER_LOG_SERV_FUNC 16
 #define SERVER_STATUS_SERV_FUNC 17
+#define DM_SERV_FUNC 18
+#define PRE_DM_LOG_SERV_FUNC 19
 
 #define WOKER_THREAD_NUM 4
 
@@ -129,5 +130,7 @@ void group_delete_service(epoll_net_core* server_ptr, task_t* task);
 void server_log_service(epoll_net_core* server_ptr, task_t* task);
 void server_status_service(epoll_net_core* server_ptr, task_t* task);
 void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task);
+void chat_in_user_service(epoll_net_core* server_ptr, task_t* task);
+void pre_dm_log_service(epoll_net_core* server_ptr, task_t* task);
 
 #endif
