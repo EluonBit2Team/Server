@@ -1462,7 +1462,7 @@ cleanup_and_respond:
                 &log_time.tm_year, &log_time.tm_mon, &log_time.tm_mday,
                 &log_time.tm_hour, &log_time.tm_min, &log_time.tm_sec,
                 &login_user_cnt, &tps, &mem_usage);
-            cJSON_AddNumberToObject(result_json, "mem", login_user_cnt);
+            cJSON_AddNumberToObject(result_json, "mem", mem_usage);
             cJSON_AddNumberToObject(result_json, "login_user_cnt", login_user_cnt);
             cJSON_AddNumberToObject(result_json, "tps", tps);
         }

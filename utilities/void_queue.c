@@ -33,24 +33,18 @@ int enqueue(void_queue_t* queue, const void* data_org) {
     // queue->rear_node = new_node;
 
     // [queue] pre(new__node)rear <- pre()
-    if (queue->rear_node == NULL) {
-        new_node->pre = NULL;
-        new_node->next = NULL;
-
+    new_node->pre = NULL;
+    new_node->next = queue->rear_node;
+    if (new_node->next == NULL) {
         if (queue->pront_node != NULL) {
             fprintf(stderr, "%s", "Invalid queue node\n");
         }
         queue->pront_node = new_node;
-        queue->rear_node = new_node;
     }
     else {
-        new_node->pre = queue->rear_node;
-        new_node->next = NULL;
-
-        queue->rear_node->next = new_node;
-
-        queue->rear_node = new_node;
+        queue->rear_node->pre = new_node;
     }
+    queue->rear_node = new_node;
     return 0;
 }
 
