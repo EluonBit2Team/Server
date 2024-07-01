@@ -77,20 +77,26 @@ void init_worker_thread(epoll_net_core* server_ptr, thread_pool_t* thread_pool_t
     }
 }
 
-char* get_rear_send_buf_ptr(void_queue_t* vq)
+char* get_front_send_buf_ptr(void_queue_t* vq)
 {
-    if (get_rear_data(vq) == NULL)
+    if (get_front_node(vq) == NULL)
     {
         return NULL;
     }
-    return ((send_buf_t*)get_rear_data(vq))->buf_ptr;
+
+    send_buf_t* front_node = (send_buf_t*)get_front_node(vq);
+    if (front_node == NULL) {
+        return NULL;
+    }
+
+    return ((send_buf_t*)get_front_node(vq))->buf_ptr;
 }
 
 // todo : queue함수로 옮기기.
-size_t get_rear_send_buf_size(void_queue_t* vq)
+size_t get_front_send_buf_size(void_queue_t* vq)
 {
     //return *((size_t*)get_rear_data(vq));
-    return ((send_buf_t*)get_rear_data(vq))->send_data_size;
+    return ((send_buf_t*)get_front_node(vq))->send_data_size;
 }
 
 void reserve_epoll_send(int epoll_fd, client_session_t* send_session, char* send_org, int send_size) {
@@ -369,24 +375,26 @@ int run_server(epoll_net_core* server_ptr) {
                     continue ;
                 }
                 //printf("send session id:%ld, fd:%d\n", s_ptr->session_idx, s_ptr->fd);
-                char* send_buf_ptr = get_rear_send_buf_ptr(&s_ptr->send_bufs);
-                if (send_buf_ptr == NULL)
-                {
-                    continue ;
-                }
+                while (1) {
+                    char* send_buf_ptr = get_front_send_buf_ptr(&s_ptr->send_bufs);
+                    if (send_buf_ptr == NULL)
+                    {
+                        break ;
+                    }
 
-                size_t sent = send(client_fd, send_buf_ptr, get_rear_send_buf_size(&s_ptr->send_bufs), 0);
-                // 필요할때 주석 풀기.
-                //write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, send_buf_ptr, get_rear_send_buf_size(&s_ptr->send_bufs)); write(STDOUT_FILENO, "\n", 1);
-                if (sent < 0) {
-                    perror("send");
-                    close(server_ptr->epoll_events[i].data.fd);
+                    size_t sent = send(client_fd, send_buf_ptr, get_front_send_buf_size(&s_ptr->send_bufs), 0);
+                    // 필요할때 주석 풀기.
+                    //write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, send_buf_ptr, get_rear_send_buf_size(&s_ptr->send_bufs)); write(STDOUT_FILENO, "\n", 1);
+                    if (sent < 0) {
+                        perror("send");
+                        close(server_ptr->epoll_events[i].data.fd);
+                    }
+                    send_buf_t temp;
+                    dequeue(&s_ptr->send_bufs, &temp);
+                    free_all(1, temp.buf_ptr);
+                    // send할 때 이벤트를 변경(EPOLL_CTL_MOD)해서 보내는 이벤트로 바꿨으니
+                    // 다시 통신을 받는 이벤트로 변경하여 유저의 입력을 대기.
                 }
-                send_buf_t temp;
-                dequeue(&s_ptr->send_bufs, &temp);
-                free_all(1, temp.buf_ptr);
-                // send할 때 이벤트를 변경(EPOLL_CTL_MOD)해서 보내는 이벤트로 바꿨으니
-                // 다시 통신을 받는 이벤트로 변경하여 유저의 입력을 대기.
                 struct epoll_event temp_event;
                 temp_event.events = EPOLLIN | EPOLLET;
                 //temp_event.data.fd = server_ptr->epoll_events[i].data.fd;

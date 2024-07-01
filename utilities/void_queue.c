@@ -88,8 +88,8 @@ int dequeue(void_queue_t* queue, void* data_des) {
     return 0;
 }
 
-void* get_rear_data(void_queue_t* queue) {
-    return queue->rear_node->data;
+void* get_front_node(void_queue_t* queue) {
+    return queue->rear_node;
 }
 
 bool is_empty(void_queue_t* queue) {
