@@ -60,7 +60,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     }
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT uid FROM user WHERE user.login_id = '%s' AND user.passwordv = UNHEX(SHA2('%s', %d)",
+        "SELECT uid FROM user WHERE '%s' = user.login_id AND UNHEX(SHA2('%s', %d)) = user.password",
         cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH);
 
     uid = query_result_to_int(user_setting_conn,&msg,SQL_buf);
@@ -85,8 +85,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     type = 2;
     
     // 로그인 성공시 DB에 로그 저장
-    snprintf(SQL_buf, sizeof(SQL_buf), 
-        "INSERT INTO client_log (uid, login_time) VALUES (%d, NOW())", uid);
+    snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO client_log (uid, login_time) VALUES (%d, NOW())", uid);
     if (mysql_query(log_conn->conn, SQL_buf)) {
         fprintf(stderr, "SELECT failed: %s\n", mysql_error(user_setting_conn->conn));
         msg = "DB error";
@@ -105,10 +104,8 @@ cleanup_and_respond:
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 2, user_setting_conn, log_conn);
-    printf("release conn done\n");
     cJSON_del_and_free(2, result_json, json_ptr);
     free_all(1, response_str);
-    printf("login done\n");
     return ;
 }
 
@@ -309,7 +306,7 @@ void user_list_service(epoll_net_core* server_ptr, task_t* task) {
     }
 
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "SELECT u.login_id, u.name, jp.position_name, d.dept_name FROM user u LEFT JOIN dept d ON u.did = d.did LEFT JOIN job_position jp ON jp.pid = u.position LIMIT 5");
+         "SELECT u.login_id, u.name, jp.position_name, d.dept_name FROM user u LEFT JOIN dept d ON u.did = d.did LEFT JOIN job_position jp ON jp.pid = u.position");
 
     cJSON* user_list = query_result_to_json(user_setting_conn,&msg,SQL_buf,4,"login_id","name","position_name","dept_name");
     if (msg != NULL) {
@@ -478,7 +475,6 @@ void edit_member_service(epoll_net_core* server_ptr, task_t* task) {
         }
     }
 
-    mysql_commit(user_setting_conn->conn);
     type = 7;
 
 cleanup_and_respond:
@@ -486,6 +482,7 @@ cleanup_and_respond:
     if (msg != NULL) {
         cJSON_AddStringToObject(result_json, "msg", msg);
     }
+    mysql_commit(user_setting_conn->conn);
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 2, user_setting_conn, chat_group_conn);
@@ -675,7 +672,7 @@ void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
 
     snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO user (login_id, password, name, phone, email, did, position, role, max_tps, create_date)\
                                         SELECT login_id, password, name, phone, email, %d, %d, %d, %d, NOW() FROM \
-                                        signup_req WHERE login_id = '%s'", dept, pos, role, max_tps,cJSON_GetStringValue(id_ptr));
+                                        signup_req WHERE login_id = '%s'", dept, pos, role, max_tps, cJSON_GetStringValue(id_ptr));
     query_result_to_execuete(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
         mysql_rollback(user_setting_conn->conn);
