@@ -12,7 +12,7 @@ bool enqueue_task(thread_pool_t* thread_pool, int req_client_fd, ring_buf *org_b
     new_task.task_data_len = org_buf->msg_size;
 
     pthread_mutex_lock(&thread_pool->task_mutex);
-    printf("enqueue_task : %d\n", thread_pool->task_queue.type_default_size);
+    //printf("enqueue_task : %d\n", thread_pool->task_queue.type_default_size);
     enqueue(&thread_pool->task_queue, (void*)&new_task);
     pthread_cond_signal(&thread_pool->task_cond);
     pthread_mutex_unlock(&thread_pool->task_mutex);
@@ -58,7 +58,7 @@ void* work_routine(void *ptr)
             {
                 printf("invalid type\n");
             }
-            printf("type num:%d\n", type);
+            //printf("type num:%d\n", type);
             server_ptr->function_array[type](server_ptr, &temp_task);
         }
     }
@@ -340,6 +340,11 @@ int run_server(epoll_net_core* server_ptr) {
                 int input_size = ring_read(&s_ptr->recv_bufs, client_fd);
                 if (input_size <= 0) {
                     disconnect_client(server_ptr, client_fd);
+
+                    conn_t* user_status_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
+                    user_status_change_notice(server_ptr, user_status_conn);
+                    release_conns(&server_ptr->db, 1, user_status_conn);
+                    
                     continue;
                 }
                 while(1) {
@@ -371,7 +376,8 @@ int run_server(epoll_net_core* server_ptr) {
                 }
 
                 size_t sent = send(client_fd, send_buf_ptr, get_rear_send_buf_size(&s_ptr->send_bufs), 0);
-                write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, send_buf_ptr, get_rear_send_buf_size(&s_ptr->send_bufs)); write(STDOUT_FILENO, "\n", 1);
+                // 필요할때 주석 풀기.
+                //write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, send_buf_ptr, get_rear_send_buf_size(&s_ptr->send_bufs)); write(STDOUT_FILENO, "\n", 1);
                 if (sent < 0) {
                     perror("send");
                     close(server_ptr->epoll_events[i].data.fd);
@@ -389,7 +395,6 @@ int run_server(epoll_net_core* server_ptr) {
                     perror("epoll_ctl: del");
                     close(server_ptr->epoll_events[i].data.fd);
                 }
-                printf("after epoll_ctl\n");
             }
             else {
                 printf("?\n");

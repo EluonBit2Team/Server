@@ -68,6 +68,13 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "Invalid ID or PW";
         goto cleanup_and_respond;
     }
+
+    // 중복 로그인 방지
+    int fd = find(&server_ptr->uid_to_fd_hash, uid);
+    if (fd >= 0) {
+        msg = "This user has already logged in";
+        goto cleanup_and_respond;
+    }
     
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT role FROM user WHERE login_id = '%s'", cJSON_GetStringValue(id_ptr));
@@ -91,6 +98,9 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "DB error";
         goto cleanup_and_respond;
     }
+
+    // 로그인 notice
+    user_status_change_notice(server_ptr, user_setting_conn);
 
 cleanup_and_respond:
     cJSON_AddNumberToObject(result_json, "type", type);
@@ -930,6 +940,7 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
     conn_t* chat_group_conn = NULL;
     conn_t* log_conn = NULL;
     char* response_str = NULL;
+    char* timestamp = NULL;
     int* recieve_fd_array = NULL;
     char SQL_buf[1024];
 
@@ -992,10 +1003,17 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
+    // snprintf(SQL_buf, sizeof(SQL_buf), 
+    //     "CALL insert_message(%d, %d, '%s', %d, '%s','%s',@result)", 
+    //     uid, gid, cJSON_GetStringValue(text_ptr), max_tps,cJSON_GetStringValue(login_id_ptr),cJSON_GetStringValue(groupname_ptr));
+    // query_result_to_execuete(log_conn, &msg, SQL_buf);
+    // if (msg != NULL) {
+    //     goto cleanup_and_respond;
+    // }
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "CALL insert_message(%d, %d, '%s', %d, '%s','%s',@result)", 
         uid, gid, cJSON_GetStringValue(text_ptr), max_tps,cJSON_GetStringValue(login_id_ptr),cJSON_GetStringValue(groupname_ptr));
-    query_result_to_execuete(log_conn, &msg, SQL_buf);
+    timestamp = query_result_to_str(log_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
@@ -1029,6 +1047,9 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
         }
     }
 
+    // 받은거에서 timestamp붙여서 그대로 날려줌.
+    cJSON_AddStringToObject(json_ptr, "timestamp", timestamp);
+    response_str = cJSON_Print(json_ptr);
     for (int i = 0; i < uid_count; i++) {
         printf("%d \n", recieve_fd_array[i]); write(STDOUT_FILENO, task->buf, task->task_data_len); write(STDOUT_FILENO, "\n", 1);
         if (recieve_fd_array[i] < 0) {
@@ -1041,7 +1062,7 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
         }
         // 그대로 echo때려버리면 될듯.
         write(STDOUT_FILENO, "true:", 5); write(STDOUT_FILENO, task->buf + HEADER_SIZE, task->task_data_len - HEADER_SIZE); write(STDOUT_FILENO, "\n", 1);
-        reserve_epoll_send(server_ptr->epoll_fd, session, task->buf + HEADER_SIZE, task->task_data_len - HEADER_SIZE);
+        reserve_epoll_send(server_ptr->epoll_fd, session, response_str, strlen(response_str));
     }
 
 
@@ -1053,9 +1074,8 @@ cleanup_and_respond:
         reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     }
     release_conns(&server_ptr->db, 3, log_conn, chat_group_conn, user_setting_conn);
-    cJSON_Delete(json_ptr);
-    cJSON_Delete(result_json);
-    free(recieve_fd_array);
+    cJSON_del_and_free(2, json_ptr, result_json);
+    free_all(2, response_str, timestamp);
     return ;
 }
 
@@ -1531,4 +1551,62 @@ cleanup_and_respond:
     cJSON_del_and_free(2, result_json, json_ptr);
     free_all(1, response_str);
     return ;
+}
+
+// Notice의 경우, conn을 외부에서 받아서 쓸 것! (conn 또 할당받으면 재귀적 자원 할당으로 데드락 가능성 높음)
+void user_status_change_notice(epoll_net_core* server_ptr, conn_t* user_setting_conn) {
+    char* error_msg = NULL;
+    char *response_str = NULL;
+    cJSON* result_json = cJSON_CreateObject();
+    cJSON* uid_list_json = NULL;
+    char SQL_buf[64];
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE user.role = 1");
+    uid_list_json = query_result_to_json(user_setting_conn, &error_msg, SQL_buf, 1, "uid");
+    if (error_msg != NULL) {
+        goto cleanup_and_respond;
+    }
+
+    cJSON_AddNumberToObject(result_json, "type", USER_STATUS_CHANGE_NOTICE);
+    response_str = cJSON_Print(result_json);
+    int uid_count = cJSON_GetArraySize(uid_list_json);
+    printf("uid cnt: %d\n", uid_count);
+    for (int i = 0; i < uid_count; i++) {
+        cJSON* item = cJSON_GetArrayItem(uid_list_json, i);
+        cJSON* uid_value = cJSON_GetObjectItemCaseSensitive(item, "uid");
+        if (cJSON_IsString(uid_value) == false && (uid_value->valuestring == NULL)) {
+            error_msg = "uid json list parse error";
+            goto cleanup_and_respond;   
+        }
+        int manager_uid = atoi(uid_value->valuestring);
+        if (manager_uid == 0 && uid_value->valuestring[0] != '0') {
+            error_msg = "uid json list is not number error";
+            goto cleanup_and_respond;
+        }
+        printf("%d manager_uid : %d\n", i, manager_uid);
+
+        int connected_manager_fd = find(&server_ptr->uid_to_fd_hash, manager_uid);
+        if (connected_manager_fd < 0) {
+            continue;
+        }
+        printf("%d manager_fd : %d\n", i, connected_manager_fd);
+
+        client_session_t* connected_manager_session = find_session_by_fd(&server_ptr->session_pool, connected_manager_fd);
+        if (connected_manager_session != NULL) {
+            reserve_epoll_send(server_ptr->epoll_fd, connected_manager_session, response_str, strlen(response_str));
+        }
+    }
+
+
+cleanup_and_respond:
+    if (error_msg != NULL) {
+        fprintf(stderr, "%s", error_msg);
+    }
+    cJSON_del_and_free(2, result_json, uid_list_json);
+    free_all(1, response_str);
+    return ;
+}
+
+void server_down_notice(epoll_net_core* server_ptr, conn_t* user_setting_conn) {
+
 }

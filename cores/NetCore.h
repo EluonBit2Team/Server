@@ -49,6 +49,11 @@
 #define SERVER_LOG_SERV_FUNC 16
 #define SERVER_STATUS_SERV_FUNC 17
 
+
+
+#define USER_STATUS_CHANGE_NOTICE 300
+#define SERVER_DOWN_NOTICE 301
+
 #define WOKER_THREAD_NUM 4
 
 // 워커스레드가 처리할 일감을 포장한 구조체
@@ -129,5 +134,9 @@ void group_delete_service(epoll_net_core* server_ptr, task_t* task);
 void server_log_service(epoll_net_core* server_ptr, task_t* task);
 void server_status_service(epoll_net_core* server_ptr, task_t* task);
 void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task);
+
+// notice. 서버 -> 클라이언트. 응답 안기다림.
+void user_status_change_notice(epoll_net_core* server_ptr, conn_t* user_setting_conn);
+void server_down_notice(epoll_net_core* server_ptr, conn_t* user_setting_conn);
 
 #endif
