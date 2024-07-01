@@ -24,9 +24,7 @@ int enqueue(void_queue_t* queue, const void* data_org) {
         // TODO: error 로깅 및 처리
         return -1;
     }
-    printf("malloc done\n");
     memcpy(new_node->data, data_org, queue->type_default_size);
-    printf("memcpy done\n");
     new_node->pre = queue->rear_node;
     
     // rear노드 갱신

@@ -1570,7 +1570,6 @@ void user_status_change_notice(epoll_net_core* server_ptr, conn_t* user_setting_
     cJSON_AddNumberToObject(result_json, "type", USER_STATUS_CHANGE_NOTICE);
     response_str = cJSON_Print(result_json);
     int uid_count = cJSON_GetArraySize(uid_list_json);
-    printf("uid cnt: %d\n", uid_count);
     for (int i = 0; i < uid_count; i++) {
         cJSON* item = cJSON_GetArrayItem(uid_list_json, i);
         cJSON* uid_value = cJSON_GetObjectItemCaseSensitive(item, "uid");
@@ -1583,16 +1582,15 @@ void user_status_change_notice(epoll_net_core* server_ptr, conn_t* user_setting_
             error_msg = "uid json list is not number error";
             goto cleanup_and_respond;
         }
-        printf("%d manager_uid : %d\n", i, manager_uid);
 
         int connected_manager_fd = find(&server_ptr->uid_to_fd_hash, manager_uid);
         if (connected_manager_fd < 0) {
             continue;
         }
-        printf("%d manager_fd : %d\n", i, connected_manager_fd);
 
         client_session_t* connected_manager_session = find_session_by_fd(&server_ptr->session_pool, connected_manager_fd);
         if (connected_manager_session != NULL) {
+            printf("%d manager_fd : %d\n", i, connected_manager_fd);
             reserve_epoll_send(server_ptr->epoll_fd, connected_manager_session, response_str, strlen(response_str));
         }
     }
