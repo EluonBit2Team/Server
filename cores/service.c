@@ -1013,17 +1013,17 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "CALL insert_message(%d, %d, '%s', %d, '%s','%s',@result)", 
         uid, gid, cJSON_GetStringValue(text_ptr), max_tps,cJSON_GetStringValue(login_id_ptr),cJSON_GetStringValue(groupname_ptr));
-    timestamp = query_result_to_str(log_conn, &msg, SQL_buf);
+    query_result_to_execuete(log_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
 
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT @result");
-    int tps_query_result = query_result_to_int(log_conn, &msg, SQL_buf);
+    timestamp = query_result_to_str(log_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
-    if (tps_query_result == 0) {
+    if (timestamp == NULL) {
         type = 101;
         msg = "Too Much Message in Minute";
         goto cleanup_and_respond;
