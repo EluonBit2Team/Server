@@ -12,7 +12,7 @@ typedef struct node {
 } node_t;
 
 typedef struct void_queue {
-    node_t* pront_node;
+    node_t* front_node;
     node_t* rear_node;
     int type_default_size;
 } void_queue_t;

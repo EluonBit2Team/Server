@@ -84,19 +84,28 @@ char* get_front_send_buf_ptr(void_queue_t* vq)
         return NULL;
     }
 
-    send_buf_t* front_node = (send_buf_t*)get_front_node(vq);
+    node_t* front_node = (node_t*)get_front_node(vq);
     if (front_node == NULL) {
         return NULL;
     }
 
-    return ((send_buf_t*)get_front_node(vq))->buf_ptr;
+    return ((send_buf_t*)front_node->data)->buf_ptr;
 }
 
 // todo : queue함수로 옮기기.
 size_t get_front_send_buf_size(void_queue_t* vq)
 {
+    if (get_front_node(vq) == NULL)
+    {
+        return 0;
+    }
+
+    node_t* front_node = (node_t*)get_front_node(vq);
+    if (front_node == NULL) {
+        return 0;
+    }
     //return *((size_t*)get_rear_data(vq));
-    return ((send_buf_t*)get_front_node(vq))->send_data_size;
+    return ((send_buf_t*)front_node->data)->send_data_size;
 }
 
 void reserve_epoll_send(int epoll_fd, client_session_t* send_session, char* send_org, int send_size) {
@@ -127,7 +136,7 @@ void reserve_send(void_queue_t* vq, char* send_org, int body_size)
     temp_send_buf.send_data_size = total_size;
     memcpy(temp_send_buf.buf_ptr, (char*)&total_size, HEADER_SIZE);
     memcpy(temp_send_buf.buf_ptr + HEADER_SIZE, send_org, body_size);
-    printf("reserve_send_size : %d ", temp_send_buf.send_data_size); write(STDOUT_FILENO, temp_send_buf.buf_ptr, temp_send_buf.send_data_size); write(STDOUT_FILENO, "\n", 1);
+    printf("reserve_send_size : %d \n", temp_send_buf.send_data_size); write(STDOUT_FILENO, temp_send_buf.buf_ptr, temp_send_buf.send_data_size); write(STDOUT_FILENO, "\n", 1);
     enqueue(vq, (void*)&temp_send_buf);
 }
 
