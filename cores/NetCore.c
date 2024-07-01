@@ -127,6 +127,7 @@ void reserve_send(void_queue_t* vq, char* send_org, int body_size)
     temp_send_buf.send_data_size = total_size;
     memcpy(temp_send_buf.buf_ptr, (char*)&total_size, HEADER_SIZE);
     memcpy(temp_send_buf.buf_ptr + HEADER_SIZE, send_org, body_size);
+    printf("reserve_send_size : %d ", temp_send_buf.send_data_size); write(STDOUT_FILENO, temp_send_buf.buf_ptr, temp_send_buf.send_data_size); write(STDOUT_FILENO, "\n", 1);
     enqueue(vq, (void*)&temp_send_buf);
 }
 
