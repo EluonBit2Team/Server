@@ -33,5 +33,6 @@ cJSON* query_result_get_user_json(conn_t* conn, char** out_msg, const char* quer
 void release_conns(chatdb_t* db, int release_conn_num, ...);
 bool init_mariadb(chatdb_t* db);
 void close_mariadb(chatdb_t* db);
-//int* query_result_to_int_array(conn_t* conn, char** out_msg, const char* query, size_t* out_array_size);
+char* query_result_to_str(conn_t* conn, char** out_msg, const char* query);
+
 #endif
