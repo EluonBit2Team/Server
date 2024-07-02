@@ -61,7 +61,8 @@ bool ring_array(ring_buf *ring, char *data_ptr) {
         data_ptr[i] = ring_deque(ring);
         printf("%c",data_ptr[i]);
     }
-    printf("\nmsg_size %d\n",ring->msg_size);
+    //printf("\nmsg_size %d\n",ring->msg_size);
+    printf("\n");
     return true;
 }
 

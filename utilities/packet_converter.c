@@ -85,3 +85,42 @@ void free_all(int ptr_num, ...) {
     }
     va_end(VA_LIST);
 }
+
+bool raw_json_guard(const char *raw_json) {
+    const char *invalid_str_arr[] = {":\t\n", ":\n", ": \n", NULL};
+    bool in_quotes = false;
+    bool escape = false;
+
+    while (*raw_json) {
+        if (escape) {
+            escape = false;
+        } 
+        else if (*raw_json == '\\') {
+            escape = true;
+        }
+        else if (*raw_json == '"') {
+            in_quotes = !in_quotes;
+        } 
+        else if (!in_quotes) {
+            for (int i = 0; invalid_str_arr[i] != NULL; i++) {
+                const char *substr_position = strstr(raw_json, invalid_str_arr[i]);
+                if (substr_position != NULL) {
+                    // Ensure invalid substring is not inside quotes
+                    const char *quote_check = raw_json;
+                    bool inside_quotes = false;
+                    while (quote_check < substr_position) {
+                        if (*quote_check == '"' && (quote_check == raw_json || *(quote_check - 1) != '\\')) {
+                            inside_quotes = !inside_quotes;
+                        }
+                        quote_check++;
+                    }
+                    if (!inside_quotes) {
+                        return false;
+                    }
+                }
+            }
+        }
+        raw_json++;
+    }
+    return true;
+}
