@@ -49,6 +49,7 @@
 #define SERVER_STATUS_SERV_FUNC 17
 #define DM_SERV_FUNC 18
 #define PRE_DM_LOG_SERV_FUNC 19
+#define OUT_CHAT_GROUP_sERV_FUNC 20
 
 #define WOKER_THREAD_NUM 4
 
@@ -132,5 +133,6 @@ void server_status_service(epoll_net_core* server_ptr, task_t* task);
 void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task);
 void chat_in_user_service(epoll_net_core* server_ptr, task_t* task);
 void pre_dm_log_service(epoll_net_core* server_ptr, task_t* task);
+void out_chat_group(epoll_net_core* server_ptr, task_t* task);
 
 #endif

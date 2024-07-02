@@ -1737,3 +1737,69 @@ cleanup_and_respond:
     return ;
 }
 
+void out_chat_group(epoll_net_core* server_ptr, task_t* task) {
+    printf("out_chat_group\n");
+    int type = 100;
+    char* msg = NULL;
+    char *response_str = NULL;
+    cJSON* result_json = cJSON_CreateObject();
+    client_session_t* now_session = NULL;
+    conn_t* chat_group_conn = NULL;
+    char SQL_buf[512];
+    int gid = -1;
+
+    chat_group_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
+
+    int uid = find(&server_ptr->fd_to_uid_hash, task->req_client_fd);
+    if (uid < 0) {
+        msg = "Invalid user";
+        goto cleanup_and_respond;
+    }
+
+    cJSON* json_ptr = get_parsed_json(task->buf);
+    if (json_ptr == NULL)
+    {
+        msg = "user send invalid json";
+        goto cleanup_and_respond;
+    }
+
+    cJSON* groupname_ptr = cJSON_GetObjectItem(json_ptr, "groupname");
+    if (groupname_ptr == NULL || cJSON_GetStringValue(groupname_ptr)[0] == '\0')
+    {
+        msg = "user send invalid json. Miss page";
+        goto cleanup_and_respond;
+    }
+
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL)
+    {
+        msg = "session error";
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT gid FROM chat_group WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
+    gid = query_result_to_int(chat_group_conn, &msg, SQL_buf);
+    if ((gid == -1) || (msg != NULL)) {
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "DELETE FROM group_member WHERE gid = %d AND uid = %d",gid,uid);
+    query_result_to_execuete(chat_group_conn, &msg, SQL_buf);
+    if ((msg != NULL)) {
+        goto cleanup_and_respond;
+    }
+
+    type = 20;
+
+cleanup_and_respond:
+    cJSON_AddNumberToObject(result_json, "type", type);
+    if (msg != NULL) {
+        cJSON_AddStringToObject(result_json, "msg", msg);
+    }
+    response_str = cJSON_Print(result_json);
+    reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
+    release_conns(&server_ptr->db, 1, chat_group_conn);
+    cJSON_del_and_free(2, result_json, json_ptr);
+    free_all(1, response_str);
+    return ;
+}
