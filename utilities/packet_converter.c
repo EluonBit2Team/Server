@@ -227,3 +227,58 @@ bool is_valid_login_id(const char* id, char** out_msg) {
     }
     return true;
 }
+
+bool is_valid_password(const char* password, char** out_msg) {
+    int length = strlen(password);
+    if (length < 5 || length > 20) {
+        *out_msg = "ID 길이는 5자 이상 20자 이하여야 합니다.";
+        return false;
+    }
+
+    int has_alpha = 0;
+    int has_digit = 0;
+
+    for (int i = 0; i < length; i++) {
+        unsigned char ch = password[i];
+
+        if (isalpha(ch)) {
+            has_alpha = 1;
+        }
+        else if (isdigit(ch)) {
+            has_digit = 1;
+        }
+        else if (isspace(ch)) {
+            *out_msg = "비밀번호에 공백이 포함될 수 없습니다.";
+            return false;
+        }
+        else if ((ch >= 0xE0 && ch <= 0xEF) && (password[i+1] >= 0x80 && password[i+1] <= 0xBF) && (password[i+2] >= 0x80 && password[i+2] <= 0xBF)) {
+            *out_msg = "비밀번호에 한글이 포함될 수 없습니다.";
+            return false;
+        }
+        else if (contains_emoji(&password[i])) {
+            *out_msg = "비밀번호에 이모지가 포함될 수 없습니다.";
+            return false;
+        }
+        if (i >= 2 && password[i] == password[i-1] && password[i] == password[i-2]) {
+            *out_msg = "비밀번호에 동일한 문자가 연속으로 세 번 이상 나타날 수 없습니다.";
+            return false;
+        }
+    }
+    if (!has_alpha) {
+        *out_msg = "비밀번호에 최소 하나 이상의 알파벳 문자가 포함되어야 합니다.";
+        return false;
+    }
+    if (!has_digit) {
+        *out_msg = "비밀번호에 최소 하나 이상의 숫자가 포함되어야 합니다.";
+        return false;
+    }
+    // 금칙어 검사
+    const char* banned_words[] = {NULL};
+    for (int i = 0; banned_words[i] != NULL; i++) {
+        if (strstr(password, banned_words[i]) != NULL) {
+            *out_msg = "비밀번호에 금칙어가 포함될 수 없습니다.";
+            return false;
+        }
+    }
+    return true;
+}

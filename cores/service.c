@@ -175,6 +175,9 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
     if (!is_valid_login_id(cJSON_GetStringValue(id_ptr),&msg)) {
         goto cleanup_and_respond;
     }
+    if (!is_valid_login_id(cJSON_GetStringValue(pw_ptr),&msg)) {
+        goto cleanup_and_respond;
+    }
 
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT COUNT(login_id) FROM user WHERE login_id = '%s'", cJSON_GetStringValue(id_ptr));
     if (query_result_to_int(user_setting_conn, &msg, SQL_buf) > 0) {
@@ -1733,7 +1736,7 @@ void pre_dm_log_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE recver_login_id = '%s'",
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE login_id = '%s'",
     cJSON_GetStringValue(recver_login_id_ptr));
     recver_uid = query_result_to_int(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
