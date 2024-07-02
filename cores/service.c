@@ -1735,7 +1735,7 @@ void pre_dm_log_service(epoll_net_core* server_ptr, task_t* task) {
 
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE recver_login_id = '%s'",
     cJSON_GetStringValue(recver_login_id_ptr));
-    recver_uid = query_result_to_int(log_conn, &msg, SQL_buf);
+    recver_uid = query_result_to_int(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
