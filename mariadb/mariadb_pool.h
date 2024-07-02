@@ -6,7 +6,7 @@
 #include "../includes.h"
 
 #define DB_IP "192.168.0.253"
-#define DB_PORT 3307
+#define DB_PORT 3306
 #define DB_USER_NAME "today_chicken"
 #define DB_USER_PASS "1q2w3e4r"
 #define DB_CONN_TIMEOUT_SEC 3
