@@ -12,4 +12,6 @@ void cJSON_del_and_free(int cjson_num, ...);
 void free_all(int ptr_num, ...);
 bool is_valid_login_id(const char* id, char** out_msg);
 bool raw_json_guard(const char *raw_json);
+bool is_emoji(unsigned int codepoint);
+bool contains_emoji(const char* str);
 #endif

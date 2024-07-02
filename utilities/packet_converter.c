@@ -125,6 +125,50 @@ bool raw_json_guard(const char *raw_json) {
     return true;
 }
 
+bool is_emoji(unsigned int codepoint) {
+    return (codepoint >= 0x1F600 && codepoint <= 0x1F64F) ||
+           (codepoint >= 0x1F300 && codepoint <= 0x1F5FF) ||
+           (codepoint >= 0x1F680 && codepoint <= 0x1F6FF) ||
+           (codepoint >= 0x1F700 && codepoint <= 0x1F77F) ||
+           (codepoint >= 0x1F780 && codepoint <= 0x1F7FF) ||
+           (codepoint >= 0x1F800 && codepoint <= 0x1F8FF) ||
+           (codepoint >= 0x1F900 && codepoint <= 0x1F9FF) ||
+           (codepoint >= 0x1FA00 && codepoint <= 0x1FA6F) ||
+           (codepoint >= 0x1FA70 && codepoint <= 0x1FAFF) ||
+           (codepoint >= 0x2600 && codepoint <= 0x26FF) ||
+           (codepoint >= 0x2700 && codepoint <= 0x27BF);
+}
+
+bool contains_emoji(const char* str) {
+    const unsigned char *s = (const unsigned char *)str;
+    while (*s) {
+        if (*s < 0x80) {
+            s++;
+        } else if ((*s & 0xE0) == 0xC0) {
+            unsigned int codepoint = ((*s & 0x1F) << 6) | (s[1] & 0x3F);
+            if (is_emoji(codepoint)) {
+                return true;
+            }
+            s += 2;
+        } else if ((*s & 0xF0) == 0xE0) {
+            unsigned int codepoint = ((*s & 0x0F) << 12) | ((s[1] & 0x3F) << 6) | (s[2] & 0x3F);
+            if (is_emoji(codepoint)) {
+                return true;
+            }
+            s += 3;
+        } else if ((*s & 0xF8) == 0xF0) {
+            unsigned int codepoint = ((*s & 0x07) << 18) | ((s[1] & 0x3F) << 12) | ((s[2] & 0x3F) << 6) | (s[3] & 0x3F);
+            if (is_emoji(codepoint)) {
+                return true;
+            }
+            s += 4;
+        } else {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool is_valid_login_id(const char* id, char** out_msg) {
     int length = strlen(id);
     if (length < 5 || length > 20) {
@@ -154,6 +198,10 @@ bool is_valid_login_id(const char* id, char** out_msg) {
         }
         else if ((ch >= 0xE0 && ch <= 0xEF) && (id[i+1] >= 0x80 && id[i+1] <= 0xBF) && (id[i+2] >= 0x80 && id[i+2] <= 0xBF)) {
             *out_msg = "ID에 한글이 포함될 수 없습니다.";
+            return false;
+        }
+        else if (contains_emoji(&id[i])) {
+            *out_msg = "ID에 이모지가 포함될 수 없습니다.";
             return false;
         }
         if (i >= 2 && id[i] == id[i-1] && id[i] == id[i-2]) {
