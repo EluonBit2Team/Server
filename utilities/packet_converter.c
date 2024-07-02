@@ -128,7 +128,7 @@ bool raw_json_guard(const char *raw_json) {
 bool is_valid_login_id(const char* id, char** out_msg) {
     int length = strlen(id);
     if (length < 5 || length > 20) {
-        printf("ID 길이는 5자 이상 20자 이하여야 합니다.\n");
+        *out_msg = "ID 길이는 5자 이상 20자 이하여야 합니다.";
         return false;
     }
 
