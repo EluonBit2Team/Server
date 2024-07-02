@@ -937,7 +937,6 @@ cleanup_and_respond:
 
 void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
     printf("chat_in_group_service\n");
-
     int type = 100;
     char* msg = NULL;
     cJSON* result_json = cJSON_CreateObject();
@@ -1009,14 +1008,13 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), 
-        "CALL insert_message(%d, %d, '%s', %d, '%s','%s',@result)", 
-        uid, gid, cJSON_GetStringValue(text_ptr), max_tps,cJSON_GetStringValue(login_id_ptr),cJSON_GetStringValue(groupname_ptr));
-    query_result_to_execuete(log_conn, &msg, SQL_buf);
-    if (msg != NULL) {
-        goto cleanup_and_respond;
-    }
-
+    // snprintf(SQL_buf, sizeof(SQL_buf), 
+    //     "CALL insert_message(%d, %d, '%s', %d, '%s','%s',@result)", 
+    //     uid, gid, cJSON_GetStringValue(text_ptr), max_tps,cJSON_GetStringValue(login_id_ptr),cJSON_GetStringValue(groupname_ptr));
+    // query_result_to_execuete(log_conn, &msg, SQL_buf);
+    // if (msg != NULL) {
+    //     goto cleanup_and_respond;
+    // }
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "CALL insert_message(%d, %d, '%s', %d, '%s','%s',@result)", 
         uid, gid, cJSON_GetStringValue(text_ptr), max_tps,cJSON_GetStringValue(login_id_ptr),cJSON_GetStringValue(groupname_ptr));
@@ -1035,6 +1033,7 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "Too Much Message in Minute";
         goto cleanup_and_respond;
     }
+    
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM group_member AS gm WHERE gm.gid = %d", gid);
     cJSON* uid_list = query_result_to_json(chat_group_conn, &msg, SQL_buf, 1, "uid");
     int uid_count = cJSON_GetArraySize(uid_list);
@@ -1053,6 +1052,7 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
         }
     }
 
+    // 받은거에서 timestamp붙여서 그대로 날려줌.
     cJSON_AddStringToObject(json_ptr, "timestamp", timestamp);
     response_str = cJSON_Print(json_ptr);
     for (int i = 0; i < uid_count; i++) {
@@ -1069,6 +1069,19 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
         write(STDOUT_FILENO, "true:", 5); write(STDOUT_FILENO, task->buf + HEADER_SIZE, task->task_data_len - HEADER_SIZE); write(STDOUT_FILENO, "\n", 1);
         reserve_epoll_send(server_ptr->epoll_fd, session, response_str, strlen(response_str));
     }
+
+
+cleanup_and_respond:
+    if (msg != NULL) {
+        cJSON_AddNumberToObject(result_json, "type", type);
+        cJSON_AddStringToObject(result_json, "msg", msg);
+        response_str = cJSON_Print(result_json);
+        reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
+    }
+    release_conns(&server_ptr->db, 3, log_conn, chat_group_conn, user_setting_conn);
+    cJSON_del_and_free(2, json_ptr, result_json);
+    free_all(2, response_str, timestamp);
+    return ;
 }
 
 void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
