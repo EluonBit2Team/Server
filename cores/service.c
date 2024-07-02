@@ -172,6 +172,11 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss email";
         goto cleanup_and_respond;
     }
+
+    if (!is_valid_login_id(cJSON_GetStringValue(id_ptr))) {
+        goto cleanup_and_respond;
+    }
+
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT COUNT(login_id) FROM user WHERE login_id = '%s'", cJSON_GetStringValue(id_ptr));
     if (query_result_to_int(user_setting_conn, &msg, SQL_buf) > 0) {
         msg = "login_id already exists.";
@@ -1729,21 +1734,21 @@ void pre_dm_log_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT gid FROM user WHERE recver_login_id = '%s'",
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE recver_login_id = '%s'",
     cJSON_GetStringValue(recver_login_id_ptr));
     recver_uid = query_result_to_int(log_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id, text, timestamp FROM dm_log WHERE recver_uid = %d\
-     sender_uid = %d AND timestamp BETWEEN '%s' AND '%s' ORDER BY timestamp ASC",
-    recver_uid,uid,cJSON_GetStringValue(start_time_ptr),cJSON_GetStringValue(end_time_ptr));
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT recver_login_id, text, timestamp FROM dm_log WHERE (recver_uid = %d AND sender_uid = %d) OR \
+    (recver_uid = %d AND sender_uid = %d) AND timestamp BETWEEN '%s' AND '%s' ORDER BY timestamp ASC",
+    recver_uid,uid,uid,recver_uid,cJSON_GetStringValue(start_time_ptr),cJSON_GetStringValue(end_time_ptr));
     cJSON* chat_log = query_result_to_json(log_conn, &msg, SQL_buf, 3, "login_id" ,"text", "timestamp");
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
-    type = 14;
+    type = 19;
 
 cleanup_and_respond:
     cJSON_AddNumberToObject(result_json, "type", type);

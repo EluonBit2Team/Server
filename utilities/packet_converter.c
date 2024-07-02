@@ -124,3 +124,58 @@ bool raw_json_guard(const char *raw_json) {
     }
     return true;
 }
+
+bool is_valid_login_id(const char* id, char** out_msg) {
+    int length = strlen(id);
+    if (length < 5 || length > 20) {
+        printf("ID 길이는 5자 이상 20자 이하여야 합니다.\n");
+        return false;
+    }
+
+    int has_alpha = 0;
+    int has_digit = 0;
+
+    for (int i = 0; i < length; i++) {
+        unsigned char ch = id[i];
+
+        if (isalpha(ch)) {
+            has_alpha = 1;
+        }
+        else if (isdigit(ch)) {
+            has_digit = 1;
+        }
+        else if (ispunct(ch)) {
+            *out_msg = "ID에 특수 문자가 포함될 수 없습니다.";
+            return false;
+        }
+        else if (isspace(ch)) {
+            *out_msg = "ID에 공백이 포함될 수 없습니다.";
+            return false;
+        }
+        else if ((ch >= 0xE0 && ch <= 0xEF) && (id[i+1] >= 0x80 && id[i+1] <= 0xBF) && (id[i+2] >= 0x80 && id[i+2] <= 0xBF)) {
+            *out_msg = "ID에 한글이 포함될 수 없습니다.";
+            return false;
+        }
+        if (i >= 2 && id[i] == id[i-1] && id[i] == id[i-2]) {
+            *out_msg = "ID에 동일한 문자가 연속으로 세 번 이상 나타날 수 없습니다.";
+            return false;
+        }
+    }
+    if (!has_alpha) {
+        *out_msg = "ID에 최소 하나 이상의 알파벳 문자가 포함되어야 합니다.";
+        return false;
+    }
+    if (!has_digit) {
+        *out_msg = "ID에 최소 하나 이상의 숫자가 포함되어야 합니다.";
+        return false;
+    }
+    // 금칙어 검사
+    const char* banned_words[] = {"admin", "root", "user", NULL};
+    for (int i = 0; banned_words[i] != NULL; i++) {
+        if (strstr(id, banned_words[i]) != NULL) {
+            *out_msg = "ID에 금칙어가 포함될 수 없습니다.";
+            return false;
+        }
+    }
+    return true;
+}
