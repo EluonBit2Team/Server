@@ -46,7 +46,7 @@ int enqueue(void_queue_t* queue, const void* data_org) {
     }
     queue->rear_node = new_node;
 
-    printf("front:%p, rear:%p /\nnew_node:%p data:%p pre:%p next:%p\n", queue->front_node, queue->rear_node, new_node, new_node->data, new_node->pre, new_node->next);
+    //printf("front:%p, rear:%p /\nnew_node:%p data:%p pre:%p next:%p\n", queue->front_node, queue->rear_node, new_node, new_node->data, new_node->pre, new_node->next);
     return 0;
 }
 
@@ -74,13 +74,11 @@ int dequeue(void_queue_t* queue, void* data_des) {
     queue->front_node = f_node->next;
     if (queue->front_node == NULL) {
         queue->rear_node = NULL;
-        printf("queue->pront_node:NULL\n");
     }
     else {
         queue->front_node->pre = NULL;
-        printf("queue->pront_node:%p\n", queue->front_node);
     }
-    printf("front:%p, rear:%p /front_node:%p data:%p pre:%p next:%p\n", queue->front_node, queue->rear_node, f_node, f_node->data, f_node->pre, f_node->next);
+    //printf("front:%p, rear:%p /front_node:%p data:%p pre:%p next:%p\n", queue->front_node, queue->rear_node, f_node, f_node->data, f_node->pre, f_node->next);
     free(f_node->data);
     free(f_node);
     return 0;
