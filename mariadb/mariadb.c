@@ -157,7 +157,6 @@ bool init_mariadb(chatdb_t* db)
             }
             return false;
         }
-        //printf("%s init done : %d - %d\n", db->db_names[i], db->pools[i].pool_idx_stack_top, db->pools[i].pool_idx_stack[db->pools[i].pool_idx_stack_top]);
     }
     return true;
 }

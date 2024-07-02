@@ -136,7 +136,7 @@ void reserve_send(void_queue_t* vq, char* send_org, int body_size)
     temp_send_buf.send_data_size = total_size;
     memcpy(temp_send_buf.buf_ptr, (char*)&total_size, HEADER_SIZE);
     memcpy(temp_send_buf.buf_ptr + HEADER_SIZE, send_org, body_size);
-    printf("reserve_send_size : %d \n", temp_send_buf.send_data_size); write(STDOUT_FILENO, temp_send_buf.buf_ptr, temp_send_buf.send_data_size); write(STDOUT_FILENO, "\n", 1);
+    //printf("reserve_send_size : %d \n", temp_send_buf.send_data_size); write(STDOUT_FILENO, temp_send_buf.buf_ptr, temp_send_buf.send_data_size); write(STDOUT_FILENO, "\n", 1);
     enqueue(vq, (void*)&temp_send_buf);
 }
 
@@ -257,7 +257,7 @@ void disconnect_client(epoll_net_core* server_ptr, int client_fd)
     printf("disconnect:%d\n", client_fd);
 }
 
-void set_serverlog(epoll_net_core* server_ptr) {
+void fix_log_time_pairs(epoll_net_core* server_ptr) {
     conn_t* conn = NULL;
     char SQL_buf[512];
     conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
@@ -323,7 +323,7 @@ int run_server(epoll_net_core* server_ptr) {
         printf("epoll_ctl Error : %d\n", errno);
     }
 
-    set_serverlog(server_ptr);
+    fix_log_time_pairs(server_ptr);
 
     // 메인 스레드(main함수에서 run_server()까지 호출한 메인 흐름)가 epoll_wait로 io완료 대기
     while (server_ptr->is_run == true) {
@@ -337,6 +337,9 @@ int run_server(epoll_net_core* server_ptr) {
         for (int i = 0; i < occured_event_cnt; i++) {
             // accept 이벤트시
             if (server_ptr->epoll_events[i].data.fd == STDIN_FILENO) {
+                conn_t* user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
+                server_down_notice(server_ptr, user_setting_conn);
+                release_conns(&server_ptr->db, 1, user_setting_conn);
                 return 0;
             }
             if (server_ptr->epoll_events[i].data.fd == server_ptr->listen_fd) {
@@ -357,9 +360,9 @@ int run_server(epoll_net_core* server_ptr) {
                 if (input_size <= 0) {
                     disconnect_client(server_ptr, client_fd);
 
-                    conn_t* user_status_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
-                    user_status_change_notice(server_ptr, user_status_conn);
-                    release_conns(&server_ptr->db, 1, user_status_conn);
+                    conn_t* user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
+                    user_status_change_notice(server_ptr, user_setting_conn);
+                    release_conns(&server_ptr->db, 1, user_setting_conn);
                     
                     continue;
                 }
@@ -384,17 +387,15 @@ int run_server(epoll_net_core* server_ptr) {
                 {
                     continue ;
                 }
-                //printf("send session id:%ld, fd:%d\n", s_ptr->session_idx, s_ptr->fd);
                 while (1) {
                     char* send_buf_ptr = get_front_send_buf_ptr(&s_ptr->send_bufs);
-                    printf("send_buf_ptr : %p, get_front_send_buf_size: %ld\n", send_buf_ptr, get_front_send_buf_size(&s_ptr->send_bufs));
                     if (send_buf_ptr == NULL)
                     {
                         break ;
                     }
                     size_t sent = send(client_fd, send_buf_ptr, get_front_send_buf_size(&s_ptr->send_bufs), 0);
                     // 필요할때 주석 풀기.
-                    write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, send_buf_ptr, get_front_send_buf_size(&s_ptr->send_bufs)); write(STDOUT_FILENO, "\n", 1);
+                    //write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, send_buf_ptr, get_front_send_buf_size(&s_ptr->send_bufs)); write(STDOUT_FILENO, "\n", 1);
                     if (sent < 0) {
                         perror("send");
                         close(server_ptr->epoll_events[i].data.fd);
@@ -407,7 +408,6 @@ int run_server(epoll_net_core* server_ptr) {
                 }
                 struct epoll_event temp_event;
                 temp_event.events = EPOLLIN | EPOLLET;
-                //temp_event.data.fd = server_ptr->epoll_events[i].data.fd;
                 temp_event.data.fd = client_fd;
                 if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, client_fd, &temp_event) == -1) {
                     perror("epoll_ctl: del");
@@ -423,17 +423,17 @@ int run_server(epoll_net_core* server_ptr) {
 
 void down_server(epoll_net_core* server_ptr) {
     printf("down server\n");
-    conn_t* conn = NULL;
+    conn_t* log_conn = NULL;
     char SQL_buf[512];
-    conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
+    log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
 
     snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE server_log SET downtime = NOW() WHERE downtime IS NULL;");
 
-    if (mysql_query(conn->conn, SQL_buf)) {
-        fprintf(stderr, "UPDATE server_log timestamp failed: %s\n", mysql_error(conn->conn));
+    if (mysql_query(log_conn->conn, SQL_buf)) {
+        fprintf(stderr, "UPDATE server_log timestamp failed: %s\n", mysql_error(log_conn->conn));
     }
-    if (conn != NULL) {
-        release_conn(&server_ptr->db.pools[LOG_DB_IDX], conn);
+    if (log_conn != NULL) {
+        release_conn(&server_ptr->db.pools[LOG_DB_IDX], log_conn);
     }
     server_ptr->is_run = false;
     epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_DEL, server_ptr->listen_fd, NULL);

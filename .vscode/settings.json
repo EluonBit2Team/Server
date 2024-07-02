@@ -26,6 +26,7 @@
         "session.h": "c",
         "cjson.h": "c",
         "wait.h": "c",
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "regex.h": "c"
     }
 }

@@ -57,11 +57,6 @@ bool init_mariadb_pool(mariadb_conn_pool_t* pool, size_t poolsize, int db_idx, c
         pool->pool_idx_stack[i] = i;
     }
     pool->pool_idx_stack_top = poolsize - 1;
-    for (int i = 0; i < poolsize; i++)
-    {
-        printf("%d번째 conn:%p\t", i, pool->pool[i].conn);
-    }
-    printf("top:%ld top_idx:%d top:%p\n", pool->pool_idx_stack_top, pool->pool_idx_stack[pool->pool_idx_stack_top], pool->pool[pool->pool_idx_stack[pool->pool_idx_stack_top]].conn);
     return true;
 }
 
