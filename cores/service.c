@@ -1748,7 +1748,7 @@ void out_chat_group(epoll_net_core* server_ptr, task_t* task) {
     char SQL_buf[512];
     int gid = -1;
 
-    chat_group_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
+    chat_group_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
 
     int uid = find(&server_ptr->fd_to_uid_hash, task->req_client_fd);
     if (uid < 0) {
