@@ -1621,29 +1621,29 @@ void chat_in_user_service(epoll_net_core* server_ptr, task_t* task) {
     user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
     
-    printf("1\n");
+
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT uid FROM user WHERE login_id = '%s'", cJSON_GetStringValue(recver_login_id_ptr));
     int recver_uid = query_result_to_int(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
-    printf("2\n");
+   
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT max_tps FROM user WHERE uid = %d", uid);
     int max_tps = query_result_to_int(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
-    printf("3\n");
+
     snprintf(SQL_buf, sizeof(SQL_buf), 
-        "CALL dm_message(%d, %d, '%s', '%s', '%s',@result)", 
-        uid, recver_uid, cJSON_GetStringValue(text_ptr), max_tps,cJSON_GetStringValue(sender_login_id_ptr),cJSON_GetStringValue(recver_login_id_ptr));
+        "CALL dm_message(%d, '%s', %d, '%s', '%s', '%d', @result)", 
+        uid, cJSON_GetStringValue(sender_login_id_ptr), recver_uid, cJSON_GetStringValue(recver_login_id_ptr), cJSON_GetStringValue(text_ptr), max_tps);
     query_result_to_execuete(log_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
-    printf("4\n");
+
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT @result");
     timestamp = query_result_to_str(log_conn, &msg, SQL_buf);
     if (msg != NULL) {
@@ -1654,26 +1654,28 @@ void chat_in_user_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "Too Much Message in Minute";
         goto cleanup_and_respond;
     }
-    printf("5\n");
+
     cJSON_AddStringToObject(json_ptr, "timestamp", timestamp);
     response_str = cJSON_Print(json_ptr);
-    printf("6\n");
+
     recieve_fd = find(&server_ptr->uid_to_fd_hash, recver_uid);
     if (recieve_fd < 0) {
         msg = "user is not online";
         goto cleanup_and_respond;
     }
-    printf("7\n");
+    
     client_session_t* session = find_session_by_fd(&server_ptr->session_pool, recieve_fd);
     if (session == NULL) {
         printf("%d fd Not have session!!\n", recieve_fd);
         msg = "user is not online";
         goto cleanup_and_respond;
     }
-    printf("8\n");
+    
     write(STDOUT_FILENO, "true:", 5); write(STDOUT_FILENO, task->buf + HEADER_SIZE, task->task_data_len - HEADER_SIZE); write(STDOUT_FILENO, "\n", 1);
     reserve_epoll_send(server_ptr->epoll_fd, session, response_str, strlen(response_str));
     
+    cJSON_AddStringToObject(json_ptr, "timestamp", timestamp);
+    response_str = cJSON_Print(json_ptr);
 
 cleanup_and_respond:
     if (msg != NULL) {
