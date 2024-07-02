@@ -106,6 +106,35 @@ cJSON* query_result_to_json(conn_t* conn, char** msg, const char* query, int key
     return query_result_list;
 }
 
+char* query_result_to_str(conn_t* conn, char** out_msg, const char* query) {
+    MYSQL_ROW row;
+    MYSQL_RES *res = NULL;
+    char* result = NULL;
+
+    if (mysql_query(conn->conn, query)) {
+        fprintf(stderr, "query fail: %s\n", mysql_error(conn->conn));
+        *out_msg = "DB error";
+        return 0;
+    }
+    res = mysql_store_result(conn->conn);
+    if (res == NULL) {
+        fprintf(stderr, "mysql_store_result failed: %s\n", mysql_error(conn->conn));
+        *out_msg = "DB error";
+        return 0;
+    }
+    if ((row = mysql_fetch_row(res)) == NULL) {
+        *out_msg = "No result";
+        return 0;
+    }
+    if (row[0] != NULL) {
+        result = (char*)malloc(strlen(row[0]));
+        strcpy(result, row[0]);
+    }
+    mysql_free_result(res);
+    
+    return result;
+}
+
 bool init_mariadb(chatdb_t* db)
 {
     db->db_names[USER_SETTING_DB_IDX] = USER_SETTING_DB;
@@ -128,7 +157,6 @@ bool init_mariadb(chatdb_t* db)
             }
             return false;
         }
-        //printf("%s init done : %d - %d\n", db->db_names[i], db->pools[i].pool_idx_stack_top, db->pools[i].pool_idx_stack[db->pools[i].pool_idx_stack_top]);
     }
     return true;
 }

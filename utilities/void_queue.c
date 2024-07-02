@@ -3,6 +3,7 @@
 
 void init_queue(void_queue_t* queue, int type_default_size) {
     queue->type_default_size = type_default_size;
+    queue->front_node = NULL;
     queue->rear_node = NULL;
 }
 
@@ -24,39 +25,71 @@ int enqueue(void_queue_t* queue, const void* data_org) {
         // TODO: error 로깅 및 처리
         return -1;
     }
-    printf("malloc done\n");
     memcpy(new_node->data, data_org, queue->type_default_size);
-    printf("memcpy done\n");
-    new_node->pre = queue->rear_node;
     
-    // rear노드 갱신
+    // new_node->pre = queue->rear_node;
+    
+    // // rear노드 갱신
+    // queue->rear_node = new_node;
+
+    // [queue] pre(new__node)rear <- pre()
+    new_node->pre = queue->rear_node;
+    new_node->next = NULL;
+    if (queue->rear_node == NULL) {
+        if (queue->front_node != NULL) {
+            fprintf(stderr, "%s", "Invalid queue node\n");
+        }
+        queue->front_node = new_node;
+    }
+    else {
+        queue->rear_node->next = new_node;
+    }
     queue->rear_node = new_node;
+
+    //printf("front:%p, rear:%p /\nnew_node:%p data:%p pre:%p next:%p\n", queue->front_node, queue->rear_node, new_node, new_node->data, new_node->pre, new_node->next);
     return 0;
 }
 
 int dequeue(void_queue_t* queue, void* data_des) {
-    node_t* r_node = queue->rear_node;
-    if (r_node == NULL) {
+    // node_t* r_node = queue->rear_node;
+    // if (r_node == NULL) {
+    //     return -1;
+    // }
+
+    // if (data_des != NULL) {
+    //    memcpy(data_des, r_node->data, queue->type_default_size);
+    // }
+    // node_t* new_r_node = queue->rear_node->pre;
+    // queue->rear_node = new_r_node;
+
+    node_t* f_node = queue->front_node;
+    if (f_node == NULL) {
         return -1;
     }
 
     if (data_des != NULL) {
-       memcpy(data_des, r_node->data, queue->type_default_size);
+       memcpy(data_des, f_node->data, queue->type_default_size);
     }
-    node_t* new_r_node = queue->rear_node->pre;
-    queue->rear_node = new_r_node;
-
-    free(r_node->data);
-    free(r_node);
+    
+    queue->front_node = f_node->next;
+    if (queue->front_node == NULL) {
+        queue->rear_node = NULL;
+    }
+    else {
+        queue->front_node->pre = NULL;
+    }
+    //printf("front:%p, rear:%p /front_node:%p data:%p pre:%p next:%p\n", queue->front_node, queue->rear_node, f_node, f_node->data, f_node->pre, f_node->next);
+    free(f_node->data);
+    free(f_node);
     return 0;
 }
 
-void* get_rear_data(void_queue_t* queue) {
-    return queue->rear_node->data;
+void* get_front_node(void_queue_t* queue) {
+    return queue->front_node;
 }
 
 bool is_empty(void_queue_t* queue) {
-    if (queue->rear_node == NULL) {
+    if (queue->front_node == NULL) {
         return true;
     }
     return false;

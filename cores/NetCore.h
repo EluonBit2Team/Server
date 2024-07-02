@@ -49,6 +49,11 @@
 #define SERVER_LOG_SERV_FUNC 16
 #define SERVER_STATUS_SERV_FUNC 17
 
+
+
+#define USER_STATUS_CHANGE_NOTICE 300
+#define SERVER_DOWN_NOTICE 301
+
 #define WOKER_THREAD_NUM 4
 
 // 워커스레드가 처리할 일감을 포장한 구조체
@@ -92,7 +97,7 @@ typedef struct st_epoll_net_core {
 bool init_server(epoll_net_core* server_ptr) ;
 int run_server(epoll_net_core* server_ptr) ;
 void down_server(epoll_net_core* server_ptr);
-void set_serverlog(epoll_net_core* server_ptr);
+void fix_log_time_pairs(epoll_net_core* server_ptr);
 
 // 스레드 풀 관련 초기화
 void init_worker_thread(epoll_net_core* server_ptr, thread_pool_t* thread_pool_t_ptr);
@@ -107,8 +112,8 @@ int accept_client(epoll_net_core* server_ptr);
 void disconnect_client(epoll_net_core* server_ptr, int client_fd);
 void set_sock_nonblocking_mode(int sockFd) ;
 
-char* get_rear_send_buf_ptr(void_queue_t* vq);
-size_t get_rear_send_buf_size(void_queue_t* vq);
+char* get_front_send_buf_ptr(void_queue_t* vq);
+size_t get_front_send_buf_size(void_queue_t* vq);
 void reserve_send(void_queue_t* vq, char* send_org, int send_size);
 void reserve_epoll_send(int epoll_fd, client_session_t* send_session, char* send_org, int send_size);
 // ✨ 서비스 함수. 이런 형태의 함수들을 추가하여 서비스 추가. ✨
@@ -129,5 +134,9 @@ void group_delete_service(epoll_net_core* server_ptr, task_t* task);
 void server_log_service(epoll_net_core* server_ptr, task_t* task);
 void server_status_service(epoll_net_core* server_ptr, task_t* task);
 void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task);
+
+// notice. 서버 -> 클라이언트. 응답 안기다림.
+void user_status_change_notice(epoll_net_core* server_ptr, conn_t* user_setting_conn);
+void server_down_notice(epoll_net_core* server_ptr, conn_t* user_setting_conn);
 
 #endif

@@ -11,6 +11,7 @@
 #include <sys/file.h>
 #include <sys/wait.h>
 #include <mysql/mysql.h>
+#include <ctype.h>
 
 #define LOG_FILE "server_status.log"
 #define DB_HOST "192.168.0.253"
@@ -30,6 +31,25 @@ typedef struct statistic {
     double mem_usage_max;
     double mem_usage_avg;
 } statistic_t;
+
+void fix_log_time_pairs(MYSQL* log_conn) {
+    char SQL_buf[512];
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE client_log SET logout_time = NOW() WHERE logout_time IS NULL");
+    if (mysql_query(log_conn, SQL_buf)) {
+        fprintf(stderr, "UPDATE client_log failed: %s\n", mysql_error(log_conn));
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE server_log SET downtime = NOW() WHERE downtime IS NULL");
+    if (mysql_query(log_conn, SQL_buf)) {
+        fprintf(stderr, "UPDATE server_log server_status failed: %s\n", mysql_error(log_conn));
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO server_log (uptime) VALUES (NOW())");
+    if (mysql_query(log_conn, SQL_buf)) {
+        fprintf(stderr, "UPDATE server_log timestamp failed: %s\n", mysql_error(log_conn));
+    }
+}
 
 void handle_signal(int sig) {
     if (sig == SIGTERM || sig == SIGKILL || sig == SIGSEGV || sig == SIGABRT) {
