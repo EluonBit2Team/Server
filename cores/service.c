@@ -1658,6 +1658,8 @@ void chat_in_user_service(epoll_net_core* server_ptr, task_t* task) {
     cJSON_AddStringToObject(json_ptr, "timestamp", timestamp);
     response_str = cJSON_Print(json_ptr);
 
+    reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
+
     recieve_fd = find(&server_ptr->uid_to_fd_hash, recver_uid);
     if (recieve_fd < 0) {
         msg = "user is not online";
@@ -1673,7 +1675,6 @@ void chat_in_user_service(epoll_net_core* server_ptr, task_t* task) {
     printf("%d \n", recieve_fd); write(STDOUT_FILENO, task->buf, task->task_data_len); write(STDOUT_FILENO, "\n", 1);
     write(STDOUT_FILENO, "true:", 5); write(STDOUT_FILENO, task->buf + HEADER_SIZE, task->task_data_len - HEADER_SIZE); write(STDOUT_FILENO, "\n", 1);
     reserve_epoll_send(server_ptr->epoll_fd, session, response_str, strlen(response_str));
-    reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
 
 cleanup_and_respond:
     if (msg != NULL) {
