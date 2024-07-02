@@ -15,6 +15,7 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <time.h>
+#include <ctype.h>
 #include <stdarg.h>
 #include <sys/file.h>
 #include <sys/wait.h>

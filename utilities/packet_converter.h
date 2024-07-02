@@ -10,4 +10,6 @@ cJSON* get_parsed_json(char* buf);
 int type_finder(char *buf);
 void cJSON_del_and_free(int cjson_num, ...);
 void free_all(int ptr_num, ...);
+bool is_valid_login_id(const char* id, char** out_msg);
+bool raw_json_guard(const char *raw_json);
 #endif
