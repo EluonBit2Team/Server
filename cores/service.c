@@ -264,19 +264,17 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
     snprintf(SQL_buf,sizeof(SQL_buf),"SELECT COUNT(groupname) FROM chat_group WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
     count_groupname += query_result_to_int(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
-        msg = "groupname  already exists";
         goto cleanup_and_respond;
     }
 
     snprintf(SQL_buf,sizeof(SQL_buf),"SELECT COUNT(groupname) FROM group_req WHERE groupname = '%s'",cJSON_GetStringValue(groupname_ptr));
     count_groupname += query_result_to_int(chat_group_conn, &msg, SQL_buf);
     if (msg != NULL) {
-        msg = "groupname  already exists in req";
         goto cleanup_and_respond;
     }
 
     if (count_groupname >= 1) {
-        msg = "groupname is duplicated";
+        msg = "groupname already exists";
         goto cleanup_and_respond;
     }
 
@@ -414,6 +412,7 @@ void edit_member_service(epoll_net_core* server_ptr, task_t* task) {
     conn_t* user_setting_conn = NULL;
     char SQL_buf[512];
     int array_size = 0;
+    int user_count = 0;
 
     chat_group_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
     user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
@@ -460,18 +459,19 @@ void edit_member_service(epoll_net_core* server_ptr, task_t* task) {
     array_size = cJSON_GetArraySize(inmem_ptr);
     for (int i = 0; i < array_size; i++) {
         cJSON* user_item = cJSON_GetArrayItem(inmem_ptr, i);
-        if (user_item == NULL) {
-            msg = "Invalid JSON: Empty username in users list";
-            goto cleanup_and_respond;
-        }
-        else if (cJSON_GetStringValue(user_item)[0] != '\0') {
+        if (cJSON_GetStringValue(user_item)[0] != '\0') {
             snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE login_id = '%s'", cJSON_GetStringValue(user_item));
             int uid = query_result_to_int(user_setting_conn,&msg,SQL_buf);
 
+            snprintf(SQL_buf, sizeof(SQL_buf), "SELECT count(uid) FROM group_member WHERE gid = %d", gid);
+            user_count = query_result_to_int(chat_group_conn,&msg,SQL_buf);
+            if (user_count > 0) {
+                msg = "user is allready exist";
+                goto cleanup_and_respond;
+            }
             snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO group_member (uid, gid,is_host) VALUES ('%d', '%d',0)", uid, gid);
             query_result_to_execuete(chat_group_conn,&msg,SQL_buf);
             if (msg != NULL) {
-                msg = "rollback";
                 mysql_rollback(user_setting_conn->conn);
                 goto cleanup_and_respond;
             }
@@ -481,18 +481,13 @@ void edit_member_service(epoll_net_core* server_ptr, task_t* task) {
     array_size = cJSON_GetArraySize(outmem_ptr);
     for (int i = 0; i < array_size; i++) {
         cJSON* user_item = cJSON_GetArrayItem(outmem_ptr, i);
-        if (user_item == NULL) {
-            msg = "Invalid JSON: Empty username in users list";
-            goto cleanup_and_respond;
-        }
-        else if (cJSON_GetStringValue(user_item)[0] != '\0') {
+        if (cJSON_GetStringValue(user_item)[0] != '\0') {
             snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE login_id = '%s'", cJSON_GetStringValue(user_item));
             int uid = query_result_to_int(user_setting_conn,&msg,SQL_buf);
 
             snprintf(SQL_buf, sizeof(SQL_buf), "DELETE FROM group_member WHERE uid = %d", uid);
             query_result_to_execuete(chat_group_conn,&msg,SQL_buf);
             if (msg != NULL) {
-                msg = "rollback";
                 mysql_rollback(user_setting_conn->conn);
                 goto cleanup_and_respond;
             }
