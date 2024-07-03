@@ -43,6 +43,12 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
+
+    if (raw_json_guard(task->buf) != false) {
+        msg = "json guard fail";
+        goto cleanup_and_respond;
+    }
+
     cJSON* json_ptr = get_parsed_json(task->buf);
     if (json_ptr == NULL) {
         msg = "user send invalid json";
@@ -137,10 +143,6 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    // if (raw_json_guard(task->buf) != false) {
-    //     msg = "json guard fail";
-    //     goto cleanup_and_respond;
-    // }
     cJSON* json_ptr = get_parsed_json(task->buf);
     if (json_ptr == NULL) {
         msg = "json parse fail";
