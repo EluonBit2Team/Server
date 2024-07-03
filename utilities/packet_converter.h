@@ -10,7 +10,6 @@ cJSON* get_parsed_json(char* buf);
 int type_finder(char *buf);
 void cJSON_del_and_free(int cjson_num, ...);
 void free_all(int ptr_num, ...);
-bool raw_json_guard(const char *raw_json);
 bool is_emoji(unsigned int codepoint);
 bool contains_emoji(const char* str);
 bool is_valid_login_id(const char* id, char** out_msg);

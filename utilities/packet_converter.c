@@ -46,19 +46,6 @@ int type_finder(char *buf) {
     return type_int;
 }
 
-// todo~~~
-bool is_exception(const char *input) {
-    const char *exceptions[] = {"NULL", "null", "invalid", "forbidden", "unauthorized"};
-    const int num_exceptions = sizeof(exceptions) / sizeof(exceptions[0]);
-
-    for (int i = 0; i < num_exceptions; i++) {
-        if (strcmp(input, exceptions[i]) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
 void cJSON_del_and_free(int cjson_num, ...) {
     va_list VA_LIST;
     va_start(VA_LIST, cjson_num);
@@ -86,45 +73,6 @@ void free_all(int ptr_num, ...) {
     va_end(VA_LIST);
 }
 
-bool raw_json_guard(const char *raw_json) {
-    const char *invalid_str_arr[] = {":\t\n", ":\n", ": \n", NULL};
-    bool in_quotes = false;
-    bool escape = false;
-
-    while (*raw_json) {
-        if (escape) {
-            escape = false;
-        } 
-        else if (*raw_json == '\\') {
-            escape = true;
-        }
-        else if (*raw_json == '"') {
-            in_quotes = !in_quotes;
-        } 
-        else if (!in_quotes) {
-            for (int i = 0; invalid_str_arr[i] != NULL; i++) {
-                const char *substr_position = strstr(raw_json, invalid_str_arr[i]);
-                if (substr_position != NULL) {
-                    // Ensure invalid substring is not inside quotes
-                    const char *quote_check = raw_json;
-                    bool inside_quotes = false;
-                    while (quote_check < substr_position) {
-                        if (*quote_check == '"' && (quote_check == raw_json || *(quote_check - 1) != '\\')) {
-                            inside_quotes = !inside_quotes;
-                        }
-                        quote_check++;
-                    }
-                    if (!inside_quotes) {
-                        return false;
-                    }
-                }
-            }
-        }
-        raw_json++;
-    }
-    return true;
-}
-
 bool is_emoji(unsigned int codepoint) {
     return (codepoint >= 0x1F600 && codepoint <= 0x1F64F) ||
            (codepoint >= 0x1F300 && codepoint <= 0x1F5FF) ||
@@ -140,30 +88,47 @@ bool is_emoji(unsigned int codepoint) {
 }
 
 bool contains_emoji(const char* str) {
-    const unsigned char *s = (const unsigned char *)str;
-    while (*s) {
-        if (*s < 0x80) {
-            s++;
-        } else if ((*s & 0xE0) == 0xC0) {
-            unsigned int codepoint = ((*s & 0x1F) << 6) | (s[1] & 0x3F);
+    while (*str) {
+        unsigned char byte = *str;
+
+        if (byte >= 0xF0) {
+            unsigned int codepoint = 0;
+            if ((byte & 0xF8) == 0xF0) {
+                codepoint = ((byte & 0x07) << 18) |
+                            ((str[1] & 0x3F) << 12) |
+                            ((str[2] & 0x3F) << 6) |
+                            (str[3] & 0x3F);
+                str += 4;
+            }
             if (is_emoji(codepoint)) {
                 return true;
             }
-            s += 2;
-        } else if ((*s & 0xF0) == 0xE0) {
-            unsigned int codepoint = ((*s & 0x0F) << 12) | ((s[1] & 0x3F) << 6) | (s[2] & 0x3F);
+        } else if (byte >= 0xE0) {
+            unsigned int codepoint = 0;
+            if ((byte & 0xF0) == 0xE0) {
+                codepoint = ((byte & 0x0F) << 12) |
+                            ((str[1] & 0x3F) << 6) |
+                            (str[2] & 0x3F);
+                str += 3;
+            }
             if (is_emoji(codepoint)) {
                 return true;
             }
-            s += 3;
-        } else if ((*s & 0xF8) == 0xF0) {
-            unsigned int codepoint = ((*s & 0x07) << 18) | ((s[1] & 0x3F) << 12) | ((s[2] & 0x3F) << 6) | (s[3] & 0x3F);
+        } else if (byte >= 0xC0) {
+            unsigned int codepoint = 0;
+            if ((byte & 0xE0) == 0xC0) {
+                codepoint = ((byte & 0x1F) << 6) |
+                            (str[1] & 0x3F);
+                str += 2;
+            }
             if (is_emoji(codepoint)) {
                 return true;
             }
-            s += 4;
         } else {
-            return true;
+            if (is_emoji(byte)) {
+                return true;
+            }
+            str += 1;
         }
     }
     return false;

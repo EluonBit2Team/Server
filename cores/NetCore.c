@@ -397,7 +397,7 @@ int run_server(epoll_net_core* server_ptr) {
                     }
                     size_t sent = send(client_fd, send_buf_ptr, get_front_send_buf_size(&s_ptr->send_bufs), 0);
                     // 필요할때 주석 풀기.
-                    //write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, send_buf_ptr, get_front_send_buf_size(&s_ptr->send_bufs)); write(STDOUT_FILENO, "\n", 1);
+                    write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, send_buf_ptr, get_front_send_buf_size(&s_ptr->send_bufs)); write(STDOUT_FILENO, "\n", 1);
                     if (sent < 0) {
                         perror("send");
                         close(server_ptr->epoll_events[i].data.fd);
