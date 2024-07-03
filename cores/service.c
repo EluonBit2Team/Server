@@ -3,21 +3,32 @@
 // ✨ 서비스 함수. 이런 형태의 함수들을 추가하여 서비스 추가. ✨
 void echo_service(epoll_net_core* server_ptr, task_t* task) {
     printf("echo_service\n");
-    client_session_t* now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    int type = 100;
+    char* msg = NULL;
+    client_session_t* now_session = NULL;
+    cJSON* result_json = cJSON_CreateObject();
+    char* response_str = NULL;
+
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
     if (now_session == NULL)
     {
-        printf("invalid fd:%d", task->req_client_fd);
-        return ;
+        msg = "session error";
+        goto cleanup_and_respond;
     }
-    reserve_send(&now_session->send_bufs, task->buf, task->task_data_len);
-    
-    struct epoll_event temp_event;
-    temp_event.events = EPOLLOUT | EPOLLET;
-    temp_event.data.fd = now_session->fd;
-    if (epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_MOD, now_session->fd, &temp_event) == -1) {
-        perror("epoll_ctl: add");
-        close(task->req_client_fd);
+
+    type = 0;
+
+cleanup_and_respond:
+    cJSON_AddNumberToObject(result_json, "type", type);
+    if (msg != NULL)
+    {
+        cJSON_AddStringToObject(result_json, "msg", msg);
     }
+
+    response_str = cJSON_Print(result_json);
+    reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
+    free_all(1, response_str);
+    return ;
 }
 
 void login_service(epoll_net_core* server_ptr, task_t* task) {
