@@ -46,19 +46,6 @@ int type_finder(char *buf) {
     return type_int;
 }
 
-// todo~~~
-bool is_exception(const char *input) {
-    const char *exceptions[] = {"NULL", "null", "invalid", "forbidden", "unauthorized"};
-    const int num_exceptions = sizeof(exceptions) / sizeof(exceptions[0]);
-
-    for (int i = 0; i < num_exceptions; i++) {
-        if (strcmp(input, exceptions[i]) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
 void cJSON_del_and_free(int cjson_num, ...) {
     va_list VA_LIST;
     va_start(VA_LIST, cjson_num);
@@ -140,30 +127,47 @@ bool is_emoji(unsigned int codepoint) {
 }
 
 bool contains_emoji(const char* str) {
-    const unsigned char *s = (const unsigned char *)str;
-    while (*s) {
-        if (*s < 0x80) {
-            s++;
-        } else if ((*s & 0xE0) == 0xC0) {
-            unsigned int codepoint = ((*s & 0x1F) << 6) | (s[1] & 0x3F);
+    while (*str) {
+        unsigned char byte = *str;
+
+        if (byte >= 0xF0) {
+            unsigned int codepoint = 0;
+            if ((byte & 0xF8) == 0xF0) {
+                codepoint = ((byte & 0x07) << 18) |
+                            ((str[1] & 0x3F) << 12) |
+                            ((str[2] & 0x3F) << 6) |
+                            (str[3] & 0x3F);
+                str += 4;
+            }
             if (is_emoji(codepoint)) {
                 return true;
             }
-            s += 2;
-        } else if ((*s & 0xF0) == 0xE0) {
-            unsigned int codepoint = ((*s & 0x0F) << 12) | ((s[1] & 0x3F) << 6) | (s[2] & 0x3F);
+        } else if (byte >= 0xE0) {
+            unsigned int codepoint = 0;
+            if ((byte & 0xF0) == 0xE0) {
+                codepoint = ((byte & 0x0F) << 12) |
+                            ((str[1] & 0x3F) << 6) |
+                            (str[2] & 0x3F);
+                str += 3;
+            }
             if (is_emoji(codepoint)) {
                 return true;
             }
-            s += 3;
-        } else if ((*s & 0xF8) == 0xF0) {
-            unsigned int codepoint = ((*s & 0x07) << 18) | ((s[1] & 0x3F) << 12) | ((s[2] & 0x3F) << 6) | (s[3] & 0x3F);
+        } else if (byte >= 0xC0) {
+            unsigned int codepoint = 0;
+            if ((byte & 0xE0) == 0xC0) {
+                codepoint = ((byte & 0x1F) << 6) |
+                            (str[1] & 0x3F);
+                str += 2;
+            }
             if (is_emoji(codepoint)) {
                 return true;
             }
-            s += 4;
         } else {
-            return true;
+            if (is_emoji(byte)) {
+                return true;
+            }
+            str += 1;
         }
     }
     return false;

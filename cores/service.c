@@ -175,7 +175,7 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
     if (!is_valid_login_id(cJSON_GetStringValue(id_ptr),&msg)) {
         goto cleanup_and_respond;
     }
-    if (!is_valid_login_id(cJSON_GetStringValue(pw_ptr),&msg)) {
+    if (!is_valid_password(cJSON_GetStringValue(pw_ptr),&msg)) {
         goto cleanup_and_respond;
     }
 
