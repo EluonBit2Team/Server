@@ -5,7 +5,7 @@
 #include <mysql/mysql.h>
 #include "../includes.h"
 
-#define DB_IP "172.31.161.122"
+#define DB_IP "172.31.165.122"
 #define DB_PORT 3306
 #define DB_USER_NAME "today_chicken"
 #define DB_USER_PASS "1q2w3e4r"
