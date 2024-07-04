@@ -410,7 +410,10 @@ int run_server(epoll_net_core* server_ptr) {
                 while (1) {
                     pthread_mutex_lock(&s_ptr->send_buf_mutex);
                     send_buf_t temp_send_data;
-                    dequeue(&s_ptr->send_bufs, &temp_send_data);
+                    if (dequeue(&s_ptr->send_bufs, &temp_send_data) < 0) {
+                        pthread_mutex_unlock(&s_ptr->send_buf_mutex);
+                        break ;
+                    } 
                     pthread_mutex_unlock(&s_ptr->send_buf_mutex);
 
                     // char* send_buf_ptr = get_front_send_buf_ptr(&s_ptr->send_bufs);
