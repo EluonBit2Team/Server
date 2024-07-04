@@ -46,7 +46,7 @@ int type_finder(char *buf) {
     return type_int;
 }
 
-void cJSON_del_and_free(int cjson_num, ...) {
+void cJSON_del(int cjson_num, ...) {
     va_list VA_LIST;
     va_start(VA_LIST, cjson_num);
     for (int i = 0; i < cjson_num; i ++) {

@@ -125,7 +125,7 @@ cleanup_and_respond:
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 2, user_setting_conn, log_conn);
-    cJSON_del_and_free(2, result_json, json_ptr);
+    cJSON_del(2, result_json, json_ptr);
     free_all(1, response_str);
     return ;
 }
@@ -212,7 +212,7 @@ cleanup_and_respond:
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 1, user_setting_conn);
-    cJSON_del_and_free(2, result_json, json_ptr);
+    cJSON_del(2, result_json, json_ptr);
     free_all(1, response_str);
     return ;
 }
@@ -303,7 +303,7 @@ cleanup_and_respond:
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 1, chat_group_conn);
-    cJSON_del_and_free(2, result_json, json_ptr);
+    cJSON_del(2, result_json, json_ptr);
     free_all(1, response_str);
     return ;
 }
@@ -352,7 +352,7 @@ cleanup_and_respond:
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 1, user_setting_conn);
-    cJSON_del_and_free(2, result_json, json_ptr);
+    cJSON_del(2, result_json, json_ptr);
     free_all(1, response_str);
     return ;
 }
@@ -401,7 +401,7 @@ cleanup_and_respond:
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 1, chat_group_conn);
-    cJSON_del_and_free(2, result_json, json_ptr);
+    cJSON_del(2, result_json, json_ptr);
     free_all(1, response_str);
     return ;
 }
@@ -510,7 +510,7 @@ cleanup_and_respond:
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 2, user_setting_conn, chat_group_conn);
-    cJSON_del_and_free(2, result_json, json_ptr);
+    cJSON_del(2, result_json, json_ptr);
     free_all(1, response_str);
     return ;
 }
@@ -587,7 +587,7 @@ cleanup_and_respond:
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 2, user_setting_conn, chat_group_conn);
-    cJSON_del_and_free(2, result_json, json_ptr);
+    cJSON_del(2, result_json, json_ptr);
     free_all(1, response_str);
     return ;
 }
@@ -722,7 +722,7 @@ cleanup_and_respond:
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 1, user_setting_conn);
-    cJSON_del_and_free(2, result_json, json_ptr);
+    cJSON_del(2, result_json, json_ptr);
     free_all(1, response_str);
     return ;
 }
@@ -852,7 +852,7 @@ cleanup_and_respond:
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 1, chat_group_conn);
-    cJSON_del_and_free(2, result_json, json_ptr);
+    cJSON_del(2, result_json, json_ptr);
     free_all(1, response_str);
     return ;
 }
@@ -939,7 +939,7 @@ cleanup_and_respond:
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 2, user_setting_conn, chat_group_conn);
-    cJSON_del_and_free(2, result_json, json_ptr);
+    cJSON_del(2, result_json, json_ptr);
     free_all(1, response_str);
     return ;
 }
@@ -1088,7 +1088,7 @@ cleanup_and_respond:
         reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     }
     release_conns(&server_ptr->db, 3, log_conn, chat_group_conn, user_setting_conn);
-    cJSON_del_and_free(2, json_ptr, result_json);
+    cJSON_del(2, json_ptr, result_json);
     free_all(2, response_str, timestamp);
     return ;
 }
@@ -1239,7 +1239,7 @@ cleanup_and_respond:
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 1, user_setting_conn);
-    cJSON_del_and_free(2, result_json, json_ptr);
+    cJSON_del(2, result_json, json_ptr);
     free_all(1, response_str);
     return ;
 }
@@ -1316,7 +1316,7 @@ cleanup_and_respond:
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 2, log_conn, chat_group_conn);
-    cJSON_del_and_free(2, result_json, json_ptr);
+    cJSON_del(2, result_json, json_ptr);
     free_all(1, response_str);
     return ;
 }
@@ -1406,7 +1406,7 @@ cleanup_and_respond:
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 1, chat_group_conn);
-    cJSON_del_and_free(2, json_ptr, result_json);
+    cJSON_del(2, json_ptr, result_json);
     free_all(1, response_str);
     return ;
 }
@@ -1487,7 +1487,7 @@ cleanup_and_respond:
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 2, user_setting_conn, log_conn);
-    cJSON_del_and_free(2, json_ptr, result_json);
+    cJSON_del(2, json_ptr, result_json);
     free_all(1, response_str);
     return ;
 }
@@ -1561,7 +1561,7 @@ cleanup_and_respond:
 
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
-    cJSON_del_and_free(1, result_json);
+    cJSON_del(1, result_json);
     free_all(1, response_str);
 
     return ;
@@ -1686,7 +1686,7 @@ cleanup_and_respond:
         reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     }
     release_conns(&server_ptr->db, 2, log_conn, user_setting_conn);
-    cJSON_del_and_free(2, json_ptr, result_json);
+    cJSON_del(2, json_ptr, result_json);
     free_all(2, response_str, timestamp);
     return ;
 }
@@ -1769,7 +1769,7 @@ cleanup_and_respond:
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 2, log_conn, user_setting_conn);
-    cJSON_del_and_free(2, result_json, json_ptr);
+    cJSON_del(2, result_json, json_ptr);
     free_all(1, response_str);
     return ;
 }
@@ -1836,7 +1836,7 @@ cleanup_and_respond:
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 1, chat_group_conn);
-    cJSON_del_and_free(2, result_json, json_ptr);
+    cJSON_del(2, result_json, json_ptr);
     free_all(1, response_str);
     return ;
 }
@@ -1888,7 +1888,7 @@ cleanup_and_respond:
     if (error_msg != NULL) {
         fprintf(stderr, "%s", error_msg);
     }
-    cJSON_del_and_free(2, result_json, uid_list_json);
+    cJSON_del(2, result_json, uid_list_json);
     free_all(1, response_str);
     return ;
 }
@@ -1939,7 +1939,7 @@ cleanup_and_respond:
     if (error_msg != NULL) {
         fprintf(stderr, "%s", error_msg);
     }
-    cJSON_del_and_free(2, result_json, uid_list_json);
+    cJSON_del(2, result_json, uid_list_json);
     free_all(1, response_str);
     return ;
 }

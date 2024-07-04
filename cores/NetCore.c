@@ -407,27 +407,29 @@ int run_server(epoll_net_core* server_ptr) {
                     continue ;
                 }
 
-                pthread_mutex_lock(&s_ptr->send_buf_mutex);
                 while (1) {
-                    char* send_buf_ptr = get_front_send_buf_ptr(&s_ptr->send_bufs);
-                    if (send_buf_ptr == NULL)
-                    {
-                        break ;
-                    }
-                    size_t sent = send(client_fd, send_buf_ptr, get_front_send_buf_size(&s_ptr->send_bufs), 0);
+                    pthread_mutex_lock(&s_ptr->send_buf_mutex);
+                    send_buf_t temp_send_data;
+                    dequeue(&s_ptr->send_bufs, &temp_send_data);
+                    pthread_mutex_unlock(&s_ptr->send_buf_mutex);
+
+                    // char* send_buf_ptr = get_front_send_buf_ptr(&s_ptr->send_bufs);
+                    // if (send_buf_ptr == NULL)
+                    // {
+                    //     break ;
+                    // }
+                    //size_t sent = send(client_fd, temp_send_data, get_front_send_buf_size(&s_ptr->send_bufs), 0);
+                    size_t sent = send(client_fd, temp_send_data.buf_ptr, temp_send_data.send_data_size, 0);
                     // 필요할때 주석 풀기.
-                    write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, send_buf_ptr, get_front_send_buf_size(&s_ptr->send_bufs)); write(STDOUT_FILENO, "\n", 1);
+                    write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, temp_send_data.buf_ptr, get_front_send_buf_size(&s_ptr->send_bufs)); write(STDOUT_FILENO, "\n", 1);
                     if (sent < 0) {
                         perror("send");
                         close(server_ptr->epoll_events[i].data.fd);
                     }
-                    send_buf_t temp;
-                    dequeue(&s_ptr->send_bufs, &temp);
-                    free_all(1, temp.buf_ptr);
+                    free_all(1, temp_send_data.buf_ptr);
                     // send할 때 이벤트를 변경(EPOLL_CTL_MOD)해서 보내는 이벤트로 바꿨으니
                     // 다시 통신을 받는 이벤트로 변경하여 유저의 입력을 대기.
                 }
-                pthread_mutex_unlock(&s_ptr->send_buf_mutex);
 
                 struct epoll_event temp_event;
                 temp_event.events = EPOLLIN | EPOLLET;
