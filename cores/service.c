@@ -1895,53 +1895,59 @@ cleanup_and_respond:
     return ;
 }
 
-void server_down_notice(epoll_net_core* server_ptr, conn_t* user_setting_conn) {
+//void server_down_notice(epoll_net_core* server_ptr, conn_t* user_setting_conn) {
+void server_down_notice(epoll_net_core* server_ptr) {
     char* error_msg = NULL;
     char *response_str = NULL;
     cJSON* result_json = cJSON_CreateObject();
-    cJSON* uid_list_json = NULL;
     char SQL_buf[64];
-
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE user.role = 1");
-    uid_list_json = query_result_to_json(user_setting_conn, &error_msg, SQL_buf, 1, "uid");
-    if (error_msg != NULL) {
-        goto cleanup_and_respond;
-    }
 
     cJSON_AddNumberToObject(result_json, "type", SERVER_DOWN_NOTICE);
     response_str = cJSON_Print(result_json);
-    int uid_count = cJSON_GetArraySize(uid_list_json);
-    for (int i = 0; i < uid_count; i++) {
-        cJSON* item = cJSON_GetArrayItem(uid_list_json, i);
-        cJSON* uid_value = cJSON_GetObjectItemCaseSensitive(item, "uid");
-        if (cJSON_IsString(uid_value) == false && (uid_value->valuestring == NULL)) {
-            error_msg = "uid json list parse error";
-            goto cleanup_and_respond;   
+    for (int i = 0; i < MAX_CLIENT_NUM; i++) {
+        if (server_ptr->session_pool.session_pool[i].fd < 0) {
+            continue ;
         }
-        int manager_uid = atoi(uid_value->valuestring);
-        if (manager_uid == 0 && uid_value->valuestring[0] != '0') {
-            error_msg = "uid json list is not number error";
-            goto cleanup_and_respond;
-        }
-
-        int connected_manager_fd = find(&server_ptr->uid_to_fd_hash, manager_uid);
-        if (connected_manager_fd < 0) {
-            continue;
-        }
-
-        client_session_t* connected_manager_session = find_session_by_fd(&server_ptr->session_pool, connected_manager_fd);
-        if (connected_manager_session != NULL) {
-            printf("%d manager_fd : %d\n", i, connected_manager_session->fd);
-            reserve_epoll_send(server_ptr->epoll_fd, connected_manager_session, response_str, strlen(response_str));
-        }
+        reserve_epoll_send(server_ptr->epoll_fd, &server_ptr->session_pool.session_pool[i], response_str, strlen(response_str));
     }
 
+    //cJSON* uid_list_json = NULL;
+    // snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE user.role = 1");
+    // uid_list_json = query_result_to_json(user_setting_conn, &error_msg, SQL_buf, 1, "uid");
+    // if (error_msg != NULL) {
+    //     goto cleanup_and_respond;
+    // }
+    // int uid_count = cJSON_GetArraySize(uid_list_json);
+    // for (int i = 0; i < uid_count; i++) {
+    //     cJSON* item = cJSON_GetArrayItem(uid_list_json, i);
+    //     cJSON* uid_value = cJSON_GetObjectItemCaseSensitive(item, "uid");
+    //     if (cJSON_IsString(uid_value) == false && (uid_value->valuestring == NULL)) {
+    //         error_msg = "uid json list parse error";
+    //         goto cleanup_and_respond;   
+    //     }
+    //     int manager_uid = atoi(uid_value->valuestring);
+    //     if (manager_uid == 0 && uid_value->valuestring[0] != '0') {
+    //         error_msg = "uid json list is not number error";
+    //         goto cleanup_and_respond;
+    //     }
+
+    //     int connected_manager_fd = find(&server_ptr->uid_to_fd_hash, manager_uid);
+    //     if (connected_manager_fd < 0) {
+    //         continue;
+    //     }
+
+    //     client_session_t* connected_manager_session = find_session_by_fd(&server_ptr->session_pool, connected_manager_fd);
+    //     if (connected_manager_session != NULL) {
+    //         printf("%d manager_fd : %d\n", i, connected_manager_session->fd);
+    //         reserve_epoll_send(server_ptr->epoll_fd, connected_manager_session, response_str, strlen(response_str));
+    //     }
+    // }
 
 cleanup_and_respond:
     if (error_msg != NULL) {
         fprintf(stderr, "%s", error_msg);
     }
-    cJSON_del(2, result_json, uid_list_json);
+    cJSON_del(1, result_json);
     free_all(1, response_str);
     return ;
 }

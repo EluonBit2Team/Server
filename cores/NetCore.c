@@ -54,11 +54,10 @@ void* work_routine(void *ptr)
         if (deqeueu_and_get_task(thread_pool, &temp_task) == true)
         {
             int type = type_finder(temp_task.buf + HEADER_SIZE);
-            if (type < 0)
+            if (type < 0 || type > SERVICE_FUNC_NUM || server_ptr->function_array[type] == NULL)
             {
-                printf("invalid type\n");
+                printf("%d client send invalid type\n", temp_task.req_client_fd);
             }
-            //printf("type num:%d\n", type);
             server_ptr->function_array[type](server_ptr, &temp_task);
         }
     }
@@ -356,9 +355,10 @@ int run_server(epoll_net_core* server_ptr) {
         for (int i = 0; i < occured_event_cnt; i++) {
             // accept 이벤트시
             if (server_ptr->epoll_events[i].data.fd == STDIN_FILENO) {
-                conn_t* user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
-                server_down_notice(server_ptr, user_setting_conn);
-                release_conns(&server_ptr->db, 1, user_setting_conn);
+                // conn_t* user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
+                // server_down_notice(server_ptr, user_setting_conn);
+                server_down_notice(server_ptr);
+                //release_conns(&server_ptr->db, 1, user_setting_conn);
                 return 0;
             }
             if (server_ptr->epoll_events[i].data.fd == server_ptr->listen_fd) {
