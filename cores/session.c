@@ -3,7 +3,9 @@
 void reset_session(client_session_t* session_ptr)
 {
     session_ptr->fd = -1;
+    pthread_mutex_lock(&session_ptr->send_buf_mutex);
     reset_queue(&session_ptr->send_bufs);
+    pthread_mutex_unlock(&session_ptr->send_buf_mutex);
 }
 
 int init_session_pool(session_pool_t* pool_ptr, size_t session_size)
@@ -27,6 +29,7 @@ int init_session_pool(session_pool_t* pool_ptr, size_t session_size)
         init_queue(&pool_ptr->session_pool[i].send_bufs, sizeof(send_buf_t));
         ring_init(&pool_ptr->session_pool[i].recv_bufs);
         pool_ptr->session_pool_idx_stack[i] = i;
+        pthread_mutex_init(&pool_ptr->session_pool[i].send_buf_mutex, NULL);
     }
     
     pool_ptr->stack_top_idx = session_size - 1;
@@ -89,6 +92,7 @@ void close_all_sessions(int epoll_fd, session_pool_t* pool_ptr)
         if (pool_ptr->session_pool[i].fd != -1) {
             epoll_ctl(epoll_fd, EPOLL_CTL_DEL, pool_ptr->session_pool[i].fd, NULL);
             close(pool_ptr->session_pool[i].fd);
+            pthread_mutex_destroy(&pool_ptr->session_pool[i].send_buf_mutex);
         }
     }
     free(pool_ptr->session_pool);

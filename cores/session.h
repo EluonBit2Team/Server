@@ -2,6 +2,7 @@
 #define SESSION_H
 
 #include <sys/epoll.h>
+#include <pthread.h>
 #include "../utilities/ring_buffer.h"
 #include "../utilities/uthash.h"
 #include "../utilities/void_queue.h"
@@ -18,6 +19,7 @@ typedef struct client_session {
     size_t session_idx;
     ring_buf recv_bufs;
     void_queue_t send_bufs;
+    pthread_mutex_t send_buf_mutex;
     UT_hash_handle hh;
 } client_session_t;
 

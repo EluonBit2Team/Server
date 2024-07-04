@@ -116,7 +116,24 @@ void reserve_epoll_send(int epoll_fd, client_session_t* send_session, char* send
     struct epoll_event temp_send_event;
     temp_send_event.events = EPOLLOUT | EPOLLET;
     temp_send_event.data.fd = send_session->fd;
-    reserve_send(&send_session->send_bufs, send_org, send_size);
+    //reserve_send(&send_session->send_bufs, send_org, send_size);
+
+    int total_size = HEADER_SIZE + send_size;
+    send_buf_t temp_send_buf;
+    // send_size는 int여야함.
+    // malloc(): corrupted top size -> enqueue내부 malloc에서 발생.
+    // 하지만 실제 문제는 아래 malloc에서 할당한 사이즈를 넘어서 데이터를 조작해서 발생
+    //  -> sizeof(char) * body_size를 할당받았지만 실제로 조작한 데이터 크기는 HEADER_SIZE + sizeof(char) * body_size여서 발생.
+    temp_send_buf.buf_ptr = (char*)malloc(HEADER_SIZE + sizeof(char) * send_size);
+    temp_send_buf.send_data_size = total_size;
+    memcpy(temp_send_buf.buf_ptr, (char*)&total_size, HEADER_SIZE);
+    memcpy(temp_send_buf.buf_ptr + HEADER_SIZE, send_org, send_size);
+    //printf("reserve_send_size : %d \n", temp_send_buf.send_data_size); write(STDOUT_FILENO, temp_send_buf.buf_ptr, temp_send_buf.send_data_size); write(STDOUT_FILENO, "\n", 1);
+    
+    pthread_mutex_lock(&send_session->send_buf_mutex);
+    enqueue(&send_session->send_bufs, (void*)&temp_send_buf);
+    pthread_mutex_unlock(&send_session->send_buf_mutex);
+    
     if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, send_session->fd, &temp_send_event) == -1) {
         perror("epoll_ctl: add");
     }
@@ -389,6 +406,8 @@ int run_server(epoll_net_core* server_ptr) {
                 {
                     continue ;
                 }
+
+                pthread_mutex_lock(&s_ptr->send_buf_mutex);
                 while (1) {
                     char* send_buf_ptr = get_front_send_buf_ptr(&s_ptr->send_bufs);
                     if (send_buf_ptr == NULL)
@@ -408,6 +427,8 @@ int run_server(epoll_net_core* server_ptr) {
                     // send할 때 이벤트를 변경(EPOLL_CTL_MOD)해서 보내는 이벤트로 바꿨으니
                     // 다시 통신을 받는 이벤트로 변경하여 유저의 입력을 대기.
                 }
+                pthread_mutex_unlock(&s_ptr->send_buf_mutex);
+
                 struct epoll_event temp_event;
                 temp_event.events = EPOLLIN | EPOLLET;
                 temp_event.data.fd = client_fd;
