@@ -295,7 +295,7 @@ int main() {
         log_usage(login_user_cnt, tps, memory_usage);
 
         current_time = time(NULL);
-        if (difftime(current_time, start_time) >= 5) {
+        if (difftime(current_time, start_time) >= 60) {
             statistic_t server_statistic;
             get_statistic(&server_statistic);
             save_statistic_to_db(statistic_conn, &server_statistic);
