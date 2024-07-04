@@ -448,29 +448,36 @@ void down_server(epoll_net_core* server_ptr) {
     log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
 
     snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE server_log SET downtime = NOW() WHERE downtime IS NULL;");
-
+    printf("1\n");
     if (mysql_query(log_conn->conn, SQL_buf)) {
         fprintf(stderr, "UPDATE server_log timestamp failed: %s\n", mysql_error(log_conn->conn));
     }
     if (log_conn != NULL) {
         release_conn(&server_ptr->db.pools[LOG_DB_IDX], log_conn);
     }
+    printf("2\n");
     server_ptr->is_run = false;
     epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_DEL, server_ptr->listen_fd, NULL);
+    printf("3\n");
     close_all_sessions(server_ptr->epoll_fd, &server_ptr->session_pool);
+    printf("4\n");
     close(server_ptr->listen_fd);
     close(server_ptr->epoll_fd);
     free(server_ptr->epoll_events);
+    printf("5\n");
     for (int i = 0; i < WOKER_THREAD_NUM; i++) {
         pthread_cond_signal(&server_ptr->thread_pool.task_cond);
     }
+    printf("6\n");
     for (int i = 0; i < WOKER_THREAD_NUM; i++) {
         pthread_join(server_ptr->thread_pool.worker_threads[i], NULL);
     }
+    printf("7\n");
     for (int i = 0; i < WOKER_THREAD_NUM; i++) {
         pthread_mutex_destroy(&server_ptr->thread_pool.task_mutex);
         pthread_cond_destroy(&server_ptr->thread_pool.task_cond);
     }
+    printf("8\n");
     clear_hash_map(&server_ptr->fd_to_uid_hash);
     clear_hash_map(&server_ptr->uid_to_fd_hash);
     close_mariadb(&server_ptr->db);
