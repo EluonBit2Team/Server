@@ -54,11 +54,10 @@ void* work_routine(void *ptr)
         if (deqeueu_and_get_task(thread_pool, &temp_task) == true)
         {
             int type = type_finder(temp_task.buf + HEADER_SIZE);
-            if (type < 0)
+            if (type < 0 || type > SERVICE_FUNC_NUM || server_ptr->function_array[type] == NULL)
             {
-                printf("invalid type\n");
+                printf("%d client send invalid type\n", temp_task.req_client_fd);
             }
-            //printf("type num:%d\n", type);
             server_ptr->function_array[type](server_ptr, &temp_task);
         }
     }
@@ -116,7 +115,24 @@ void reserve_epoll_send(int epoll_fd, client_session_t* send_session, char* send
     struct epoll_event temp_send_event;
     temp_send_event.events = EPOLLOUT | EPOLLET;
     temp_send_event.data.fd = send_session->fd;
-    reserve_send(&send_session->send_bufs, send_org, send_size);
+    //reserve_send(&send_session->send_bufs, send_org, send_size);
+
+    int total_size = HEADER_SIZE + send_size;
+    send_buf_t temp_send_buf;
+    // send_size는 int여야함.
+    // malloc(): corrupted top size -> enqueue내부 malloc에서 발생.
+    // 하지만 실제 문제는 아래 malloc에서 할당한 사이즈를 넘어서 데이터를 조작해서 발생
+    //  -> sizeof(char) * body_size를 할당받았지만 실제로 조작한 데이터 크기는 HEADER_SIZE + sizeof(char) * body_size여서 발생.
+    temp_send_buf.buf_ptr = (char*)malloc(HEADER_SIZE + sizeof(char) * send_size);
+    temp_send_buf.send_data_size = total_size;
+    memcpy(temp_send_buf.buf_ptr, (char*)&total_size, HEADER_SIZE);
+    memcpy(temp_send_buf.buf_ptr + HEADER_SIZE, send_org, send_size);
+    //printf("reserve_send_size : %d \n", temp_send_buf.send_data_size); write(STDOUT_FILENO, temp_send_buf.buf_ptr, temp_send_buf.send_data_size); write(STDOUT_FILENO, "\n", 1);
+    
+    pthread_mutex_lock(&send_session->send_buf_mutex);
+    enqueue(&send_session->send_bufs, (void*)&temp_send_buf);
+    pthread_mutex_unlock(&send_session->send_buf_mutex);
+    
     if (epoll_ctl(epoll_fd, EPOLL_CTL_MOD, send_session->fd, &temp_send_event) == -1) {
         perror("epoll_ctl: add");
     }
@@ -339,9 +355,10 @@ int run_server(epoll_net_core* server_ptr) {
         for (int i = 0; i < occured_event_cnt; i++) {
             // accept 이벤트시
             if (server_ptr->epoll_events[i].data.fd == STDIN_FILENO) {
-                conn_t* user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
-                server_down_notice(server_ptr, user_setting_conn);
-                release_conns(&server_ptr->db, 1, user_setting_conn);
+                // conn_t* user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
+                // server_down_notice(server_ptr, user_setting_conn);
+                server_down_notice(server_ptr);
+                //release_conns(&server_ptr->db, 1, user_setting_conn);
                 return 0;
             }
             if (server_ptr->epoll_events[i].data.fd == server_ptr->listen_fd) {
@@ -389,25 +406,26 @@ int run_server(epoll_net_core* server_ptr) {
                 {
                     continue ;
                 }
+
                 while (1) {
-                    char* send_buf_ptr = get_front_send_buf_ptr(&s_ptr->send_bufs);
-                    if (send_buf_ptr == NULL)
-                    {
+                    pthread_mutex_lock(&s_ptr->send_buf_mutex);
+                    send_buf_t temp_send_data;
+                    if (dequeue(&s_ptr->send_bufs, &temp_send_data) < 0) {
+                        pthread_mutex_unlock(&s_ptr->send_buf_mutex);
                         break ;
-                    }
-                    size_t sent = send(client_fd, send_buf_ptr, get_front_send_buf_size(&s_ptr->send_bufs), 0);
+                    } 
+                    pthread_mutex_unlock(&s_ptr->send_buf_mutex);
+
+                    write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, temp_send_data.buf_ptr, temp_send_data.send_data_size); write(STDOUT_FILENO, "\n", 1);
+                    size_t sent = send(client_fd, temp_send_data.buf_ptr, temp_send_data.send_data_size, 0);
                     // 필요할때 주석 풀기.
-                    write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, send_buf_ptr, get_front_send_buf_size(&s_ptr->send_bufs)); write(STDOUT_FILENO, "\n", 1);
                     if (sent < 0) {
                         perror("send");
                         close(server_ptr->epoll_events[i].data.fd);
                     }
-                    send_buf_t temp;
-                    dequeue(&s_ptr->send_bufs, &temp);
-                    free_all(1, temp.buf_ptr);
-                    // send할 때 이벤트를 변경(EPOLL_CTL_MOD)해서 보내는 이벤트로 바꿨으니
-                    // 다시 통신을 받는 이벤트로 변경하여 유저의 입력을 대기.
+                    free_all(1, temp_send_data.buf_ptr);
                 }
+
                 struct epoll_event temp_event;
                 temp_event.events = EPOLLIN | EPOLLET;
                 temp_event.data.fd = client_fd;
@@ -424,13 +442,11 @@ int run_server(epoll_net_core* server_ptr) {
 }
 
 void down_server(epoll_net_core* server_ptr) {
-    printf("down server\n");
     conn_t* log_conn = NULL;
     char SQL_buf[512];
     log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
 
     snprintf(SQL_buf, sizeof(SQL_buf), "UPDATE server_log SET downtime = NOW() WHERE downtime IS NULL;");
-
     if (mysql_query(log_conn->conn, SQL_buf)) {
         fprintf(stderr, "UPDATE server_log timestamp failed: %s\n", mysql_error(log_conn->conn));
     }
@@ -449,10 +465,8 @@ void down_server(epoll_net_core* server_ptr) {
     for (int i = 0; i < WOKER_THREAD_NUM; i++) {
         pthread_join(server_ptr->thread_pool.worker_threads[i], NULL);
     }
-    for (int i = 0; i < WOKER_THREAD_NUM; i++) {
-        pthread_mutex_destroy(&server_ptr->thread_pool.task_mutex);
-        pthread_cond_destroy(&server_ptr->thread_pool.task_cond);
-    }
+    pthread_cond_destroy(&server_ptr->thread_pool.task_cond);
+    pthread_mutex_destroy(&server_ptr->thread_pool.task_mutex);
     clear_hash_map(&server_ptr->fd_to_uid_hash);
     clear_hash_map(&server_ptr->uid_to_fd_hash);
     close_mariadb(&server_ptr->db);

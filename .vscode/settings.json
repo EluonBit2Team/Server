@@ -27,6 +27,7 @@
         "cjson.h": "c",
         "wait.h": "c",
         "stdbool.h": "c",
-        "regex.h": "c"
+        "regex.h": "c",
+        "errno.h": "c"
     }
 }

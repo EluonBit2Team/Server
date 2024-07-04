@@ -14,8 +14,8 @@
 #include <ctype.h>
 
 #define LOG_FILE "server_status.log"
-#define DB_HOST "192.168.0.253"
-#define DB_PORT 3307
+#define DB_HOST "mariadb"
+#define DB_PORT 3306
 #define DB_USER "today_chicken"
 #define DB_PASS "1q2w3e4r"
 #define STATIS_DB_NAME "server_statistic_db"
@@ -245,7 +245,7 @@ void save_statistic_to_db(MYSQL* statistic_conn, statistic_t* server_statistic) 
 
     char query[512];
     snprintf(query, sizeof(query),
-            "INSERT INTO statistic (tps_avg, tps_max, mem_avg, mem_max, login_user_cnt_avg, login_user_cnt_max, log_timestamp) VALUES (%f, %d, %f, %f, %f, %d, NOW())",
+            "INSERT INTO statistic (tps_avg, tps_max, mem_avg, mem_max, login_user_cnt_avg, login_user_cnt_max) VALUES (%f, %d, %f, %f, %f, %d)",
             server_statistic->tps_avg, server_statistic->tps_max, 
             server_statistic->mem_usage_avg, server_statistic->mem_usage_max, 
             server_statistic->login_user_avg, server_statistic->login_user_max);
@@ -295,7 +295,7 @@ int main() {
         log_usage(login_user_cnt, tps, memory_usage);
 
         current_time = time(NULL);
-        if (difftime(current_time, start_time) >= 5) {
+        if (difftime(current_time, start_time) >= 60) {
             statistic_t server_statistic;
             get_statistic(&server_statistic);
             save_statistic_to_db(statistic_conn, &server_statistic);
