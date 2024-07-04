@@ -15,7 +15,7 @@
 
 #define LOG_FILE "server_status.log"
 #define DB_HOST "mariadb"
-#define DB_PORT 3307
+#define DB_PORT 3306
 #define DB_USER "today_chicken"
 #define DB_PASS "1q2w3e4r"
 #define STATIS_DB_NAME "server_statistic_db"

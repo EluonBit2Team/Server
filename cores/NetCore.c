@@ -416,12 +416,6 @@ int run_server(epoll_net_core* server_ptr) {
                     } 
                     pthread_mutex_unlock(&s_ptr->send_buf_mutex);
 
-                    // char* send_buf_ptr = get_front_send_buf_ptr(&s_ptr->send_bufs);
-                    // if (send_buf_ptr == NULL)
-                    // {
-                    //     break ;
-                    // }
-                    //size_t sent = send(client_fd, temp_send_data, get_front_send_buf_size(&s_ptr->send_bufs), 0);
                     write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, temp_send_data.buf_ptr, temp_send_data.send_data_size); write(STDOUT_FILENO, "\n", 1);
                     size_t sent = send(client_fd, temp_send_data.buf_ptr, temp_send_data.send_data_size, 0);
                     // 필요할때 주석 풀기.
@@ -430,8 +424,6 @@ int run_server(epoll_net_core* server_ptr) {
                         close(server_ptr->epoll_events[i].data.fd);
                     }
                     free_all(1, temp_send_data.buf_ptr);
-                    // send할 때 이벤트를 변경(EPOLL_CTL_MOD)해서 보내는 이벤트로 바꿨으니
-                    // 다시 통신을 받는 이벤트로 변경하여 유저의 입력을 대기.
                 }
 
                 struct epoll_event temp_event;
