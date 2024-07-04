@@ -473,10 +473,8 @@ void down_server(epoll_net_core* server_ptr) {
         pthread_join(server_ptr->thread_pool.worker_threads[i], NULL);
     }
     printf("7\n");
-    for (int i = 0; i < WOKER_THREAD_NUM; i++) {
-        pthread_mutex_destroy(&server_ptr->thread_pool.task_mutex);
-        pthread_cond_destroy(&server_ptr->thread_pool.task_cond);
-    }
+    pthread_cond_destroy(&server_ptr->thread_pool.task_cond);
+    pthread_mutex_destroy(&server_ptr->thread_pool.task_mutex);
     printf("8\n");
     clear_hash_map(&server_ptr->fd_to_uid_hash);
     clear_hash_map(&server_ptr->uid_to_fd_hash);
