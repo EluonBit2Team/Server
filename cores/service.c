@@ -83,6 +83,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     // 중복 로그인 방지
     int fd = find(&server_ptr->uid_to_fd_hash, uid);
     if (fd >= 0) {
+        type = 102;
         msg = "This user has already logged in";
         goto cleanup_and_respond;
     }
@@ -115,11 +116,12 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
 
 cleanup_and_respond:
     cJSON_AddNumberToObject(result_json, "type", type);
-    cJSON_AddStringToObject(result_json, "login_id", cJSON_GetStringValue(id_ptr));
-    cJSON_AddNumberToObject(result_json, "role", role);
-    if (msg != NULL)
-    {
+    if (msg != NULL) {
         cJSON_AddStringToObject(result_json, "msg", msg);
+    }
+    else {
+        cJSON_AddStringToObject(result_json, "login_id", cJSON_GetStringValue(id_ptr));
+        cJSON_AddNumberToObject(result_json, "role", role);
     }
 
     response_str = cJSON_Print(result_json);
