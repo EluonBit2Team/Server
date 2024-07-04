@@ -2008,9 +2008,9 @@ void user_log_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid, login_time, logout_time, login_id FROM client_log WHERE login_time BETWEEN '%s' AND '%s'", 
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_time, logout_time, login_id FROM client_log WHERE login_time BETWEEN '%s' AND '%s'", 
         cJSON_GetStringValue(start_time_ptr), cJSON_GetStringValue(end_time_ptr));
-    user_log_list = query_result_to_json(log_conn, &msg, SQL_buf, 4,"uid", "login_time", "logout_time", "login_id");
+    user_log_list = query_result_to_json(log_conn, &msg, SQL_buf, 3, "login_time", "logout_time", "login_id");
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
