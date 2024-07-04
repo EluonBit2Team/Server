@@ -470,7 +470,7 @@ void edit_member_service(epoll_net_core* server_ptr, task_t* task) {
             snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE login_id = '%s'", cJSON_GetStringValue(user_item));
             int uid = query_result_to_int(user_setting_conn,&msg,SQL_buf);
 
-            snprintf(SQL_buf, sizeof(SQL_buf), "SELECT count(uid) FROM group_member WHERE gid = %d AND uid = %d", gid, uid);
+            snprintf(SQL_buf, sizeof(SQL_buf), "SELECT count(*) FROM group_member WHERE gid = %d AND uid = %d", gid, uid);
             user_count = query_result_to_int(chat_group_conn,&msg,SQL_buf);
             if (user_count > 0) {
                 msg = "user is allready exist";
