@@ -97,7 +97,12 @@ cJSON* query_result_to_json(conn_t* conn, char** msg, const char* query, int key
         for (int i = 0; i < key_num; i++)
         {
             const char* key = va_arg(VA_LIST, const char*);
-            cJSON_AddStringToObject(query_result_obj, key, row[i]);
+            if (row[i] == NULL) {
+                cJSON_AddStringToObject(query_result_obj, key, "NULL");
+            }
+            else {
+                cJSON_AddStringToObject(query_result_obj, key, row[i]);
+            }
         }
         va_end(VA_LIST);
         cJSON_AddItemToArray(query_result_list, query_result_obj);
