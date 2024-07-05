@@ -1928,6 +1928,7 @@ void server_down_notice_to_all(epoll_net_core* server_ptr) {
         if (set_send_timeout(client_fd, 1) < 0) {
             close(client_fd);
         }
+        write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, notice_send_buf, down_notice_total_size); write(STDOUT_FILENO, "\n", 1);
         send(client_fd, notice_send_buf, down_notice_total_size, 0);
     }
 
