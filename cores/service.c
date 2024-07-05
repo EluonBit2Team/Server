@@ -104,7 +104,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     type = 2;
     
     // 로그인 성공시 DB에 로그 저장
-    snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO client_log (uid, login_time) VALUES (%d, NOW())", uid);
+    snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO client_log (uid, login_time, login_id) VALUES (%d, NOW(), '%s')", uid, cJSON_GetStringValue(id_ptr));
     if (mysql_query(log_conn->conn, SQL_buf)) {
         fprintf(stderr, "SELECT failed: %s\n", mysql_error(user_setting_conn->conn));
         msg = "DB error";
@@ -470,12 +470,13 @@ void edit_group_member_service(epoll_net_core* server_ptr, task_t* task) {
             snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE login_id = '%s'", cJSON_GetStringValue(user_item));
             int uid = query_result_to_int(user_setting_conn,&msg,SQL_buf);
 
-            snprintf(SQL_buf, sizeof(SQL_buf), "SELECT count(uid) FROM group_member WHERE gid = %d", gid);
+            snprintf(SQL_buf, sizeof(SQL_buf), "SELECT count(*) FROM group_member WHERE gid = %d AND uid = %d", gid, uid);
             user_count = query_result_to_int(chat_group_conn,&msg,SQL_buf);
             if (user_count > 0) {
                 msg = "user is allready exist";
                 goto cleanup_and_respond;
             }
+
             snprintf(SQL_buf, sizeof(SQL_buf), "INSERT INTO group_member (uid, gid,is_host) VALUES ('%d', '%d',0)", uid, gid);
             query_result_to_execuete(chat_group_conn,&msg,SQL_buf);
             if (msg != NULL) {
@@ -1948,6 +1949,86 @@ cleanup_and_respond:
         fprintf(stderr, "%s", error_msg);
     }
     cJSON_del(1, result_json);
+    free_all(1, response_str);
+    return ;
+}
+
+void user_log_service(epoll_net_core* server_ptr, task_t* task) {
+    printf("user_log_service\n");
+    int type = 100;
+    char* msg = NULL;
+    cJSON* json_ptr = NULL;
+    cJSON* result_json = cJSON_CreateObject();
+    cJSON* user_log_list = NULL;
+    client_session_t* now_session = NULL;
+    conn_t* user_setting_conn = NULL;
+    conn_t* log_conn = NULL;
+    char* response_str = NULL;
+    char SQL_buf[1024];
+
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL) {
+        msg = "Session Error";
+        goto cleanup_and_respond;
+    }
+
+    log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
+    user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
+    json_ptr = get_parsed_json(task->buf);
+    if (json_ptr == NULL) {
+        msg = "user send invalid json";
+        goto cleanup_and_respond;
+    }
+
+    int uid = find(&server_ptr->fd_to_uid_hash, task->req_client_fd);
+    if (uid < 0) {
+        msg = "Invalid user";
+        goto cleanup_and_respond;
+    }
+
+    cJSON* start_time_ptr = cJSON_GetObjectItem(json_ptr, "start_time");
+    if (start_time_ptr == NULL || cJSON_GetStringValue(start_time_ptr)[0] == '\0') {
+        msg = "user send invalid json. Miss start_time";
+        goto cleanup_and_respond;
+    }
+
+    cJSON* end_time_ptr = cJSON_GetObjectItem(json_ptr, "end_time");
+    if (end_time_ptr == NULL || cJSON_GetStringValue(end_time_ptr)[0] == '\0') {
+        msg = "user send invalid json. Miss end_time";
+        goto cleanup_and_respond;
+    }
+
+    // 관리자 권한 확인
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE uid = %d AND role = 1", uid);
+    int rt_uid = query_result_to_int(user_setting_conn, &msg, SQL_buf);
+    if (uid < 0 || msg != NULL) {
+        if (strcmp(msg, "No result") == 0) {
+            msg = "Not permitted User";
+        }
+        goto cleanup_and_respond;
+    }
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid, login_time, logout_time, login_id FROM client_log WHERE login_time BETWEEN '%s' AND '%s'", 
+        cJSON_GetStringValue(start_time_ptr), cJSON_GetStringValue(end_time_ptr));
+    user_log_list = query_result_to_json(log_conn, &msg, SQL_buf, 4,"uid", "login_time", "logout_time", "login_id");
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+
+    type = 21;
+
+cleanup_and_respond:
+    cJSON_AddNumberToObject(result_json, "type", type);
+    if (msg != NULL) {
+        cJSON_AddStringToObject(result_json, "msg", msg);
+    }
+    else {
+        cJSON_AddItemToObject(result_json, "user_log_list", user_log_list);
+    }
+    response_str = cJSON_Print(result_json);
+    reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
+    release_conns(&server_ptr->db, 2, user_setting_conn, log_conn);
+    cJSON_del(2, json_ptr, result_json);
     free_all(1, response_str);
     return ;
 }

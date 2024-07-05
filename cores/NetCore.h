@@ -140,6 +140,7 @@ void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task);
 void chat_in_user_service(epoll_net_core* server_ptr, task_t* task);
 void pre_dm_log_service(epoll_net_core* server_ptr, task_t* task);
 void out_chat_group_service(epoll_net_core* server_ptr, task_t* task);
+void user_log_service(epoll_net_core* server_ptr, task_t* task);
 
 // notice. from 서버 to 클라이언트. 응답 안기다림.
 void user_status_change_notice(epoll_net_core* server_ptr, conn_t* user_setting_conn);
