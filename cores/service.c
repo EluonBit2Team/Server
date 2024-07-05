@@ -1906,7 +1906,7 @@ void server_down_notice(epoll_net_core* server_ptr) {
     cJSON_AddNumberToObject(result_json, "type", SERVER_DOWN_NOTICE);
     response_str = cJSON_Print(result_json);
     for (int i = 0; i < MAX_CLIENT_NUM; i++) {
-        prtinf("%d client\n");
+        printf("%d client\n");
         if (server_ptr->session_pool.session_pool[i].fd < 0) {
             continue ;
         }
