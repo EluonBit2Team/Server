@@ -455,11 +455,12 @@ void down_server(epoll_net_core* server_ptr) {
         release_conn(&server_ptr->db.pools[LOG_DB_IDX], log_conn);
     }
     
+    server_down_notice(server_ptr);
     // 메세지 전송용 딜레이
     const int SERVER_DOWN_COUNT_DOWN = 5;
     printf("Server is going to Down");
     for (int i = 0; i < SERVER_DOWN_COUNT_DOWN; i++) {
-        printf(".");
+        printf("."); fflush(stdout);
         sleep(1);
     }
     printf("\n");
