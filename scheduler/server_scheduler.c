@@ -249,7 +249,6 @@ void save_statistic_to_db(MYSQL* statistic_conn, statistic_t* server_statistic) 
             server_statistic->tps_avg, server_statistic->tps_max, 
             server_statistic->mem_usage_avg, server_statistic->mem_usage_max, 
             server_statistic->login_user_avg, server_statistic->login_user_max);
-    printf("%s\n", query);
     if (mysql_query(statistic_conn, query)) {
         fprintf(stderr, "INSERT error: %s\n", mysql_error(statistic_conn));
     }
