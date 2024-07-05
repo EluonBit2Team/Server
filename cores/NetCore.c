@@ -191,22 +191,21 @@ bool init_server(epoll_net_core* server_ptr) {
     server_ptr->function_array[MAKE_GROUP_SERV_FUNC] = make_group_service;
     server_ptr->function_array[USER_LIST_SERV_FUNC] = user_list_service;
     server_ptr->function_array[GROUP_LIST_SERV_FUNC] = group_list_service;
-    server_ptr->function_array[EDIT_MEMBER_SERV_FUNC] = edit_member_service;
-    server_ptr->function_array[MNG_REQ_LIST_SERV_FUNC] = Mng_req_list_service;
-    server_ptr->function_array[MNG_SIGNUP_APPROVE_SERV_FUNC] = Mng_signup_approve_service;
-    server_ptr->function_array[MNG_GROUP_APPROVE_SERV_FUNC] = Mng_group_approve_service;
-    server_ptr->function_array[GROUP_MEMEMBER_SERV_FUNC] = group_member_service;
+    server_ptr->function_array[EDIT_MEMBER_SERV_FUNC] = edit_group_member_service;
+    server_ptr->function_array[MNG_REQ_LIST_SERV_FUNC] = mng_req_list_service;
+    server_ptr->function_array[MNG_SIGNUP_APPROVE_SERV_FUNC] = mng_signup_approve_service;
+    server_ptr->function_array[MNG_GROUP_APPROVE_SERV_FUNC] = mng_group_approve_service;
+    server_ptr->function_array[GROUP_MEMEMBER_SERV_FUNC] = get_group_members_service;
     server_ptr->function_array[CHATTING_SERV_FUNC] = chat_in_group_service;
-    server_ptr->function_array[EDIT_MEMBER_INFO_SERV_FUNC] = edit_user_info_service;
+    server_ptr->function_array[EDIT_MEMBER_INFO_SERV_FUNC] = mng_edit_user_info_service;
     server_ptr->function_array[PRE_CHAT_LOG_SERV_FUNC] = pre_chat_log_service;
     server_ptr->function_array[GROUP_DELETE_SERV_FUNC] = group_delete_service;
-    server_ptr->function_array[SERVER_LOG_SERV_FUNC] = server_log_service;
-    server_ptr->function_array[SERVER_STATUS_SERV_FUNC] = server_status_service;
+    server_ptr->function_array[SERVER_LOG_SERV_FUNC] = mng_server_log_service;
+    server_ptr->function_array[SERVER_STATUS_SERV_FUNC] = mng_server_status_service;
     server_ptr->function_array[DM_SERV_FUNC] = chat_in_user_service;
     server_ptr->function_array[PRE_DM_LOG_SERV_FUNC] = pre_dm_log_service;
-    server_ptr->function_array[OUT_CHAT_GROUP_SERV_FUNC] = out_chat_group;
+    server_ptr->function_array[OUT_CHAT_GROUP_SERV_FUNC] = out_chat_group_service;
     server_ptr->function_array[USER_LOG_SERV_FUNC] = user_log_service;
-
     // 리슨소켓 생성
     server_ptr->listen_fd = socket(PF_INET, SOCK_STREAM, 0);
     if (server_ptr->listen_fd < 0)
