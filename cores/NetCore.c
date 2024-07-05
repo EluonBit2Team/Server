@@ -206,6 +206,8 @@ bool init_server(epoll_net_core* server_ptr) {
     server_ptr->function_array[PRE_DM_LOG_SERV_FUNC] = pre_dm_log_service;
     server_ptr->function_array[OUT_CHAT_GROUP_SERV_FUNC] = out_chat_group_service;
     server_ptr->function_array[USER_LOG_SERV_FUNC] = user_log_service;
+    server_ptr->function_array[CURRENT_USER_LIST_SERV_FUNC] = current_user_list_service;
+
     // 리슨소켓 생성
     server_ptr->listen_fd = socket(PF_INET, SOCK_STREAM, 0);
     if (server_ptr->listen_fd < 0)
