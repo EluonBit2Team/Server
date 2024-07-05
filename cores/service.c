@@ -1908,7 +1908,7 @@ int set_send_timeout(int sockfd, int seconds) {
     return 0;
 }
 
-void server_down_notice(epoll_net_core* server_ptr) {
+void server_down_notice_to_all(epoll_net_core* server_ptr) {
     char* error_msg = NULL;
     char *response_str = NULL;
     cJSON* result_json = cJSON_CreateObject();

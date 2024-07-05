@@ -145,7 +145,7 @@ void user_log_service(epoll_net_core* server_ptr, task_t* task);
 
 // notice. from 서버 to 클라이언트. 응답 안기다림.
 void user_status_change_notice(epoll_net_core* server_ptr, conn_t* user_setting_conn);
-//void server_down_notice(epoll_net_core* server_ptr, conn_t* user_setting_conn);
-void server_down_notice(epoll_net_core* server_ptr);
+//void server_down_notice_to_all(epoll_net_core* server_ptr, conn_t* user_setting_conn);
+void server_down_notice_to_all(epoll_net_core* server_ptr);
 
 #endif
