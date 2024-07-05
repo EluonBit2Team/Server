@@ -115,7 +115,6 @@ void reserve_epoll_send(int epoll_fd, client_session_t* send_session, char* send
     struct epoll_event temp_send_event;
     temp_send_event.events = EPOLLOUT | EPOLLET;
     temp_send_event.data.fd = send_session->fd;
-    //reserve_send(&send_session->send_bufs, send_org, send_size);
 
     int total_size = HEADER_SIZE + send_size;
     send_buf_t temp_send_buf;
@@ -127,7 +126,6 @@ void reserve_epoll_send(int epoll_fd, client_session_t* send_session, char* send
     temp_send_buf.send_data_size = total_size;
     memcpy(temp_send_buf.buf_ptr, (char*)&total_size, HEADER_SIZE);
     memcpy(temp_send_buf.buf_ptr + HEADER_SIZE, send_org, send_size);
-    //printf("reserve_send_size : %d \n", temp_send_buf.send_data_size); write(STDOUT_FILENO, temp_send_buf.buf_ptr, temp_send_buf.send_data_size); write(STDOUT_FILENO, "\n", 1);
     
     pthread_mutex_lock(&send_session->send_buf_mutex);
     enqueue(&send_session->send_bufs, (void*)&temp_send_buf);
