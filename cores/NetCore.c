@@ -455,6 +455,16 @@ void down_server(epoll_net_core* server_ptr) {
     if (log_conn != NULL) {
         release_conn(&server_ptr->db.pools[LOG_DB_IDX], log_conn);
     }
+    
+    // 메세지 전송용 딜레이
+    const int SERVER_DOWN_COUNT_DOWN = 5;
+    printf("Server unloading");
+    for (int i = 0; i < SERVER_DOWN_COUNT_DOWN; i++) {
+        printf(".");
+        sleep(1);
+    }
+    printf("\n");
+
     server_ptr->is_run = false;
     epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_DEL, server_ptr->listen_fd, NULL);
     close_all_sessions(server_ptr->epoll_fd, &server_ptr->session_pool);
