@@ -1920,6 +1920,8 @@ void server_down_notice_to_all(epoll_net_core* server_ptr) {
     down_notice_total_size = HEADER_SIZE + strlen(response_str);
     memcpy(notice_send_buf, (char*)(&down_notice_total_size), HEADER_SIZE);
     memcpy(notice_send_buf + HEADER_SIZE, response_str, sizeof(response_str));
+    prtinf("%d, %s\n", down_notice_total_size, response_str);
+    write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, notice_send_buf, down_notice_total_size); write(STDOUT_FILENO, "\n", 1);
     for (int i = 0; i < MAX_CLIENT_NUM; i++) {
         if (server_ptr->session_pool.session_pool[i].fd < 0) {
             continue ;
@@ -1928,7 +1930,6 @@ void server_down_notice_to_all(epoll_net_core* server_ptr) {
         if (set_send_timeout(client_fd, 1) < 0) {
             close(client_fd);
         }
-        write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, notice_send_buf, down_notice_total_size); write(STDOUT_FILENO, "\n", 1);
         send(client_fd, notice_send_buf, down_notice_total_size, 0);
     }
 
