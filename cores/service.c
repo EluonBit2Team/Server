@@ -2053,7 +2053,7 @@ void current_user_list_service(epoll_net_core* server_ptr, task_t* task) {
 
     log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id FROM client_log WHERE logout_time = NULL");
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id FROM client_log WHERE logout_time IS NULL");
     user_log_list = query_result_to_json(log_conn, &msg, SQL_buf, 1, "login_id");
     if (msg != NULL) {
         goto cleanup_and_respond;
