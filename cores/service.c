@@ -1919,8 +1919,8 @@ void server_down_notice_to_all(epoll_net_core* server_ptr) {
     response_str = cJSON_Print(result_json);
     down_notice_total_size = HEADER_SIZE + strlen(response_str);
     memcpy(notice_send_buf, (char*)(&down_notice_total_size), HEADER_SIZE);
-    strcat(notice_send_buf + HEADER_SIZE, response_str);
-    //memcpy(notice_send_buf + HEADER_SIZE, response_str, down_notice_total_size - HEADER_SIZE);
+    //strcat(notice_send_buf + HEADER_SIZE, response_str);
+    memcpy(notice_send_buf + HEADER_SIZE, response_str, down_notice_total_size - HEADER_SIZE);
     //printf("%d, %s, %s\n", down_notice_total_size, response_str, notice_send_buf + HEADER_SIZE);
     //write(STDOUT_FILENO, "SEND:", 5); write(STDOUT_FILENO, notice_send_buf, down_notice_total_size); write(STDOUT_FILENO, "\n", 1);
     for (int i = 0; i < MAX_CLIENT_NUM; i++) {
