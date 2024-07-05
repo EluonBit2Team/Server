@@ -1906,12 +1906,12 @@ void server_down_notice(epoll_net_core* server_ptr) {
     cJSON_AddNumberToObject(result_json, "type", SERVER_DOWN_NOTICE);
     response_str = cJSON_Print(result_json);
     for (int i = 0; i < MAX_CLIENT_NUM; i++) {
-        printf("%d client\n");
+        printf("%d session client\n", server_ptr->session_pool.session_pool[i].session_idx);
         if (server_ptr->session_pool.session_pool[i].fd < 0) {
             continue ;
         }
         reserve_epoll_send(server_ptr->epoll_fd, &server_ptr->session_pool.session_pool[i], response_str, strlen(response_str));
-        printf("%d user reserved end\n");
+        printf("%d user reserved end\n", server_ptr->session_pool.session_pool[i].fd);
     }
 
     //cJSON* uid_list_json = NULL;
