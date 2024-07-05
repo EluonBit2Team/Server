@@ -52,7 +52,7 @@
 #define PRE_DM_LOG_SERV_FUNC 19
 #define OUT_CHAT_GROUP_SERV_FUNC 20
 #define USER_LOG_SERV_FUNC 21
-
+#define CURRENT_USER_LIST_SERV_FUNC 22
 #define USER_STATUS_CHANGE_NOTICE 300
 #define SERVER_DOWN_NOTICE 301
 
@@ -142,7 +142,7 @@ void chat_in_user_service(epoll_net_core* server_ptr, task_t* task);
 void pre_dm_log_service(epoll_net_core* server_ptr, task_t* task);
 void out_chat_group_service(epoll_net_core* server_ptr, task_t* task);
 void user_log_service(epoll_net_core* server_ptr, task_t* task);
-
+void current_user_list_service(epoll_net_core* server_ptr, task_t* task);
 // notice. from 서버 to 클라이언트. 응답 안기다림.
 void user_status_change_notice(epoll_net_core* server_ptr, conn_t* user_setting_conn);
 //void server_down_notice_to_all(epoll_net_core* server_ptr, conn_t* user_setting_conn);
