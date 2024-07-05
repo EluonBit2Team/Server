@@ -458,7 +458,7 @@ void down_server(epoll_net_core* server_ptr) {
     
     // 메세지 전송용 딜레이
     const int SERVER_DOWN_COUNT_DOWN = 5;
-    printf("Server unloading");
+    printf("Server is going to Down");
     for (int i = 0; i < SERVER_DOWN_COUNT_DOWN; i++) {
         printf(".");
         sleep(1);
