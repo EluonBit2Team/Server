@@ -1912,10 +1912,14 @@ void server_down_notice_to_all(epoll_net_core* server_ptr) {
     char* error_msg = NULL;
     char *response_str = NULL;
     cJSON* result_json = cJSON_CreateObject();
-    char SQL_buf[64];
+    char notice_send_buf[50];
+    int down_notice_total_size;
 
     cJSON_AddNumberToObject(result_json, "type", SERVER_DOWN_NOTICE);
     response_str = cJSON_Print(result_json);
+    down_notice_total_size = HEADER_SIZE + strlen(response_str);
+    memcpy(notice_send_buf, (char*)(&down_notice_total_size), HEADER_SIZE);
+    memcpy(notice_send_buf + HEADER_SIZE, response_str, sizeof(response_str));
     for (int i = 0; i < MAX_CLIENT_NUM; i++) {
         if (server_ptr->session_pool.session_pool[i].fd < 0) {
             continue ;
@@ -1924,7 +1928,7 @@ void server_down_notice_to_all(epoll_net_core* server_ptr) {
         if (set_send_timeout(client_fd, 1) < 0) {
             close(client_fd);
         }
-        send(client_fd, response_str, strlen(response_str), 0);
+        send(client_fd, notice_send_buf, down_notice_total_size, 0);
     }
 
 cleanup_and_respond:
