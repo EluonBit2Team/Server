@@ -358,7 +358,7 @@ int run_server(epoll_net_core* server_ptr) {
             // accept 이벤트시
             if (server_ptr->epoll_events[i].data.fd == STDIN_FILENO) {
                 server_down_notice(server_ptr);
-                //return 0;
+                return 0;
             }
             if (server_ptr->epoll_events[i].data.fd == server_ptr->listen_fd) {
                 accept_client(server_ptr);
