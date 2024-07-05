@@ -1896,7 +1896,18 @@ cleanup_and_respond:
     return ;
 }
 
-//void server_down_notice(epoll_net_core* server_ptr, conn_t* user_setting_conn) {
+int set_send_timeout(int sockfd, int seconds) {
+    struct timeval timeout;
+    timeout.tv_sec = seconds;
+    timeout.tv_usec = 0;
+
+    if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
+        perror("setsockopt");
+        return -1;
+    }
+    return 0;
+}
+
 void server_down_notice(epoll_net_core* server_ptr) {
     char* error_msg = NULL;
     char *response_str = NULL;
@@ -1906,45 +1917,15 @@ void server_down_notice(epoll_net_core* server_ptr) {
     cJSON_AddNumberToObject(result_json, "type", SERVER_DOWN_NOTICE);
     response_str = cJSON_Print(result_json);
     for (int i = 0; i < MAX_CLIENT_NUM; i++) {
-        printf("%d session client\n", server_ptr->session_pool.session_pool[i].session_idx);
         if (server_ptr->session_pool.session_pool[i].fd < 0) {
             continue ;
         }
-        reserve_epoll_send(server_ptr->epoll_fd, &server_ptr->session_pool.session_pool[i], response_str, strlen(response_str));
-        printf("%d user reserved end\n", server_ptr->session_pool.session_pool[i].fd);
+        int client_fd = server_ptr->session_pool.session_pool[i].fd;
+        if (set_send_timeout(client_fd, 1) < 0) {
+            close(client_fd);
+        }
+        send(client_fd, response_str, strlen(response_str), 0);
     }
-
-    //cJSON* uid_list_json = NULL;
-    // snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE user.role = 1");
-    // uid_list_json = query_result_to_json(user_setting_conn, &error_msg, SQL_buf, 1, "uid");
-    // if (error_msg != NULL) {
-    //     goto cleanup_and_respond;
-    // }
-    // int uid_count = cJSON_GetArraySize(uid_list_json);
-    // for (int i = 0; i < uid_count; i++) {
-    //     cJSON* item = cJSON_GetArrayItem(uid_list_json, i);
-    //     cJSON* uid_value = cJSON_GetObjectItemCaseSensitive(item, "uid");
-    //     if (cJSON_IsString(uid_value) == false && (uid_value->valuestring == NULL)) {
-    //         error_msg = "uid json list parse error";
-    //         goto cleanup_and_respond;   
-    //     }
-    //     int manager_uid = atoi(uid_value->valuestring);
-    //     if (manager_uid == 0 && uid_value->valuestring[0] != '0') {
-    //         error_msg = "uid json list is not number error";
-    //         goto cleanup_and_respond;
-    //     }
-
-    //     int connected_manager_fd = find(&server_ptr->uid_to_fd_hash, manager_uid);
-    //     if (connected_manager_fd < 0) {
-    //         continue;
-    //     }
-
-    //     client_session_t* connected_manager_session = find_session_by_fd(&server_ptr->session_pool, connected_manager_fd);
-    //     if (connected_manager_session != NULL) {
-    //         printf("%d manager_fd : %d\n", i, connected_manager_session->fd);
-    //         reserve_epoll_send(server_ptr->epoll_fd, connected_manager_session, response_str, strlen(response_str));
-    //     }
-    // }
 
 cleanup_and_respond:
     if (error_msg != NULL) {

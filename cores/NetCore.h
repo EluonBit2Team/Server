@@ -14,6 +14,7 @@
 
 #include <sys/file.h>
 #include <sys/wait.h>
+#include <sys/time.h>
 
 #include "../utilities/ring_buffer.h"
 #include "../utilities/void_queue.h"

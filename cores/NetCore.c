@@ -303,6 +303,7 @@ void fix_log_time_pairs(epoll_net_core* server_ptr) {
 
 int run_server(epoll_net_core* server_ptr) {
     server_ptr->is_run = true;
+    int server_down_reserve_user_cnt = -1;
 
     struct epoll_event temp_epoll_event;
     server_ptr->epoll_fd = epoll_create1(0);
@@ -356,11 +357,8 @@ int run_server(epoll_net_core* server_ptr) {
         for (int i = 0; i < occured_event_cnt; i++) {
             // accept 이벤트시
             if (server_ptr->epoll_events[i].data.fd == STDIN_FILENO) {
-                // conn_t* user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
-                // server_down_notice(server_ptr, user_setting_conn);
                 server_down_notice(server_ptr);
-                //release_conns(&server_ptr->db, 1, user_setting_conn);
-                return 0;
+                //return 0;
             }
             if (server_ptr->epoll_events[i].data.fd == server_ptr->listen_fd) {
                 accept_client(server_ptr);
@@ -455,7 +453,7 @@ void down_server(epoll_net_core* server_ptr) {
         release_conn(&server_ptr->db.pools[LOG_DB_IDX], log_conn);
     }
     
-    server_down_notice(server_ptr);
+    //server_down_notice(server_ptr);
     // 메세지 전송용 딜레이
     const int SERVER_DOWN_COUNT_DOWN = 5;
     printf("Server is going to Down");
