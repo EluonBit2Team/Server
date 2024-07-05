@@ -2032,3 +2032,47 @@ cleanup_and_respond:
     free_all(1, response_str);
     return ;
 }
+
+void current_user_list_service(epoll_net_core* server_ptr, task_t* task) {
+    printf("current_user_list_service\n");
+    int type = 100;
+    char* msg = NULL;
+    cJSON* json_ptr = NULL;
+    cJSON* result_json = cJSON_CreateObject();
+    cJSON* user_log_list = NULL;
+    client_session_t* now_session = NULL;
+    conn_t* log_conn = NULL;
+    char* response_str = NULL;
+    char SQL_buf[1024];
+
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL) {
+        msg = "Session Error";
+        goto cleanup_and_respond;
+    }
+
+    log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
+
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT login_id FROM client_log WHERE logout_time = 'NULL'");
+    user_log_list = query_result_to_json(log_conn, &msg, SQL_buf, 1, "login_id");
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+
+    type = 22;
+
+cleanup_and_respond:
+    cJSON_AddNumberToObject(result_json, "type", type);
+    if (msg != NULL) {
+        cJSON_AddStringToObject(result_json, "msg", msg);
+    }
+    else {
+        cJSON_AddItemToObject(result_json, "current_user_list", user_log_list);
+    }
+    response_str = cJSON_Print(result_json);
+    reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
+    release_conns(&server_ptr->db, 1 , log_conn);
+    cJSON_del(2, json_ptr, result_json);
+    free_all(1, response_str);
+    return ;
+}
