@@ -28,7 +28,7 @@
 #define MAX_CLIENT_NUM 100
 #define EPOLL_SIZE MAX_CLIENT_NUM
 
-#define SERVICE_FUNC_NUM 20
+#define SERVICE_FUNC_NUM 30
 #define ECHO_SERVICE_FUNC 0
 #define SIGNUP_SERV_FUNC 1
 #define LOGIN_SERV_FUNC 2
@@ -49,7 +49,8 @@
 #define SERVER_STATUS_SERV_FUNC 17
 #define DM_SERV_FUNC 18
 #define PRE_DM_LOG_SERV_FUNC 19
-#define OUT_CHAT_GROUP_sERV_FUNC 20
+#define OUT_CHAT_GROUP_SERV_FUNC 20
+#define USER_LOG_SERV_FUNC 21
 
 #define USER_STATUS_CHANGE_NOTICE 300
 #define SERVER_DOWN_NOTICE 301
@@ -124,20 +125,21 @@ void signup_service(epoll_net_core* server_ptr, task_t* task);
 void make_group_service(epoll_net_core* server_ptr, task_t* task);
 void user_list_service(epoll_net_core* server_ptr, task_t* task);
 void group_list_service(epoll_net_core* server_ptr, task_t* task);
-void edit_member_service(epoll_net_core* server_ptr, task_t* task);
-void Mng_req_list_service(epoll_net_core* server_ptr, task_t* task);
-void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task);
-void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task);
-void group_member_service(epoll_net_core* server_ptr, task_t* task);
-void chat_in_group_service(epoll_net_core* server_ptr, task_t* task);
-void edit_user_info_service(epoll_net_core* server_ptr, task_t* task);
+void edit_group_member_service(epoll_net_core* server_ptr, task_t* task);
+void mng_req_list_service(epoll_net_core* server_ptr, task_t* task);
+void mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task);
+void mng_group_approve_service(epoll_net_core* server_ptr, task_t* task);
+void mng_user_log_service(epoll_net_core* server_ptr, task_t* task);
+void mng_server_log_service(epoll_net_core* server_ptr, task_t* task);
+void mng_server_status_service(epoll_net_core* server_ptr, task_t* task);
+void mng_edit_user_info_service(epoll_net_core* server_ptr, task_t* task);
+void get_group_members_service(epoll_net_core* server_ptr, task_t* task);
 void group_delete_service(epoll_net_core* server_ptr, task_t* task);
-void server_log_service(epoll_net_core* server_ptr, task_t* task);
-void server_status_service(epoll_net_core* server_ptr, task_t* task);
+void chat_in_group_service(epoll_net_core* server_ptr, task_t* task);
 void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task);
 void chat_in_user_service(epoll_net_core* server_ptr, task_t* task);
 void pre_dm_log_service(epoll_net_core* server_ptr, task_t* task);
-void out_chat_group(epoll_net_core* server_ptr, task_t* task);
+void out_chat_group_service(epoll_net_core* server_ptr, task_t* task);
 
 // notice. from 서버 to 클라이언트. 응답 안기다림.
 void user_status_change_notice(epoll_net_core* server_ptr, conn_t* user_setting_conn);

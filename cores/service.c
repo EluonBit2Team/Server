@@ -408,7 +408,7 @@ cleanup_and_respond:
     return ;
 }
 
-void edit_member_service(epoll_net_core* server_ptr, task_t* task) {
+void edit_group_member_service(epoll_net_core* server_ptr, task_t* task) {
     printf("add_member_service\n");
     int type = 100;
     char* msg = NULL;
@@ -517,7 +517,7 @@ cleanup_and_respond:
     return ;
 }
 
-void Mng_req_list_service(epoll_net_core* server_ptr, task_t* task) {
+void mng_req_list_service(epoll_net_core* server_ptr, task_t* task) {
     printf("Mng_req_list_servce\n");
     int type = 100;
     char* msg = NULL;
@@ -594,8 +594,8 @@ cleanup_and_respond:
     return ;
 }
 
-void Mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("Mng_signup_approve_service\n");
+void mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
+    printf("mng_signup_approve_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -729,8 +729,8 @@ cleanup_and_respond:
     return ;
 }
 
-void Mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("Mng_group_approve_service\n");
+void mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
+    printf("mng_group_approve_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -859,8 +859,8 @@ cleanup_and_respond:
     return ;
 }
 
-void group_member_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("group_member_service\n");
+void get_group_members_service(epoll_net_core* server_ptr, task_t* task) {
+    printf("get_group_members_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -1095,8 +1095,8 @@ cleanup_and_respond:
     return ;
 }
 
-void edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("edit_user_info_service\n");
+void mng_edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
+    printf("mng_edit_user_info_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -1413,8 +1413,8 @@ cleanup_and_respond:
     return ;
 }
 
-void server_log_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("server_log_service\n");
+void mng_server_log_service(epoll_net_core* server_ptr, task_t* task) {
+    printf("mng_server_log_service\n");
     int type = 100;
     char* msg = NULL;
     cJSON* json_ptr = NULL;
@@ -1494,8 +1494,8 @@ cleanup_and_respond:
     return ;
 }
 
-void server_status_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("server_status_service\n");
+void mng_server_status_service(epoll_net_core* server_ptr, task_t* task) {
+    printf("mng_server_status_service\n");
     int type = 100;
     FILE* log_file = NULL;
     int log_file_fd = -1;
@@ -1776,8 +1776,8 @@ cleanup_and_respond:
     return ;
 }
 
-void out_chat_group(epoll_net_core* server_ptr, task_t* task) {
-    printf("out_chat_group\n");
+void out_chat_group_service(epoll_net_core* server_ptr, task_t* task) {
+    printf("out_chat_group_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;

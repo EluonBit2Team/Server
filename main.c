@@ -4,14 +4,15 @@
 
 int main() {
     epoll_net_core net;
-    // setup_signal_handlers();
-    // fork_exec();
+    setup_signal_handlers();
+    fork_exec();
 
-    if (init_server(&net) == false)
-    {
+    if (init_server(&net) == false) {
         return -1;
     }
+
     run_server(&net);
+
     down_server(&net);
-    //terminate_child();
+    terminate_child();
 }
