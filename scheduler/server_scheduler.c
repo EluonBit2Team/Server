@@ -241,8 +241,6 @@ int get_statistic(statistic_t* server_statistic) {
 }
 
 void save_statistic_to_db(MYSQL* statistic_conn, statistic_t* server_statistic) {
-    printf("save_to_db\n");
-
     char query[512];
     snprintf(query, sizeof(query),
             "INSERT INTO statistic (tps_avg, tps_max, mem_avg, mem_max, login_user_cnt_avg, login_user_cnt_max) VALUES (%f, %d, %f, %f, %f, %d)",
