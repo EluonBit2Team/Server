@@ -196,7 +196,7 @@ bool is_valid_login_id(const char* id, char** out_msg) {
 bool is_valid_password(const char* password, char** out_msg) {
     int length = strlen(password);
     if (length < 5 || length > 20) {
-        *out_msg = "ID 길이는 5자 이상 20자 이하여야 합니다.";
+        *out_msg = "PASSWORD 길이는 5자 이상 20자 이하여야 합니다.";
         return false;
     }
 
