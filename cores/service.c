@@ -75,8 +75,11 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH);
 
     uid = query_result_to_int(user_setting_conn,&msg,SQL_buf);
-    if (msg != NULL) {
-        msg = "Invalid ID or PW";
+
+    if (uid < 0 || msg != NULL) {
+        if (strcmp(msg, "No result") == 0) {
+            msg = "Invalid ID or PW";
+        }
         goto cleanup_and_respond;
     }
 
@@ -92,8 +95,10 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         "SELECT role FROM user WHERE login_id = '%s'", cJSON_GetStringValue(id_ptr));
 
     role = query_result_to_int(user_setting_conn,&msg,SQL_buf);
-    if (msg != NULL) {
-        msg = "Invalid ID or PW";
+    if (role < 0 || msg != NULL) {
+        if (strcmp(msg, "No result") == 0) {
+            msg = "No role data";
+        }
         goto cleanup_and_respond;
     }
 
@@ -469,6 +474,9 @@ void edit_group_member_service(epoll_net_core* server_ptr, task_t* task) {
         if (cJSON_GetStringValue(user_item)[0] != '\0') {
             snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE login_id = '%s'", cJSON_GetStringValue(user_item));
             int uid = query_result_to_int(user_setting_conn,&msg,SQL_buf);
+            if (msg != NULL) {
+                goto cleanup_and_respond;
+            }
 
             snprintf(SQL_buf, sizeof(SQL_buf), "SELECT count(*) FROM group_member WHERE gid = %d AND uid = %d", gid, uid);
             user_count = query_result_to_int(chat_group_conn,&msg,SQL_buf);
@@ -492,7 +500,9 @@ void edit_group_member_service(epoll_net_core* server_ptr, task_t* task) {
         if (cJSON_GetStringValue(user_item)[0] != '\0') {
             snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE login_id = '%s'", cJSON_GetStringValue(user_item));
             int uid = query_result_to_int(user_setting_conn,&msg,SQL_buf);
-
+            if (uid < 0 || msg != NULL) {
+                goto cleanup_and_respond;
+            }
             snprintf(SQL_buf, sizeof(SQL_buf), "DELETE FROM group_member WHERE uid = %d", uid);
             query_result_to_execuete(chat_group_conn,&msg,SQL_buf);
             if (msg != NULL) {
