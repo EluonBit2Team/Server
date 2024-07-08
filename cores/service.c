@@ -75,7 +75,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH);
 
     uid = query_result_to_int(user_setting_conn,&msg,SQL_buf);
-    if (uid == 0) {
+    if (msg != NULL) {
         msg = "Invalid ID or PW";
         goto cleanup_and_respond;
     }
@@ -92,7 +92,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         "SELECT role FROM user WHERE login_id = '%s'", cJSON_GetStringValue(id_ptr));
 
     role = query_result_to_int(user_setting_conn,&msg,SQL_buf);
-    if (role == 0) {
+    if (msg != NULL) {
         msg = "Invalid ID or PW";
         goto cleanup_and_respond;
     }
