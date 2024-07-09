@@ -70,11 +70,12 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss pw";
         goto cleanup_and_respond;
     }
-    // JSON_guard(json_ptr,&msg);
-    // if (validate_fields(json_ptr,&msg)) {
-    //     msg = "공백확인!";
-    //     goto cleanup_and_respond;
-    // }
+    
+    JSON_guard(json_ptr,&msg);
+    if (msg != NULL) {
+        goto cleanup_and_respond;
+    }
+
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT uid FROM user WHERE '%s' = user.login_id AND UNHEX(SHA2('%s', %d)) = user.password",
         cJSON_GetStringValue(id_ptr), cJSON_GetStringValue(pw_ptr), SHA2_HASH_LENGTH);
