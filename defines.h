@@ -15,8 +15,4 @@
 
 #define GENERAL_ERROR 100
 
-#ifndef __USE_GNU
-#define __USE_GNU
-#endif
-
 #define LOG_FILE "server_status.log"

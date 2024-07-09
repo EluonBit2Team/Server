@@ -257,7 +257,7 @@ void JSON_guard(cJSON* json, char** out_msg) {
         if (cJSON_IsString(field_value)) {
             const char* value = field_value->valuestring;
             if (value == NULL || value[0] == '\0') {
-                asprintf(out_msg, "Field '%s' is missing or empty", field_name);
+                *out_msg = "Field is missing or empty";
                 return;
             }
         }
@@ -278,7 +278,7 @@ void JSON_guard(cJSON* json, char** out_msg) {
                 } else if (cJSON_IsString(array_element)) {
                     const char* value = array_element->valuestring;
                     if (value == NULL || value[0] == '\0') {
-                        asprintf(out_msg, "Array element in field '%s' is missing or empty", field_name);
+                        *out_msg = "Array element is missing or empty";
                         return;
                     }
                 }
