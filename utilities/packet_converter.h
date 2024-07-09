@@ -15,5 +15,6 @@ bool contains_emoji(const char* str);
 bool is_valid_login_id(const char* id, char** out_msg);
 bool is_valid_password(const char* password, char** out_msg);
 void JSON_guard(cJSON* json, char** out_msg);
+bool validate_fields(const cJSON *json_ptr, char **out_msg);
 
 #endif

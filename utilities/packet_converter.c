@@ -286,3 +286,14 @@ void JSON_guard(cJSON* json, char** out_msg) {
         }
     }
 }
+
+bool validate_fields(const cJSON *json_ptr, char **out_msg) {
+    cJSON *field = NULL;
+    cJSON_ArrayForEach(field, json_ptr) {
+        if (!cJSON_IsString(field) || field->valuestring == NULL || field->valuestring[0] == '\0') {
+            *out_msg = "JSON 필드에 공백이나 NULL 데이터가 포함되어 있습니다.";
+            return true; // 에러 발생 시 true 반환
+        }
+    }
+    return false; // 성공 시 false 반환
+}
