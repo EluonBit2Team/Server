@@ -26,13 +26,6 @@ int enqueue(void_queue_t* queue, const void* data_org) {
         return -1;
     }
     memcpy(new_node->data, data_org, queue->type_default_size);
-    
-    // new_node->pre = queue->rear_node;
-    
-    // // rear노드 갱신
-    // queue->rear_node = new_node;
-
-    // [queue] pre(new__node)rear <- pre()
     new_node->pre = queue->rear_node;
     new_node->next = NULL;
     if (queue->rear_node == NULL) {
@@ -51,17 +44,6 @@ int enqueue(void_queue_t* queue, const void* data_org) {
 }
 
 int dequeue(void_queue_t* queue, void* data_des) {
-    // node_t* r_node = queue->rear_node;
-    // if (r_node == NULL) {
-    //     return -1;
-    // }
-
-    // if (data_des != NULL) {
-    //    memcpy(data_des, r_node->data, queue->type_default_size);
-    // }
-    // node_t* new_r_node = queue->rear_node->pre;
-    // queue->rear_node = new_r_node;
-
     node_t* f_node = queue->front_node;
     if (f_node == NULL) {
         return -1;

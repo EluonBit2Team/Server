@@ -1,6 +1,7 @@
 #ifndef NET_CORE_H
 #define NET_CORE_H
 
+
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -16,6 +17,7 @@
 #include <sys/wait.h>
 #include <sys/time.h>
 
+#include "../includes.h"
 #include "../utilities/ring_buffer.h"
 #include "../utilities/void_queue.h"
 #include "../utilities/packet_converter.h"
