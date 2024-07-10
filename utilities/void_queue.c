@@ -15,19 +15,27 @@ void reset_queue(void_queue_t* queue) {
         free(cur);
         cur = temp_pre;
     }
+    queue->front_node = NULL;
     queue->rear_node = NULL;
 }
 
 int enqueue(void_queue_t* queue, const void* data_org) {
     node_t* new_node = (node_t*)malloc(sizeof(node_t));
-    new_node->data = malloc(queue->type_default_size);
-    if (new_node->data == NULL) {
-        // TODO: error 로깅 및 처리
+    if (new_node == NULL) {
+        printf("enqueue malloc fail\n");
         return -1;
     }
+    new_node->data = malloc(queue->type_default_size);
+    if (new_node->data == NULL) {
+        free(new_node);
+        printf("enqueue malloc fail\n");
+        return -1;
+    }
+
     memcpy(new_node->data, data_org, queue->type_default_size);
     new_node->pre = queue->rear_node;
     new_node->next = NULL;
+
     if (queue->rear_node == NULL) {
         if (queue->front_node != NULL) {
             fprintf(stderr, "%s", "Invalid queue node\n");

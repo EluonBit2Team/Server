@@ -393,17 +393,17 @@ void group_list_service(epoll_net_core* server_ptr, task_t* task) {
 
     chat_group_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
 
-    cJSON* json_ptr = get_parsed_json(task->buf);
-    if (json_ptr == NULL)
-    {
-        msg = "user send invalid json";
-        goto cleanup_and_respond;
-    }
-
     now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
     if (now_session == NULL)
     {
         msg = "session error";
+        goto cleanup_and_respond;
+    }
+
+    cJSON* json_ptr = get_parsed_json(task->buf);
+    if (json_ptr == NULL)
+    {
+        msg = "user send invalid json";
         goto cleanup_and_respond;
     }
 
@@ -556,17 +556,17 @@ void mng_req_list_service(epoll_net_core* server_ptr, task_t* task) {
     conn_t* chat_group_conn = NULL;
     char SQL_buf[512];
 
-    cJSON* json_ptr = get_parsed_json(task->buf);
-    if (json_ptr == NULL)
-    {
-        msg = "user send invalid json";
-        goto cleanup_and_respond;
-    }
-
     now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
     if (now_session == NULL)
     {
         msg = "session error";
+        goto cleanup_and_respond;
+    }
+
+    cJSON* json_ptr = get_parsed_json(task->buf);
+    if (json_ptr == NULL)
+    {
+        msg = "user send invalid json";
         goto cleanup_and_respond;
     }
 
@@ -914,6 +914,13 @@ void get_group_members_service(epoll_net_core* server_ptr, task_t* task) {
     user_setting_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
     chat_group_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
 
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL)
+    {
+        msg = "session error";
+        goto cleanup_and_respond;
+    }
+
     cJSON* json_ptr = get_parsed_json(task->buf);
     if (json_ptr == NULL)
     {
@@ -925,13 +932,6 @@ void get_group_members_service(epoll_net_core* server_ptr, task_t* task) {
     if (groupname_ptr == NULL || cJSON_GetStringValue(groupname_ptr)[0] == '\0')
     {
         msg = "user send invalid json. Miss page";
-        goto cleanup_and_respond;
-    }
-
-    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
-    if (now_session == NULL)
-    {
-        msg = "session error";
         goto cleanup_and_respond;
     }
 
@@ -1000,6 +1000,12 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
     int* recieve_fd_array = NULL;
     char SQL_buf[1024];
 
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL) {
+        msg = "Session Error";
+        goto cleanup_and_respond;
+    }
+
     cJSON* json_ptr = get_parsed_json(task->buf);
     if (json_ptr == NULL)
     {
@@ -1034,12 +1040,6 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
-    if (now_session == NULL) {
-        msg = "Session Error";
-        goto cleanup_and_respond;
-    }
-
     user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     chat_group_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
     log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
@@ -1059,13 +1059,6 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    // snprintf(SQL_buf, sizeof(SQL_buf), 
-    //     "CALL insert_message(%d, %d, '%s', %d, '%s','%s',@result)", 
-    //     uid, gid, cJSON_GetStringValue(text_ptr), max_tps,cJSON_GetStringValue(login_id_ptr),cJSON_GetStringValue(groupname_ptr));
-    // query_result_to_execuete(log_conn, &msg, SQL_buf);
-    // if (msg != NULL) {
-    //     goto cleanup_and_respond;
-    // }
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "CALL insert_message(%d, %d, '%s', %d, '%s','%s',@result)", 
         uid, gid, cJSON_GetStringValue(text_ptr), max_tps,cJSON_GetStringValue(login_id_ptr),cJSON_GetStringValue(groupname_ptr));
@@ -1123,6 +1116,7 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
 
 
 cleanup_and_respond:
+    printf("msg:%s\n", msg);
     if (msg != NULL) {
         cJSON_AddNumberToObject(result_json, "type", type);
         cJSON_AddStringToObject(result_json, "msg", msg);
@@ -1146,6 +1140,13 @@ void mng_edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
     char SQL_buf[1024];
 
     user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]); 
+
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL) {
+        msg = "Session Error";
+        goto cleanup_and_respond;
+    }
+
     cJSON* json_ptr = get_parsed_json(task->buf);
     if (json_ptr == NULL) {
         msg = "user send invalid json";
@@ -1262,12 +1263,6 @@ void mng_edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
             mysql_rollback(user_setting_conn->conn);
             goto cleanup_and_respond;
         }
-    }
-
-    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
-    if (now_session == NULL) {
-        msg = "Session Error";
-        goto cleanup_and_respond;
     }
 
     type = 13;
@@ -1466,14 +1461,15 @@ void mng_server_log_service(epoll_net_core* server_ptr, task_t* task) {
     char* response_str = NULL;
     char SQL_buf[1024];
 
+    log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
+    user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
+
     now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
     if (now_session == NULL) {
         msg = "Session Error";
         goto cleanup_and_respond;
     }
 
-    log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
-    user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     json_ptr = get_parsed_json(task->buf);
     if (json_ptr == NULL) {
         msg = "user send invalid json";
@@ -1622,6 +1618,12 @@ void chat_in_user_service(epoll_net_core* server_ptr, task_t* task) {
     char* timestamp = NULL;
     char SQL_buf[1024];
 
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL) {
+        msg = "Session Error";
+        goto cleanup_and_respond;
+    }
+
     cJSON* json_ptr = get_parsed_json(task->buf);
     if (json_ptr == NULL)
     {
@@ -1653,12 +1655,6 @@ void chat_in_user_service(epoll_net_core* server_ptr, task_t* task) {
     if (text_ptr == NULL || cJSON_GetStringValue(text_ptr)[0] == '\0')
     {
         msg = "user send invalid json. Miss text";
-        goto cleanup_and_respond;
-    }
-
-    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
-    if (now_session == NULL) {
-        msg = "Session Error";
         goto cleanup_and_respond;
     }
 
@@ -1709,7 +1705,6 @@ void chat_in_user_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user is not online";
         goto cleanup_and_respond;
     }
-    
     client_session_t* session = find_session_by_fd(&server_ptr->session_pool, recieve_fd);
     if (session == NULL) {
         printf("%d fd Not have session!!\n", recieve_fd);
@@ -1829,6 +1824,13 @@ void out_chat_group_service(epoll_net_core* server_ptr, task_t* task) {
 
     chat_group_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
 
+    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
+    if (now_session == NULL)
+    {
+        msg = "session error";
+        goto cleanup_and_respond;
+    }
+
     int uid = find(&server_ptr->fd_to_uid_hash, task->req_client_fd);
     if (uid < 0) {
         msg = "Invalid user";
@@ -1846,13 +1848,6 @@ void out_chat_group_service(epoll_net_core* server_ptr, task_t* task) {
     if (groupname_ptr == NULL || cJSON_GetStringValue(groupname_ptr)[0] == '\0')
     {
         msg = "user send invalid json. Miss page";
-        goto cleanup_and_respond;
-    }
-
-    now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
-    if (now_session == NULL)
-    {
-        msg = "session error";
         goto cleanup_and_respond;
     }
 
