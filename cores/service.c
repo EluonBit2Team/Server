@@ -2,7 +2,7 @@
 
 // ✨ 서비스 함수. 이런 형태의 함수들을 추가하여 서비스 추가. ✨
 void echo_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("echo_service\n");
+    //printf("echo_service\n");
     int type = 100;
     char* msg = NULL;
     client_session_t* now_session = NULL;
@@ -32,7 +32,7 @@ cleanup_and_respond:
 }
 
 void login_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("login_service\n");
+    //printf("login_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -111,7 +111,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     insert(&server_ptr->fd_to_uid_hash, task->req_client_fd, uid);
     insert(&server_ptr->uid_to_fd_hash, uid, task->req_client_fd);
 
-    printf("%d user login\n", find(&server_ptr->fd_to_uid_hash, task->req_client_fd));
+    //printf("%d user login\n", find(&server_ptr->fd_to_uid_hash, task->req_client_fd));
     type = 2;
     
     // 로그인 성공시 DB에 로그 저장
@@ -144,7 +144,7 @@ cleanup_and_respond:
 }
 
 void signup_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("signup_service\n");
+    //printf("signup_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -238,7 +238,7 @@ cleanup_and_respond:
 
 void make_group_service(epoll_net_core* server_ptr, task_t* task)
 {
-    printf("make_group_service\n");
+    //printf("make_group_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -333,7 +333,7 @@ cleanup_and_respond:
 }
 
 void user_list_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("user_list_service\n");
+    //printf("user_list_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -382,7 +382,7 @@ cleanup_and_respond:
 }
 
 void group_list_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("group_list_service\n");
+    //printf("group_list_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -431,7 +431,7 @@ cleanup_and_respond:
 }
 
 void edit_group_member_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("add_member_service\n");
+    //printf("add_member_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -546,7 +546,7 @@ cleanup_and_respond:
 }
 
 void mng_req_list_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("Mng_req_list_servce\n");
+    //printf("Mng_req_list_servce\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -623,7 +623,7 @@ cleanup_and_respond:
 }
 
 void mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("mng_signup_approve_service\n");
+    //printf("mng_signup_approve_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -764,7 +764,7 @@ cleanup_and_respond:
 }
 
 void mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("mng_group_approve_service\n");
+    //printf("mng_group_approve_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -900,7 +900,7 @@ cleanup_and_respond:
 }
 
 void get_group_members_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("get_group_members_service\n");
+    //printf("get_group_members_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -987,7 +987,7 @@ cleanup_and_respond:
 }
 
 void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("chat_in_group_service\n");
+    //printf("chat_in_group_service\n");
     int type = 100;
     char* msg = NULL;
     cJSON* result_json = cJSON_CreateObject();
@@ -1107,7 +1107,7 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
     cJSON_AddStringToObject(json_ptr, "timestamp", timestamp);
     response_str = cJSON_Print(json_ptr);
     for (int i = 0; i < uid_count; i++) {
-        printf("%d \n", recieve_fd_array[i]); write(STDOUT_FILENO, task->buf, task->task_data_len); write(STDOUT_FILENO, "\n", 1);
+        //printf("%d \n", recieve_fd_array[i]); write(STDOUT_FILENO, task->buf, task->task_data_len); write(STDOUT_FILENO, "\n", 1);
         if (recieve_fd_array[i] < 0) {
             continue;
         }
@@ -1117,7 +1117,7 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
             continue;
         }
         // 그대로 echo때려버리면 될듯.
-        write(STDOUT_FILENO, "true:", 5); write(STDOUT_FILENO, task->buf + HEADER_SIZE, task->task_data_len - HEADER_SIZE); write(STDOUT_FILENO, "\n", 1);
+        //write(STDOUT_FILENO, "true:", 5); write(STDOUT_FILENO, task->buf + HEADER_SIZE, task->task_data_len - HEADER_SIZE); write(STDOUT_FILENO, "\n", 1);
         reserve_epoll_send(server_ptr->epoll_fd, session, response_str, strlen(response_str));
     }
 
@@ -1136,7 +1136,7 @@ cleanup_and_respond:
 }
 
 void mng_edit_user_info_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("mng_edit_user_info_service\n");
+    //printf("mng_edit_user_info_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -1287,7 +1287,7 @@ cleanup_and_respond:
 }
 
 void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("pre_chat_log_service\n");
+    //printf("pre_chat_log_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -1364,7 +1364,7 @@ cleanup_and_respond:
 }
 
 void group_delete_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("group_delete_service\n");
+    //printf("group_delete_service\n");
     int type = 100;
     char* msg = NULL;
     cJSON* json_ptr = NULL;
@@ -1454,7 +1454,7 @@ cleanup_and_respond:
 }
 
 void mng_server_log_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("mng_server_log_service\n");
+    //printf("mng_server_log_service\n");
     int type = 100;
     char* msg = NULL;
     cJSON* json_ptr = NULL;
@@ -1535,7 +1535,7 @@ cleanup_and_respond:
 }
 
 void mng_server_status_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("mng_server_status_service\n");
+    //printf("mng_server_status_service\n");
     int type = 100;
     FILE* log_file = NULL;
     int log_file_fd = -1;
@@ -1610,7 +1610,7 @@ cleanup_and_respond:
 }
 
 void chat_in_user_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("chat_in_user_service\n");
+    //printf("chat_in_user_service\n");
     int type = 100;
     char* msg = NULL;
     cJSON* result_json = cJSON_CreateObject();
@@ -1716,8 +1716,8 @@ void chat_in_user_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user is not online";
         goto cleanup_and_respond;
     }
-    printf("%d \n", recieve_fd); write(STDOUT_FILENO, task->buf, task->task_data_len); write(STDOUT_FILENO, "\n", 1);
-    write(STDOUT_FILENO, "true:", 5); write(STDOUT_FILENO, task->buf + HEADER_SIZE, task->task_data_len - HEADER_SIZE); write(STDOUT_FILENO, "\n", 1);
+    //printf("%d \n", recieve_fd); write(STDOUT_FILENO, task->buf, task->task_data_len); write(STDOUT_FILENO, "\n", 1);
+    //write(STDOUT_FILENO, "true:", 5); write(STDOUT_FILENO, task->buf + HEADER_SIZE, task->task_data_len - HEADER_SIZE); write(STDOUT_FILENO, "\n", 1);
     reserve_epoll_send(server_ptr->epoll_fd, session, response_str, strlen(response_str));
 
 cleanup_and_respond:
@@ -1734,7 +1734,7 @@ cleanup_and_respond:
 }
 
 void pre_dm_log_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("pre_dm_log_service\n");
+    //("pre_dm_log_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -1817,7 +1817,7 @@ cleanup_and_respond:
 }
 
 void out_chat_group_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("out_chat_group_service\n");
+    //printf("out_chat_group_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -1889,19 +1889,15 @@ void user_status_change_notice(epoll_net_core* server_ptr, conn_t* user_setting_
     char *response_str = NULL;
     cJSON* result_json = cJSON_CreateObject();
     char notice_send_buf[50];
-    int notice_total_size;
 
     cJSON_AddNumberToObject(result_json, "type", USER_STATUS_CHANGE_NOTICE);
     response_str = cJSON_Print(result_json);
-    notice_total_size = HEADER_SIZE + strlen(response_str);
-    memcpy(notice_send_buf, (char*)(&notice_total_size), HEADER_SIZE);
-    memcpy(notice_send_buf + HEADER_SIZE, response_str, notice_total_size - HEADER_SIZE);
     for (int i = 0; i < MAX_CLIENT_NUM; i++) {
         if (server_ptr->session_pool.session_pool[i].fd < 0) {
             continue ;
         }
         int client_fd = server_ptr->session_pool.session_pool[i].fd;
-        reserve_epoll_send(server_ptr->epoll_fd, &server_ptr->session_pool.session_pool[i], response_str, notice_total_size);
+        reserve_epoll_send(server_ptr->epoll_fd, &server_ptr->session_pool.session_pool[i], response_str, strlen(response_str));
     }
 
 cleanup_and_respond:
@@ -1911,54 +1907,6 @@ cleanup_and_respond:
     cJSON_del(1, result_json);
     free_all(1, response_str);
     return ;
-//     char* error_msg = NULL;
-//     char *response_str = NULL;
-//     cJSON* result_json = cJSON_CreateObject();
-//     cJSON* uid_list_json = NULL;
-//     char SQL_buf[64];
-
-//     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM user WHERE user.role = 1");
-//     uid_list_json = query_result_to_json(user_setting_conn, &error_msg, SQL_buf, 1, "uid");
-//     if (error_msg != NULL) {
-//         goto cleanup_and_respond;
-//     }
-
-//     cJSON_AddNumberToObject(result_json, "type", USER_STATUS_CHANGE_NOTICE);
-//     response_str = cJSON_Print(result_json);
-//     int uid_count = cJSON_GetArraySize(uid_list_json);
-//     for (int i = 0; i < uid_count; i++) {
-//         cJSON* item = cJSON_GetArrayItem(uid_list_json, i);
-//         cJSON* uid_value = cJSON_GetObjectItemCaseSensitive(item, "uid");
-//         if (cJSON_IsString(uid_value) == false && (uid_value->valuestring == NULL)) {
-//             error_msg = "uid json list parse error";
-//             goto cleanup_and_respond;   
-//         }
-//         int manager_uid = atoi(uid_value->valuestring);
-//         if (manager_uid == 0 && uid_value->valuestring[0] != '0') {
-//             error_msg = "uid json list is not number error";
-//             goto cleanup_and_respond;
-//         }
-
-//         int connected_manager_fd = find(&server_ptr->uid_to_fd_hash, manager_uid);
-//         if (connected_manager_fd < 0) {
-//             continue;
-//         }
-
-//         client_session_t* connected_manager_session = find_session_by_fd(&server_ptr->session_pool, connected_manager_fd);
-//         if (connected_manager_session != NULL) {
-//             printf("%d manager_fd : %d\n", i, connected_manager_session->fd);
-//             reserve_epoll_send(server_ptr->epoll_fd, connected_manager_session, response_str, strlen(response_str));
-//         }
-//     }
-
-
-// cleanup_and_respond:
-//     if (error_msg != NULL) {
-//         fprintf(stderr, "%s", error_msg);
-//     }
-//     cJSON_del(2, result_json, uid_list_json);
-//     free_all(1, response_str);
-//     return ;
 }
 
 int set_send_timeout(int sockfd, int seconds) {
@@ -2006,7 +1954,7 @@ cleanup_and_respond:
 }
 
 void user_log_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("user_log_service\n");
+    //printf("user_log_service\n");
     int type = 100;
     char* msg = NULL;
     cJSON* json_ptr = NULL;
@@ -2086,7 +2034,7 @@ cleanup_and_respond:
 }
 
 void current_user_list_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("current_user_list_service\n");
+    //printf("current_user_list_service\n");
     int type = 100;
     char* msg = NULL;
     cJSON* json_ptr = NULL;
