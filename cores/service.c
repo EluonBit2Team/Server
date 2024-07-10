@@ -1000,12 +1000,13 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
     int* recieve_fd_array = NULL;
     char SQL_buf[1024];
 
+    printf("1\n");
     now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
     if (now_session == NULL) {
         msg = "Session Error";
         goto cleanup_and_respond;
     }
-
+    printf("2\n");
     cJSON* json_ptr = get_parsed_json(task->buf);
     if (json_ptr == NULL)
     {
@@ -1013,12 +1014,13 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
     // 유저 로그인 확인
+    printf("3\n");
     int uid = find(&server_ptr->fd_to_uid_hash, task->req_client_fd);
     if (uid < 0) {
         msg = "Invalid user";
         goto cleanup_and_respond;
     }
-
+    printf("4\n");
     cJSON* groupname_ptr = cJSON_GetObjectItem(json_ptr, "groupname");
     if (groupname_ptr == NULL || cJSON_GetStringValue(groupname_ptr)[0] == '\0')
     {
