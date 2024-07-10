@@ -303,16 +303,16 @@ void fix_log_time_pairs(epoll_net_core* server_ptr) {
 }
 
 void print_logo() {
-    printf("████████╗ █████╗ ██╗     ██╗  ██╗  ████████╗ █████╗ ██╗     ██╗  ██╗\n");
+    printf("\n\
+            ████████╗ █████╗ ██╗     ██╗  ██╗  ████████╗ █████╗ ██╗     ██╗  ██╗\n");
     printf("╚══██╔══╝██╔══██╗██║     ██║ ██╔╝  ╚══██╔══╝██╔══██╗██║     ██║ ██╔╝\n");
     printf("   ██║   ███████║██║     █████╔╝█████╗██║   ███████║██║     █████╔╝ \n");
     printf("   ██║   ██╔══██║██║     ██╔═██╗╚════╝██║   ██╔══██║██║     ██╔═██╗ \n");
     printf("   ██║   ██║  ██║███████╗██║  ██╗     ██║   ██║  ██║███████╗██║  ██╗\n");
-    printf("   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝     ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝\n");
+    printf("   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝     ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝\n\n");
 }
 
 int run_server(epoll_net_core* server_ptr) {
-    print_logo();
     server_ptr->is_run = true;
     int server_down_reserve_user_cnt = -1;
 
@@ -355,8 +355,7 @@ int run_server(epoll_net_core* server_ptr) {
     }
 
     fix_log_time_pairs(server_ptr);
-
-
+    print_logo();
     // 메인 스레드(main함수에서 run_server()까지 호출한 메인 흐름)가 epoll_wait로 io완료 대기
     while (server_ptr->is_run == true) {
         int occured_event_cnt = epoll_wait(
