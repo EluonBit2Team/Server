@@ -59,6 +59,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json";
         goto cleanup_and_respond;
     }
+    
     cJSON* id_ptr = cJSON_GetObjectItem(json_ptr, "login_id");
     if (id_ptr == NULL) {
         msg = "user send invalid json. Miss name";
@@ -67,6 +68,11 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
     cJSON* pw_ptr = cJSON_GetObjectItem(json_ptr, "pw");
     if (pw_ptr == NULL) {
         msg = "user send invalid json. Miss pw";
+        goto cleanup_and_respond;
+    }
+
+    JSON_guard(json_ptr,&msg);
+    if (msg != NULL) {
         goto cleanup_and_respond;
     }
 
@@ -160,6 +166,12 @@ void signup_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "json parse fail";
         goto cleanup_and_respond;
     }
+
+    JSON_guard(json_ptr,&msg);
+    if(msg != NULL) {
+        goto cleanup_and_respond;
+    }
+
     cJSON* name_ptr = cJSON_GetObjectItem(json_ptr, "name");
     if (name_ptr == NULL || cJSON_GetStringValue(name_ptr)[0] == '\0') {
         msg = "user send invalid json. Miss name";
@@ -249,6 +261,11 @@ void make_group_service(epoll_net_core* server_ptr, task_t* task)
     if (json_ptr == NULL)
     {
         msg = "user send invalid json";
+        goto cleanup_and_respond;
+    }
+
+    JSON_guard(json_ptr,&msg);
+    if(msg != NULL) {
         goto cleanup_and_respond;
     }
 
@@ -638,6 +655,12 @@ void mng_signup_approve_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json";
         goto cleanup_and_respond;
     }
+
+    JSON_guard(json_ptr,&msg);
+    if(msg != NULL) {
+        goto cleanup_and_respond;
+    }
+
     cJSON* approve_ptr = cJSON_GetObjectItem(json_ptr, "is_ok");
     if (approve_ptr == NULL || !cJSON_IsNumber(approve_ptr)) {
         msg = "user send invalid json. Miss is_ok";
@@ -773,6 +796,12 @@ void mng_group_approve_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json";
         goto cleanup_and_respond;
     }
+
+    JSON_guard(json_ptr,&msg);
+    if(msg != NULL) {
+        goto cleanup_and_respond;
+    }
+
     cJSON* approve_ptr = cJSON_GetObjectItem(json_ptr, "is_ok");
     if (approve_ptr == NULL || !cJSON_IsNumber(approve_ptr)) {
         msg = "user send invalid json. Miss is_ok";

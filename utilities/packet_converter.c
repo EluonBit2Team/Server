@@ -247,3 +247,43 @@ bool is_valid_password(const char* password, char** out_msg) {
     }
     return true;
 }
+
+void JSON_guard(cJSON* json, char** out_msg) {
+    cJSON* child = NULL;
+
+    cJSON_ArrayForEach(child, json) {
+        const char* field_name = child->string;
+        cJSON* field_value = child;
+        if (cJSON_IsString(field_value)) {
+            const char* value = field_value->valuestring;
+            if (value == NULL || value[0] == '\0') {
+                *out_msg = "Field is missing or empty";
+                return;
+            }
+        }
+        else if (cJSON_IsObject(field_value)) {
+            JSON_guard(field_value, out_msg);
+            if (*out_msg != NULL) {
+                return;
+            }
+        }
+        else if (cJSON_IsArray(field_value)) {
+            cJSON* array_element = NULL;
+            cJSON_ArrayForEach(array_element, field_value) {
+                if (cJSON_IsObject(array_element) || cJSON_IsArray(array_element)) {
+                    JSON_guard(array_element, out_msg);
+                    if (*out_msg != NULL) {
+                        return;
+                    }
+                } else if (cJSON_IsString(array_element)) {
+                    const char* value = array_element->valuestring;
+                    if (value == NULL || value[0] == '\0') {
+                        *out_msg = "Array element is missing or empty";
+                        return;
+                    }
+                }
+            }
+        }
+    }
+}
+
