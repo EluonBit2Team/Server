@@ -136,7 +136,7 @@ cleanup_and_respond:
     }
 
     response_str = cJSON_Print(result_json);
-    //reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
+    reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
     release_conns(&server_ptr->db, 2, user_setting_conn, log_conn);
     cJSON_del(2, result_json, json_ptr);
     free_all(1, response_str);
@@ -1889,19 +1889,19 @@ void user_status_change_notice(epoll_net_core* server_ptr, conn_t* user_setting_
     char *response_str = NULL;
     cJSON* result_json = cJSON_CreateObject();
     char notice_send_buf[50];
-    int notice_total_size;
+    //int notice_total_size;
 
     cJSON_AddNumberToObject(result_json, "type", USER_STATUS_CHANGE_NOTICE);
     response_str = cJSON_Print(result_json);
-    notice_total_size = HEADER_SIZE + strlen(response_str);
-    memcpy(notice_send_buf, (char*)(&notice_total_size), HEADER_SIZE);
-    memcpy(notice_send_buf + HEADER_SIZE, response_str, notice_total_size - HEADER_SIZE);
+    // notice_total_size = HEADER_SIZE + strlen(response_str);
+    // memcpy(notice_send_buf, (char*)(&notice_total_size), HEADER_SIZE);
+    // memcpy(notice_send_buf + HEADER_SIZE, response_str, notice_total_size - HEADER_SIZE);
     for (int i = 0; i < MAX_CLIENT_NUM; i++) {
         if (server_ptr->session_pool.session_pool[i].fd < 0) {
             continue ;
         }
         int client_fd = server_ptr->session_pool.session_pool[i].fd;
-        reserve_epoll_send(server_ptr->epoll_fd, &server_ptr->session_pool.session_pool[i], response_str, notice_total_size);
+        reserve_epoll_send(server_ptr->epoll_fd, &server_ptr->session_pool.session_pool[i], response_str, strlen(response_str));
     }
 
 cleanup_and_respond:
