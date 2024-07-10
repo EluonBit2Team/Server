@@ -46,6 +46,7 @@ void login_service(epoll_net_core* server_ptr, task_t* task) {
 
     user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
+    //printf("user_setting_conn : %p / log_conn : %p\n", user_setting_conn->conn, log_conn->conn);
 
     now_session = find_session_by_fd(&server_ptr->session_pool, task->req_client_fd);
     if (now_session == NULL)

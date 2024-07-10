@@ -54,7 +54,7 @@ void* work_routine(void *ptr)
         if (deqeueu_and_get_task(thread_pool, &temp_task) == true)
         {
             int type = type_finder(temp_task.buf + HEADER_SIZE);
-            printf("recv type: %d\n", type);
+            //printf("recv type: %d\n", type);
             if (type < 0 || type > SERVICE_FUNC_NUM || server_ptr->function_array[type] == NULL)
             {
                 printf("%d client send invalid type\n", temp_task.req_client_fd);

@@ -53,16 +53,16 @@ bool ring_array(ring_buf *ring, char *data_ptr) {
         return false;
     }
 
-    printf("data: ");
+    //printf("data: ");
     for (int i = 0; i < ring->msg_size; i++) {
         if (ring_empty(ring)) {
             return false; 
         }
         data_ptr[i] = ring_deque(ring);
-        printf("%c",data_ptr[i]);
+        //printf("%c",data_ptr[i]);
     }
-    printf("\nmsg_size %d\n",ring->msg_size);
-    printf("\n");
+    //printf("\nmsg_size %d\n",ring->msg_size);
+    //printf("\n");
     return true;
 }
 
