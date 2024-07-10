@@ -28,6 +28,9 @@
         "wait.h": "c",
         "stdbool.h": "c",
         "regex.h": "c",
-        "errno.h": "c"
+        "errno.h": "c",
+        "inet.h": "c",
+        "socket.h": "c",
+        "epoll.h": "c"
     }
 }

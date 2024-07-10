@@ -1,5 +1,5 @@
 GCC = gcc
-C_FLAGS = -std=c99 -g
+C_FLAGS = -std=c99 -D_POSIX_SOURCE
 LINK_THREAD_FLAG = -lpthread
 LINK_MARIA_FLAG = -I/usr/include/mysql -L/usr/lib64/mysql -lmysqlclient
 TARGET = epoll_server.out

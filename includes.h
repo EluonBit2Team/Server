@@ -1,6 +1,5 @@
 #ifndef INCLUDES_H
 #define INCLUDES_H
-#define _POSIX_SOURCE
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
