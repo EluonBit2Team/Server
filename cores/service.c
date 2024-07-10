@@ -1041,10 +1041,11 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "user send invalid json. Miss text";
         goto cleanup_and_respond;
     }
-
+    printf("5\n");
     user_setting_conn = get_conn(&server_ptr->db.pools[USER_SETTING_DB_IDX]);
     chat_group_conn = get_conn(&server_ptr->db.pools[CHAT_GROUP_DB_IDX]);
     log_conn = get_conn(&server_ptr->db.pools[LOG_DB_IDX]);
+    printf("6\n");
     // 해당 유저가 해당 그룹인지 확인 -> gid를 가져옴
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT gm.gid FROM group_member AS gm LEFT JOIN chat_group AS cg ON cg.gid = gm.gid \
@@ -1053,14 +1054,14 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
-
+    printf("7\n");
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "SELECT user.max_tps FROM user WHERE user.uid = %d", uid);
     int max_tps = query_result_to_int(user_setting_conn, &msg, SQL_buf);
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
-
+    printf("8\n");
     snprintf(SQL_buf, sizeof(SQL_buf), 
         "CALL insert_message(%d, %d, '%s', %d, '%s','%s',@result)", 
         uid, gid, cJSON_GetStringValue(text_ptr), max_tps,cJSON_GetStringValue(login_id_ptr),cJSON_GetStringValue(groupname_ptr));
@@ -1068,7 +1069,7 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
-
+    printf("9\n");
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT @result");
     timestamp = query_result_to_str(log_conn, &msg, SQL_buf);
     if (msg != NULL) {
@@ -1079,7 +1080,7 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
         msg = "Too Much Message in Minute";
         goto cleanup_and_respond;
     }
-    
+    printf("10\n");
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT uid FROM group_member AS gm WHERE gm.gid = %d", gid);
     cJSON* uid_list = query_result_to_json(chat_group_conn, &msg, SQL_buf, 1, "uid");
     int uid_count = cJSON_GetArraySize(uid_list);
@@ -1099,6 +1100,7 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
     }
 
     // 받은거에서 timestamp붙여서 그대로 날려줌.
+    printf("11\n");
     cJSON_AddStringToObject(json_ptr, "timestamp", timestamp);
     response_str = cJSON_Print(json_ptr);
     for (int i = 0; i < uid_count; i++) {
@@ -1118,6 +1120,7 @@ void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
 
 
 cleanup_and_respond:
+    printf("12\n");
     printf("msg:%s\n", msg);
     if (msg != NULL) {
         cJSON_AddNumberToObject(result_json, "type", type);
