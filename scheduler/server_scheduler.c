@@ -115,7 +115,7 @@ int get_login_user_cnt(MYSQL* log_conn) {
 }
 
 int get_tps(MYSQL* log_conn) {
-    const static char* TPS_QUERY = "SELECT COUNT(*) FROM message_log WHERE timestamp >= NOW() - INTERVAL 5 MINUTE";
+    const static char* TPS_QUERY = "SELECT COUNT(*) FROM message_log WHERE timestamp >= NOW() - INTERVAL 1 MINUTE";
     MYSQL_ROW row;
     MYSQL_RES *res = NULL;
     
