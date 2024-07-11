@@ -257,6 +257,7 @@ void disconnect_client(epoll_net_core* server_ptr, int client_fd)
     }
     epoll_ctl(server_ptr->epoll_fd, EPOLL_CTL_DEL, client_fd, NULL);
     int uid = find(&server_ptr->fd_to_uid_hash, client_fd);
+    printf("disconnect client. uid: %d, fd:%d\n", uid, client_fd);
     erase(&server_ptr->fd_to_uid_hash, client_fd);
     erase(&server_ptr->uid_to_fd_hash, uid);
     client_session_t* session_ptr = find_session_by_fd(&server_ptr->session_pool, client_fd);
@@ -274,7 +275,6 @@ void disconnect_client(epoll_net_core* server_ptr, int client_fd)
     }
 
     close(client_fd);
-    printf("disconnect:%d\n", client_fd);
 }
 
 void fix_log_time_pairs(epoll_net_core* server_ptr) {

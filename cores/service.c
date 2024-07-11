@@ -988,7 +988,7 @@ cleanup_and_respond:
 }
 
 void chat_in_group_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("chat_in_group_service\n");
+    //printf("chat_in_group_service\n");
     int type = 100;
     char* msg = NULL;
     cJSON* result_json = cJSON_CreateObject();
