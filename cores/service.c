@@ -32,7 +32,7 @@ cleanup_and_respond:
 }
 
 void login_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("login_service\n");
+    //printf("login_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -1613,6 +1613,7 @@ void chat_in_user_service(epoll_net_core* server_ptr, task_t* task) {
     char* msg = NULL;
     cJSON* result_json = cJSON_CreateObject();
     client_session_t* now_session = NULL;
+    client_session_t* recver_session = NULL;
     conn_t* user_setting_conn = NULL;
     conn_t* log_conn = NULL;
     char* response_str = NULL;
@@ -1697,35 +1698,38 @@ void chat_in_user_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    cJSON_AddStringToObject(json_ptr, "timestamp", timestamp);
-    response_str = cJSON_Print(json_ptr);
-
-    reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
+    type = DM_SERV_FUNC;
 
     recieve_fd = find(&server_ptr->uid_to_fd_hash, recver_uid);
     if (recieve_fd < 0) {
-        msg = "user is not online";
+        // 상대 접속 안했으면 경고 안띄우게 하기 위해 주석.
+        //msg = "user is not online";
         goto cleanup_and_respond;
     }
-    client_session_t* session = find_session_by_fd(&server_ptr->session_pool, recieve_fd);
-    if (session == NULL) {
-        printf("%d fd Not have session!!\n", recieve_fd);
-        msg = "user is not online";
+    recver_session = find_session_by_fd(&server_ptr->session_pool, recieve_fd);
+    if (recver_session == NULL) {
+        msg = "server session error";
         goto cleanup_and_respond;
     }
-    if (session == now_session) {
-        goto cleanup_and_respond;
-    }
-    //printf("%d \n", recieve_fd); write(STDOUT_FILENO, task->buf, task->task_data_len); write(STDOUT_FILENO, "\n", 1);
-    //write(STDOUT_FILENO, "true:", 5); write(STDOUT_FILENO, task->buf + HEADER_SIZE, task->task_data_len - HEADER_SIZE); write(STDOUT_FILENO, "\n", 1);
-    reserve_epoll_send(server_ptr->epoll_fd, session, response_str, strlen(response_str));
+    // if (recver_session == now_session) {
+    //     goto cleanup_and_respond;
+    // }
 
 cleanup_and_respond:
+    cJSON_AddNumberToObject(result_json, "type", type);
     if (msg != NULL) {
-        cJSON_AddNumberToObject(result_json, "type", type);
         cJSON_AddStringToObject(result_json, "msg", msg);
-        response_str = cJSON_Print(result_json);
-        reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
+    }
+    else {
+        cJSON_AddStringToObject(result_json, "sender_login_id", cJSON_GetStringValue(sender_login_id_ptr));
+        cJSON_AddStringToObject(result_json, "recver_login_id", cJSON_GetStringValue(recver_login_id_ptr));
+        cJSON_AddStringToObject(result_json, "text", cJSON_GetStringValue(text_ptr));
+        cJSON_AddStringToObject(result_json, "timestamp", timestamp);
+    }
+    response_str = cJSON_Print(result_json);
+    reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
+    if (recver_session != NULL && recver_session != now_session) {
+        reserve_epoll_send(server_ptr->epoll_fd, recver_session, response_str, strlen(response_str));
     }
     release_conns(&server_ptr->db, 2, log_conn, user_setting_conn);
     cJSON_del(2, json_ptr, result_json);
@@ -1892,10 +1896,10 @@ void user_status_change_notice(epoll_net_core* server_ptr, conn_t* user_setting_
     int* keys;
     size_t num_keys = get_all_keys(&server_ptr->fd_to_uid_hash, &keys);
 
-    printf("Number of keys: %zu\n", num_keys);
-    for (size_t i = 0; i < num_keys; ++i) {
-        printf("Key %zu: %d\n", i, keys[i]);
-    }
+    // printf("Number of keys: %zu\n", num_keys);
+    // for (size_t i = 0; i < num_keys; ++i) {
+    //     printf("Key %zu: %d\n", i, keys[i]);
+    // }
 
     cJSON_AddNumberToObject(result_json, "type", USER_STATUS_CHANGE_NOTICE);
     response_str = cJSON_Print(result_json);
