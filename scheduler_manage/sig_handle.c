@@ -1,7 +1,7 @@
 #include "sig_handle.h"
 
 void handle_signal(int sig) {
-    if (sig == SIGINT || sig == SIGSEGV || sig == SIGABRT) {
+    if (sig == SIGINT || sig == SIGSEGV || sig == SIGABRT || sig == SIGTERM) {
         printf("Parent received signal %d, terminating child process\n", sig);
         if (g_child_pid > 0) {
             kill(g_child_pid, SIGKILL);
@@ -26,4 +26,5 @@ void setup_signal_handlers() {
     sigaction(SIGSEGV, &sa, NULL);
     sigaction(SIGCHLD, &sa, NULL);
     sigaction(SIGABRT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
 }
