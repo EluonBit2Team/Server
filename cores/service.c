@@ -1888,18 +1888,25 @@ cleanup_and_respond:
 // Notice의 경우, conn을 외부에서 받아서 쓸 것! (conn 또 할당받으면 재귀적 자원 할당으로 데드락 가능성 높음)
 void user_status_change_notice(epoll_net_core* server_ptr, conn_t* user_setting_conn) {
     char* error_msg = NULL;
-    char *response_str = NULL;
+    char* response_str = NULL;
     cJSON* result_json = cJSON_CreateObject();
     char notice_send_buf[50];
+    int* keys;
+    size_t num_keys = get_all_keys(&server_ptr->fd_to_uid_hash, &keys);
+
+    printf("Number of keys: %zu\n", num_keys);
+    for (size_t i = 0; i < num_keys; ++i) {
+        printf("Key %zu: %d\n", i, keys[i]);
+    }
 
     cJSON_AddNumberToObject(result_json, "type", USER_STATUS_CHANGE_NOTICE);
     response_str = cJSON_Print(result_json);
-    for (int i = 0; i < MAX_CLIENT_NUM; i++) {
-        if (server_ptr->session_pool.session_pool[i].fd < 0) {
+    for (size_t i = 0; i < num_keys; i++) {
+        int client_fd = keys[i];
+        if (client_fd < 0) {
             continue ;
         }
-        int client_fd = server_ptr->session_pool.session_pool[i].fd;
-        reserve_epoll_send(server_ptr->epoll_fd, &server_ptr->session_pool.session_pool[i], response_str, strlen(response_str));
+        reserve_epoll_send(server_ptr->epoll_fd, find_session_by_fd(&server_ptr->session_pool,client_fd), response_str, strlen(response_str));
     }
 
 cleanup_and_respond:
@@ -1907,7 +1914,7 @@ cleanup_and_respond:
         fprintf(stderr, "%s", error_msg);
     }
     cJSON_del(1, result_json);
-    free_all(1, response_str);
+    free_all(2, response_str,keys);
     return ;
 }
 

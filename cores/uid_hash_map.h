@@ -28,5 +28,6 @@ bool insert(int_hash_map_t* hash_map_ptr, int key, int value);
 int find(int_hash_map_t* hash_map_ptr, int key);
 void erase(int_hash_map_t* hash_map_ptr, int key);
 void clear_hash_map(int_hash_map_t* hash_map_ptr);
+size_t get_all_keys(int_hash_map_t* hash_map_ptr, int** keys);
 
 #endif
