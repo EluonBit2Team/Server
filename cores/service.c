@@ -1728,7 +1728,7 @@ cleanup_and_respond:
     }
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
-    if (recver_session != NULL || recver_session != now_session) {
+    if (recver_session != NULL && recver_session != now_session) {
         reserve_epoll_send(server_ptr->epoll_fd, recver_session, response_str, strlen(response_str));
     }
     release_conns(&server_ptr->db, 2, log_conn, user_setting_conn);
