@@ -32,7 +32,7 @@ cleanup_and_respond:
 }
 
 void login_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("login_service\n");
+    //printf("login_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
