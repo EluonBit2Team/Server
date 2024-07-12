@@ -1708,8 +1708,7 @@ void chat_in_user_service(epoll_net_core* server_ptr, task_t* task) {
     }
     recver_session = find_session_by_fd(&server_ptr->session_pool, recieve_fd);
     if (recver_session == NULL) {
-        printf("%d fd Not have session!!\n", recieve_fd);
-        msg = "user is not online";
+        msg = "server session error";
         goto cleanup_and_respond;
     }
     // if (recver_session == now_session) {
@@ -1722,10 +1721,10 @@ cleanup_and_respond:
         cJSON_AddStringToObject(result_json, "msg", msg);
     }
     else {
-        cJSON_AddStringToObject(json_ptr, "sender_login_id", cJSON_GetStringValue(sender_login_id_ptr));
-        cJSON_AddStringToObject(json_ptr, "recver_login_id", cJSON_GetStringValue(recver_login_id_ptr));
-        cJSON_AddStringToObject(json_ptr, "text", cJSON_GetStringValue(text_ptr));
-        cJSON_AddStringToObject(json_ptr, "timestamp", timestamp);
+        cJSON_AddStringToObject(result_json, "sender_login_id", cJSON_GetStringValue(sender_login_id_ptr));
+        cJSON_AddStringToObject(result_json, "recver_login_id", cJSON_GetStringValue(recver_login_id_ptr));
+        cJSON_AddStringToObject(result_json, "text", cJSON_GetStringValue(text_ptr));
+        cJSON_AddStringToObject(result_json, "timestamp", timestamp);
     }
     response_str = cJSON_Print(result_json);
     reserve_epoll_send(server_ptr->epoll_fd, now_session, response_str, strlen(response_str));
