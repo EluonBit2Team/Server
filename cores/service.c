@@ -1903,7 +1903,7 @@ void user_status_change_notice(epoll_net_core* server_ptr, conn_t* user_setting_
         if (keys[i] < 0) {
             continue ;
         }
-        reserve_epoll_send(keys[i], &server_ptr->session_pool.session_pool[i], response_str, strlen(response_str));
+        reserve_epoll_send(keys[i], &server_ptr->session_pool.session_pool[keys[i]], response_str, strlen(response_str));
     }
 
 cleanup_and_respond:
