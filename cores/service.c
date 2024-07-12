@@ -1900,10 +1900,11 @@ void user_status_change_notice(epoll_net_core* server_ptr, conn_t* user_setting_
     cJSON_AddNumberToObject(result_json, "type", USER_STATUS_CHANGE_NOTICE);
     response_str = cJSON_Print(result_json);
     for (size_t i = 0; i < num_keys; i++) {
-        if (keys[i] < 0) {
+        int client_fd = keys[i];
+        if (client_fd < 0) {
             continue ;
         }
-        reserve_epoll_send(keys[i], find_session_by_fd(&server_ptr->session_pool,keys[i]), response_str, strlen(response_str));
+        reserve_epoll_send(server_ptr->epoll_fd, find_session_by_fd(&server_ptr->session_pool,client_fd), response_str, strlen(response_str));
     }
 
 cleanup_and_respond:
