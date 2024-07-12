@@ -1890,7 +1890,7 @@ void user_status_change_notice(epoll_net_core* server_ptr, conn_t* user_setting_
     cJSON* result_json = cJSON_CreateObject();
     char notice_send_buf[50];
     int* keys;
-    size_t num_keys = get_all_keys(&server_ptr->uid_to_fd_hash, &keys);
+    size_t num_keys = get_all_keys(&server_ptr->fd_to_uid_hash, &keys);
 
     printf("Number of keys: %zu\n", num_keys);
     for (size_t i = 0; i < num_keys; ++i) {
@@ -1899,12 +1899,11 @@ void user_status_change_notice(epoll_net_core* server_ptr, conn_t* user_setting_
 
     cJSON_AddNumberToObject(result_json, "type", USER_STATUS_CHANGE_NOTICE);
     response_str = cJSON_Print(result_json);
-    for (int i = 0; i < MAX_CLIENT_NUM; i++) {
-        if (server_ptr->session_pool.session_pool[i].fd < 0) {
+    for (size_t i = 0; i < num_keys; i++) {
+        if (keys[i] < 0) {
             continue ;
         }
-        int client_fd = server_ptr->session_pool.session_pool[i].fd;
-        reserve_epoll_send(server_ptr->epoll_fd, &server_ptr->session_pool.session_pool[i], response_str, strlen(response_str));
+        reserve_epoll_send(keys[i], &server_ptr->session_pool.session_pool[i], response_str, strlen(response_str));
     }
 
 cleanup_and_respond:
