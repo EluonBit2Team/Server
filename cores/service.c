@@ -1722,6 +1722,9 @@ cleanup_and_respond:
         cJSON_AddStringToObject(result_json, "msg", msg);
     }
     else {
+        cJSON_AddStringToObject(json_ptr, "sender_login_id", cJSON_GetStringValue(sender_login_id_ptr));
+        cJSON_AddStringToObject(json_ptr, "recver_login_id", cJSON_GetStringValue(recver_login_id_ptr));
+        cJSON_AddStringToObject(json_ptr, "text", cJSON_GetStringValue(text_ptr));
         cJSON_AddStringToObject(json_ptr, "timestamp", timestamp);
     }
     response_str = cJSON_Print(result_json);
