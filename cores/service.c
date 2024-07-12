@@ -1616,7 +1616,7 @@ void chat_in_user_service(epoll_net_core* server_ptr, task_t* task) {
     client_session_t* recver_session = NULL;
     conn_t* user_setting_conn = NULL;
     conn_t* log_conn = NULL;
-    char* response_str = NULL, recv_str = NULL;
+    char* response_str = NULL;
     int recieve_fd = -1;
     char* timestamp = NULL;
     char SQL_buf[1024];
@@ -1894,10 +1894,10 @@ void user_status_change_notice(epoll_net_core* server_ptr, conn_t* user_setting_
     int* keys;
     size_t num_keys = get_all_keys(&server_ptr->fd_to_uid_hash, &keys);
 
-    printf("Number of keys: %zu\n", num_keys);
-    for (size_t i = 0; i < num_keys; ++i) {
-        printf("Key %zu: %d\n", i, keys[i]);
-    }
+    // printf("Number of keys: %zu\n", num_keys);
+    // for (size_t i = 0; i < num_keys; ++i) {
+    //     printf("Key %zu: %d\n", i, keys[i]);
+    // }
 
     cJSON_AddNumberToObject(result_json, "type", USER_STATUS_CHANGE_NOTICE);
     response_str = cJSON_Print(result_json);
