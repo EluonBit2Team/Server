@@ -66,3 +66,19 @@ void clear_hash_map(int_hash_map_t* hash_map_ptr) {
     free(hash_map_ptr->node_pool);
     free(hash_map_ptr->node_pool_idx_stack);
 }
+
+size_t get_all_keys(int_hash_map_t* hash_map_ptr, int** keys) {
+    pthread_mutex_lock(&hash_map_ptr->hash_map_mutex);
+    
+    size_t num_keys = HASH_COUNT(hash_map_ptr->hash_map);
+    *keys = (int*)malloc(num_keys * sizeof(int));  // 동적으로 키 배열 할당
+    
+    int_hash_entry_t *entry, *tmp;
+    size_t i = 0;
+    HASH_ITER(hh, hash_map_ptr->hash_map, entry, tmp) {
+        (*keys)[i++] = entry->key;  // 할당된 배열에 키 저장
+    }
+    
+    pthread_mutex_unlock(&hash_map_ptr->hash_map_mutex);
+    return num_keys;  // 키 개수 반환
+}
