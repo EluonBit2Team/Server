@@ -1798,8 +1798,8 @@ void pre_dm_log_service(epoll_net_core* server_ptr, task_t* task) {
         goto cleanup_and_respond;
     }
 
-    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT sender_login_id, text, timestamp FROM dm_log WHERE (recver_uid = %d AND sender_uid = %d) OR \
-    (recver_uid = %d AND sender_uid = %d) AND timestamp BETWEEN '%s' AND '%s' ORDER BY timestamp ASC",
+    snprintf(SQL_buf, sizeof(SQL_buf), "SELECT sender_login_id, text, timestamp FROM dm_log WHERE ((recver_uid = %d AND sender_uid = %d) OR \
+    (recver_uid = %d AND sender_uid = %d)) AND timestamp BETWEEN '%s' AND '%s' ORDER BY timestamp ASC",
     recver_uid,uid,uid,recver_uid,cJSON_GetStringValue(start_time_ptr),cJSON_GetStringValue(end_time_ptr));
     cJSON* chat_log = query_result_to_json(log_conn, &msg, SQL_buf, 3, "sender_login_id" ,"text", "timestamp");
     if (msg != NULL) {
