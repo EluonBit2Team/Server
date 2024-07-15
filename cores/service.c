@@ -1334,7 +1334,7 @@ void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
     }
 
     snprintf(SQL_buf, sizeof(SQL_buf), "SELECT * FROM ( \
-    SELECT mid, login_id, text, timestamp FROM message_log \
+    SELECT login_id, text, timestamp FROM message_log \
     WHERE gid = %d AND timestamp BETWEEN '%s' AND '%s' \
     ORDER BY timestamp DESC LIMIT 500) AS subquery \
     ORDER BY timestamp ASC;",
