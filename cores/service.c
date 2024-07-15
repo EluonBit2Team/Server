@@ -1339,11 +1339,14 @@ void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
     ORDER BY timestamp DESC LIMIT 500) AS subquery \
     ORDER BY mid ASC;",
     gid_value,cJSON_GetStringValue(start_time_ptr),cJSON_GetStringValue(end_time_ptr));
+    
+    printf("%s",SQL_buf);
 
     cJSON* chat_log = query_result_to_json(log_conn, &msg, SQL_buf, 3, "login_id" ,"text", "timestamp");
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
+    printf("%s",chat_log);
     type = 14;
 
 cleanup_and_respond:
