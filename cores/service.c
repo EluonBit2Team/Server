@@ -1284,7 +1284,7 @@ cleanup_and_respond:
 }
 
 void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
-    printf("pre_chat_log_service\n");
+    // printf("pre_chat_log_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -1339,15 +1339,11 @@ void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
     ORDER BY timestamp DESC LIMIT 500) AS subquery \
     ORDER BY timestamp ASC;",
     gid_value,cJSON_GetStringValue(start_time_ptr),cJSON_GetStringValue(end_time_ptr));
-    
-    printf("buf : %s",SQL_buf);
-    printf("\n");
+
     cJSON* chat_log = query_result_to_json(log_conn, &msg, SQL_buf, 3, "login_id" ,"text", "timestamp");
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
-    // printf("chat_log : %s",cJSON_Print(chat_log));
-    //printf("\n");
     type = 14;
 
 cleanup_and_respond:
