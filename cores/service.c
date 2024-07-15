@@ -1284,7 +1284,7 @@ cleanup_and_respond:
 }
 
 void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
-    //printf("pre_chat_log_service\n");
+    printf("pre_chat_log_service\n");
     int type = 100;
     char* msg = NULL;
     char *response_str = NULL;
@@ -1346,7 +1346,7 @@ void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
-    printf("%s",chat_log);
+    printf("%s",cJSON_Print(chat_log));
     type = 14;
 
 cleanup_and_respond:
