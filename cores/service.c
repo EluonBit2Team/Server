@@ -1337,7 +1337,7 @@ void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
     SELECT mid, login_id, text, timestamp FROM message_log \
     WHERE gid = %d AND timestamp BETWEEN '%s' AND '%s' \
     ORDER BY timestamp DESC LIMIT 500) AS subquery \
-    ORDER BY mid ASC;",
+    ORDER BY timestamp ASC;",
     gid_value,cJSON_GetStringValue(start_time_ptr),cJSON_GetStringValue(end_time_ptr));
     
     printf("buf : %s",SQL_buf);
@@ -1346,8 +1346,8 @@ void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
     if (msg != NULL) {
         goto cleanup_and_respond;
     }
-    printf("chat_log : %s",cJSON_Print(chat_log));
-    printf("\n");
+    // printf("chat_log : %s",cJSON_Print(chat_log));
+    //printf("\n");
     type = 14;
 
 cleanup_and_respond:
