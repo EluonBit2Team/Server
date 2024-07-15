@@ -1337,7 +1337,7 @@ void pre_chat_log_service(epoll_net_core* server_ptr, task_t* task) {
     SELECT login_id, text, timestamp FROM message_log \
     WHERE gid = %d AND timestamp BETWEEN '%s' AND '%s' \
     ORDER BY timestamp DESC LIMIT 500) AS subquery \
-    ORDER BY timestamp ASC;",
+    ORDER BY timestamp DESC;",
     gid_value,cJSON_GetStringValue(start_time_ptr),cJSON_GetStringValue(end_time_ptr));
 
     cJSON* chat_log = query_result_to_json(log_conn, &msg, SQL_buf, 3, "login_id" ,"text", "timestamp");
